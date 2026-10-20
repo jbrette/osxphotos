@@ -32,7 +32,7 @@ def test_datetime_tz_to_utc():
     tz = datetime.timezone(offset=datetime.timedelta(seconds=-25200))
     dt = datetime.datetime(2020, 9, 1, 22, 6, 0, tzinfo=tz)
     utc = datetime_tz_to_utc(dt)
-    assert utc == datetime.datetime(2020, 9, 2, 5, 6, 0, tzinfo=datetime.timezone.utc)
+    assert utc == datetime.datetime(2020, 9, 2, 5, 6, 0, tzinfo=datetime.UTC)
 
 
 @pytest.mark.usefixtures("set_tz_pacific")
@@ -47,7 +47,7 @@ def test_datetime_remove_tz():
 def test_datetime_naive_to_utc():
     dt = datetime.datetime(2020, 9, 1, 12, 0, 0)
     utc = datetime_naive_to_utc(dt)
-    assert utc == datetime.datetime(2020, 9, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+    assert utc == datetime.datetime(2020, 9, 1, 12, 0, 0, tzinfo=datetime.UTC)
 
 
 @pytest.mark.usefixtures("set_tz_pacific")
@@ -61,7 +61,7 @@ def test_datetime_naive_to_local():
 @pytest.mark.usefixtures("set_tz_pacific")
 def test_datetime_utc_to_local():
     tz = datetime.timezone(offset=datetime.timedelta(seconds=-25200))
-    utc = datetime.datetime(2020, 9, 1, 19, 0, 0, tzinfo=datetime.timezone.utc)
+    utc = datetime.datetime(2020, 9, 1, 19, 0, 0, tzinfo=datetime.UTC)
     dt = datetime_utc_to_local(utc)
     assert dt == datetime.datetime(2020, 9, 1, 12, 0, 0, tzinfo=tz)
 
@@ -69,7 +69,7 @@ def test_datetime_utc_to_local():
 @pytest.mark.usefixtures("set_tz_cest")
 def test_datetime_utc_to_local_2():
     tz = datetime.timezone(offset=datetime.timedelta(seconds=7200))
-    utc = datetime.datetime(2020, 9, 1, 19, 0, 0, tzinfo=datetime.timezone.utc)
+    utc = datetime.datetime(2020, 9, 1, 19, 0, 0, tzinfo=datetime.UTC)
     dt = datetime_utc_to_local(utc)
     assert dt == datetime.datetime(2020, 9, 1, 21, 0, 0, tzinfo=tz)
 
@@ -119,9 +119,7 @@ def test_datetime_add_tz_with_invalid_tzname_falls_back_to_tzoffset():
 
 
 def test_datetime_add_tz_raises_value_error_on_naive_datetime():
-    dt = datetime.datetime(
-        2024, 1, 1, 12, 0, tzinfo=datetime.timezone.utc
-    )  # Already aware
+    dt = datetime.datetime(2024, 1, 1, 12, 0, tzinfo=datetime.UTC)  # Already aware
     with pytest.raises(ValueError, match="dt must be naive datetime"):
         datetime_add_tz(dt, tzname="America/New_York")
 

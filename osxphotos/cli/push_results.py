@@ -1,6 +1,7 @@
 """Results class for osxphotos push-exif command"""
 
 from datetime import datetime
+from typing import Self
 
 
 class PushResults:
@@ -54,7 +55,7 @@ class PushResults:
         """Return datetime when ExportResults was created"""
         return self._datetime
 
-    def __iadd__(self, other) -> "PushResults":
+    def __iadd__(self, other) -> Self:
         if type(other) != PushResults:
             raise TypeError("Can only add PushResults to PushResults")
 

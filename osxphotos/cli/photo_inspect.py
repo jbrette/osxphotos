@@ -43,7 +43,7 @@ bold = add_rich_markup_tag("bold")
 dim = add_rich_markup_tag("dim")
 
 
-def add_cyclic_color_tag(values: list[str]) -> Generator[str, None, None]:
+def add_cyclic_color_tag(values: list[str]) -> Generator[str]:
     """Add a rich markup tag to each str in values, cycling through a set of colors"""
     # reuse some colors already in the theme
     # these are chosen for contrast to easily associate scores and values

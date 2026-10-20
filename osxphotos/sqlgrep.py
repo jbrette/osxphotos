@@ -13,7 +13,7 @@ def sqlgrep(
     ignore_case: bool = False,
     print_filename: bool = True,
     rich_markup: bool = False,
-) -> Generator[list[str], None, None]:
+) -> Generator[list[str]]:
     """grep through a sqlite database file for a given string
 
     Args:

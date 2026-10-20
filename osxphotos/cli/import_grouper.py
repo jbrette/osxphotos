@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from itertools import chain
 from re import match
-from typing import TypeVar
 
 from osxphotos.platform import is_macos
 
@@ -148,7 +147,7 @@ class Groupable:
 
 @dataclass
 class GroupingNode:
-    children: dict[str, "GroupingNode"] = field(default_factory=dict)
+    children: dict[str, GroupingNode] = field(default_factory=dict)
     files: list[Groupable] = field(default_factory=list)
 
     def add(
@@ -268,7 +267,7 @@ class GroupingNode:
 
 @dataclass
 class GroupingRoot:
-    tree: "GroupingNode" = field(default_factory=GroupingNode)
+    tree: GroupingNode = field(default_factory=GroupingNode)
 
     def add(self, item: Groupable):
         # Check if this is an edited file with increment suffix that should be matched
@@ -363,10 +362,9 @@ def group_files_for_import(
     return sort_paths(result, lambda g: g[0])
 
 
-P = TypeVar("P")
-
-
-def sort_paths(paths: Iterable[P], path_func: Callable[[P], pathlib.Path]) -> list[P]:
+def sort_paths[P](
+    paths: Iterable[P], path_func: Callable[[P], pathlib.Path]
+) -> list[P]:
     """Sort paths into desired order for import so the key file is first
 
       Sort order is:

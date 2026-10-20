@@ -129,11 +129,11 @@ class SQLiteKVStore:
         del self[key]
         return value
 
-    def keys(self) -> Generator[T, None, None]:
+    def keys(self) -> Generator[T]:
         """Return keys as generator"""
         return iter(self)
 
-    def values(self) -> Generator[T, None, None]:
+    def values(self) -> Generator[T]:
         """Return values as generator"""
         conn = self.connection()
         cursor = conn.cursor()
@@ -141,7 +141,7 @@ class SQLiteKVStore:
         for value in cursor:
             yield self._deserialize(value[0])
 
-    def items(self) -> Generator[tuple[T, T], None, None]:
+    def items(self) -> Generator[tuple[T, T]]:
         """Return items (key, value) as generator"""
         conn = self.connection()
         cursor = conn.cursor()

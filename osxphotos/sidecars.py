@@ -758,7 +758,7 @@ class SidecarWriter(_ExifMixin):
             with open(filename, newline="") as f:
                 content = f.read()
             sig_after = fileutil.file_sig(filename)
-        except (OSError, UnicodeDecodeError):
+        except OSError, UnicodeDecodeError:
             return None, None
         if sig_before != sig_after:
             return None, None

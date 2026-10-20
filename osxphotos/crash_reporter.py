@@ -79,7 +79,7 @@ def crash_reporter(
         def wrapped(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except (click.ClickException, click.Abort, click.exceptions.Exit):
+            except click.ClickException, click.Abort, click.exceptions.Exit:
                 raise
             except Exception as e:
                 print(message, file=sys.stderr)

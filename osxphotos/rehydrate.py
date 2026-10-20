@@ -47,7 +47,7 @@ def rehydrate_class(data: dict[Any, Any], cls: type) -> object:
             # If the key contains "date" and the value is not None, try to parse it as a datetime
             try:
                 setattr(instance, key, datetime.datetime.fromisoformat(value))
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 setattr(instance, key, value)
         else:
             setattr(instance, key, value)

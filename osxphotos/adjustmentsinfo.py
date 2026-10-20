@@ -171,7 +171,7 @@ class AdjustmentsInfo:
         """List of adjustment dictionaries (or empty list if none or could not be decoded)"""
         try:
             return self._adjustments["adjustments"] if self._adjustments else []
-        except (KeyError, TypeError):
+        except KeyError, TypeError:
             return []
 
     @property
@@ -179,7 +179,7 @@ class AdjustmentsInfo:
         """Metadata dictionary or None if adjustment data could not be decoded"""
         try:
             return self._adjustments["metadata"] if self._adjustments else None
-        except (KeyError, TypeError):
+        except KeyError, TypeError:
             return None
 
     @property
@@ -187,7 +187,7 @@ class AdjustmentsInfo:
         """EXIF orientation of image or 0 if none specified or None if adjustments could not be decoded"""
         try:
             return self._adjustments["metadata"]["orientation"]
-        except (KeyError, TypeError):
+        except KeyError, TypeError:
             # no orientation field or adjustments is None
             return 0
 
@@ -196,7 +196,7 @@ class AdjustmentsInfo:
         """Format version for adjustments data (formatVersion field from adjustmentData) or None if adjustments could not be decoded"""
         try:
             return self._adjustments["formatVersion"] if self._adjustments else None
-        except (KeyError, TypeError):
+        except KeyError, TypeError:
             return None
 
     @property
@@ -204,7 +204,7 @@ class AdjustmentsInfo:
         """version info for adjustments data or None if adjustments data could not be decoded"""
         try:
             return self._adjustments["versionInfo"] if self._adjustments else None
-        except (KeyError, TypeError):
+        except KeyError, TypeError:
             return None
 
     def asdict(self):

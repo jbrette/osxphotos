@@ -1800,7 +1800,7 @@ def format_date_field(dt: datetime.datetime, field: str, args: list[str]) -> str
             raise ValueError(f"Unhandled template value: {field}") from e
 
 
-def get_place_value(photo: "PhotoInfo", field: str):
+def get_place_value(photo: PhotoInfo, field: str):
     """Get the value of a 'place' field by attribute
 
     Args:

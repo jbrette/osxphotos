@@ -19,7 +19,7 @@ MPRI_Reg_Rect = namedtuple("MPRI_Reg_Rect", ["x", "y", "h", "w"])
 class PersonInfo:
     """Info about a person in the Photos library"""
 
-    def __init__(self, db: "osxphotos.PhotosDB", pk: int):
+    def __init__(self, db: osxphotos.PhotosDB, pk: int):
         """Creates a new PersonInfo instance
 
         Arguments:

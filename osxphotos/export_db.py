@@ -1007,7 +1007,7 @@ class ExportDB:
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
     def _insert_run_info(self):
         """Insert run info into runs table"""
-        dt = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        dt = datetime.datetime.now(datetime.UTC).isoformat()
         python_path = sys.executable
         cmd = sys.argv[0]
         args = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else ""

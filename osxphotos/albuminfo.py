@@ -311,7 +311,7 @@ class ImportInfo(AlbumInfoBaseClass):
         import_session = self._db._db_import_group[self._uuid]
         try:
             self._creation_date_timestamp = import_session[3]
-        except (ValueError, TypeError, KeyError):
+        except ValueError, TypeError, KeyError:
             self._creation_date_timestamp = datetime(1970, 1, 1)
         self._start_date_timestamp = self._creation_date_timestamp
         self._end_date_timestamp = self._creation_date_timestamp

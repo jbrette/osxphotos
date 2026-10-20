@@ -49,7 +49,7 @@ def start_photos():
             if is_photos_running():
                 return True
         return False
-    except (OSError, subprocess.CalledProcessError):
+    except OSError, subprocess.CalledProcessError:
         # `open` missing, or it failed to launch Photos
         return False
 

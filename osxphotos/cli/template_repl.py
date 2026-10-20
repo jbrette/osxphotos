@@ -135,7 +135,7 @@ def run_repl_loop(photosdb: osxphotos.PhotosDB, uuid: str | None):
         while True:
             try:
                 line = input(prompt)
-            except (KeyboardInterrupt, EOFError):
+            except KeyboardInterrupt, EOFError:
                 print()  # New line after Ctrl+C or Ctrl+D
                 break
 

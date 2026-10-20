@@ -1598,7 +1598,7 @@ class PhotosDB:
                 self._dbphotos[uuid]["added_date"] = photos_datetime_local(
                     import_session[3], default=True
                 )
-            except (KeyError, IndexError):
+            except KeyError, IndexError:
                 # use the default datetime
                 self._dbphotos[uuid]["added_date"] = photos_datetime_local(
                     None, default=True

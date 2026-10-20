@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Callable
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 from ._constants import DEFAULT_PREVIEW_SUFFIX
 from .export_db import ExportDB
@@ -321,7 +321,7 @@ class ExportResults:
 
         return list(set(files))
 
-    def __iadd__(self, other) -> ExportResults:
+    def __iadd__(self, other) -> Self:
         if type(other) != ExportResults:
             raise TypeError("Can only add ExportResults to ExportResults")
         for attribute in self.attributes:

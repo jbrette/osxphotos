@@ -60,7 +60,7 @@ def _normalize_for_comparison(obj):
             and ("T" in obj or obj.count(":") >= 2)
         ):
             try:
-                return datetime.datetime.fromisoformat(obj.replace("Z", "+00:00"))
+                return datetime.datetime.fromisoformat(obj)
             except ValueError:
                 pass
     return obj

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pathlib
 import unicodedata
-from typing import Literal, TypeVar
+from typing import Literal
 
 from osxphotos.platform import is_macos
 
@@ -16,12 +16,6 @@ _GLOBAL_UNICODE_FORM = DEFAULT_UNICODE_FORM
 
 # global unicode format to use for filesystem paths
 _GLOBAL_UNICODE_FS_FORM = "NFD" if is_macos else "NFC"
-
-PathType = TypeVar("PathType", bound=str | pathlib.Path)
-
-UnicodeDataType = TypeVar(
-    "UnicodeDataType", bound=str | list[str] | tuple[str, ...] | None
-)
 
 __all__ = [
     "DEFAULT_UNICODE_FORM",
@@ -64,7 +58,7 @@ def set_unicode_fs_form(fmt: Literal["NFC", "NFKC", "NFD", "NFKD"]):
     _GLOBAL_UNICODE_FS_FORM = fmt
 
 
-def normalize_fs_path(path: PathType) -> PathType:
+def normalize_fs_path[PathType: str | pathlib.Path](path: PathType) -> PathType:
     """Normalize filesystem paths with unicode in them"""
     form = get_unicode_fs_form()
     if isinstance(path, pathlib.Path):
@@ -73,7 +67,9 @@ def normalize_fs_path(path: PathType) -> PathType:
         return unicodedata.normalize(form, path)
 
 
-def normalize_unicode(value: UnicodeDataType) -> UnicodeDataType:
+def normalize_unicode[UnicodeDataType: str | list[str] | tuple[str, ...] | None](
+    value: UnicodeDataType,
+) -> UnicodeDataType:
     """normalize unicode data"""
     form = get_unicode_form()
     if value is None:

@@ -30,7 +30,7 @@ if is_macos:
     import photoscript
 
 # default date for sorting
-DEFAULT_DATE = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+DEFAULT_DATE = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
 
 __all__ = [
     "IncompatibleQueryOptions",

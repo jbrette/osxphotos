@@ -15,7 +15,7 @@ TIME_DELTA = (
 ).total_seconds()
 
 # Default datetime for when we can't determine the date
-DEFAULT_DATETIME = datetime.datetime(1970, 1, 1, 0, tzinfo=datetime.timezone.utc)
+DEFAULT_DATETIME = datetime.datetime(1970, 1, 1, 0, tzinfo=datetime.UTC)
 DEFAULT_DATETIME_LOCAL = datetime.datetime(
     1970, 1, 1, 0, tzinfo=get_local_tz(datetime.datetime(1970, 1, 1, 0))
 )
@@ -63,7 +63,7 @@ def photos_datetime(
         # Use tzoffset if tzname wasn't provided or failed
         tz = datetime.timezone(datetime.timedelta(seconds=tzoffset))
         return dt.astimezone(tz)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return DEFAULT_DATETIME if default else None
 
 
@@ -85,7 +85,7 @@ def photos_datetime_local(
         # Convert naive datetime to local timezone
         dt_local = dt_naive.astimezone(local_tz)
         return dt_local
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return DEFAULT_DATETIME_LOCAL if default else None
 
 
@@ -106,7 +106,7 @@ def iphoto_date_to_datetime(
     """
     try:
         dt = datetime.datetime.fromtimestamp(date + TIME_DELTA)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         dt = datetime.datetime(1970, 1, 1)
     if tz:
         dt = dt.replace(tzinfo=ZoneInfo(tz))

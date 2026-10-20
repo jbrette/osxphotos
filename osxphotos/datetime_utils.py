@@ -80,7 +80,7 @@ def datetime_tz_to_utc(dt: datetime.datetime) -> datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
-        return dt.replace(tzinfo=dt.tzinfo).astimezone(tz=datetime.timezone.utc)
+        return dt.replace(tzinfo=dt.tzinfo).astimezone(tz=datetime.UTC)
     else:
         raise ValueError("dt does not have timezone info")
 
@@ -129,7 +129,7 @@ def datetime_naive_to_utc(dt: datetime.datetime) -> datetime.datetime:
             f"{dt} has tzinfo {dt.tzinfo} and offset {dt.tzinfo.utcoffset(dt)}"
         )
 
-    return dt.replace(tzinfo=datetime.timezone.utc)
+    return dt.replace(tzinfo=datetime.UTC)
 
 
 def datetime_naive_to_local(dt: datetime.datetime) -> datetime.datetime:
@@ -177,10 +177,10 @@ def datetime_utc_to_local(dt: datetime.datetime) -> datetime.datetime:
     if type(dt) != datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
-    if dt.tzinfo is not datetime.timezone.utc:
+    if dt.tzinfo is not datetime.UTC:
         raise ValueError(f"{dt} must be in UTC timezone: timezone = {dt.tzinfo}")
 
-    return dt.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+    return dt.replace(tzinfo=datetime.UTC).astimezone(tz=None)
 
 
 def datetime_to_new_tz(dt: datetime.datetime, offset) -> datetime.datetime:
