@@ -61,7 +61,7 @@ Limited support is also provided for exporting photos and metadata from iPhoto l
 
 This package will read Photos databases for any supported version on any supported macOS version.  E.g. you can read a database created with Photos 5.0 on MacOS 10.15 on a machine running macOS 10.12 and vice versa.
 
-Requires python >= `3.10`, <= `3.14`.
+Requires python >= `3.14`.
 
 For macOS 26.0 / Tahoe, limited testing has been done to ensure basic functionality works. Not all features of osxphotos have been tested and some features may not work. If you encounter issues, please open an issue on GitHub.
 
@@ -87,16 +87,12 @@ uv self update
 * Type the following into Terminal:
 
 ```bash
-uv tool install --python 3.13 osxphotos
+uv tool install --python 3.14 osxphotos
 ```
 
 * Now you should be able to run `osxphotos` by typing: `osxphotos`
 
-**Note**: If you encounter errors during installation on older versions of macOS, try using an older version of python, for example, on macOS 12.7, you must use python 3.11:
-
-```bash
-uv tool install osxphotos --python 3.11
-```
+**Note**: osxphotos requires python 3.14 or later. If you need to use an older version of python (for example, on older versions of macOS where python 3.14 is not available), specify that version and uv will install the newest release of osxphotos that supports it, for example: `uv tool install osxphotos --python 3.11`.
 
 Once you've installed osxphotos with `uv`, to upgrade to the latest version:
 
@@ -104,7 +100,7 @@ Once you've installed osxphotos with `uv`, to upgrade to the latest version:
 uv tool upgrade osxphotos
 ```
 
-If you want to try `osxphotos` without installing it, you can run `uv tool run --python 3.13 osxphotos` or `uvx --python 3.13 osxphotos`. On older versions of macOS, you may need to use an older version of python: `uv tool run --python 3.11 osxphotos` or `uvx --python 3.11 osxphotos`.
+If you want to try `osxphotos` without installing it, you can run `uv tool run --python 3.14 osxphotos` or `uvx --python 3.14 osxphotos`.
 
 
 ### Installation using Brew
@@ -159,16 +155,19 @@ If you want to work on osxphotos code or contribute to the project, you can inst
 >     git checkout
 >
 
-Next, install the required dependencies, and `osxphotos` itself. I recommend you create a
-[virtual environment](https://docs.python.org/3/tutorial/venv.html) before installing osxphotos.
+Next, use [uv](https://docs.astral.sh/uv/) to create a virtual environment (`.venv`) with python 3.14, the required dependencies, the development dependencies, and `osxphotos` itself installed in editable mode:
 
-    python3 -m pip install -e ".[dev]"
+    uv sync
+
+You can then run osxphotos with:
+
+    uv run osxphotos
 
 Once you've installed osxphotos via the git repository, to upgrade to the latest version:
 
     cd osxphotos
     git pull
-    python3 -m pip install -e .
+    uv sync
 
 See also the developer notes in [README_DEV.md](README_DEV.md).
 

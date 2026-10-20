@@ -384,14 +384,12 @@ if __name__ == "__main__":
 ## <a name="concurrency">Concurrency</a>
 
 OSXPhotos is not currently compatible with multiprocessing as the `PhotosDB` class cannot be pickled which required
-when sharing data between processes. Photos can be exported concurrently using separate threads, however, this is
-only compatible with Python 3.11 and later.  See [issue #999](https://github.com/RhetTbull/osxphotos/issues/999).
-The reason for this is that internally, `PhotoExporter` uses a sqlite `ExportDB` database for managing the export,
+when sharing data between processes. Photos can be exported concurrently using separate threads.  See [issue #999](https://github.com/RhetTbull/osxphotos/issues/999).
+Internally, `PhotoExporter` uses a sqlite `ExportDB` database for managing the export,
 even if you don't specify an export database. (In the case where you don't specify an export database, a temporary
-in-memory database is created and then discard.) The python implementation of sqlite3 is not fully thread safe on
-Python < 3.11.
+in-memory database is created and then discard.)
 
-For example, the following code will work on Python >= 3.11. This code is available in the `examples` directory as
+For example, the following code exports photos concurrently. This code is available in the `examples` directory as
 [concurrent_export.py](https://github.com/RhetTbull/osxphotos/blob/main/examples/concurrent_export.py).
 
 ```python

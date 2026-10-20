@@ -7,9 +7,10 @@
 #   setup.py, requirements.txt, dev_requirements.txt,
 #   pytest.ini, .isort.cfg, .bumpversion.cfg, MANIFEST.in
 #
-# Bump versions with:  bump-my-version bump [major|minor|patch]
-# Build with:          python -m build
-# Publish with:        twine upload dist/*
+# Set up dev env with: uv sync
+# Bump versions with:  uv run bump-my-version bump [major|minor|patch]
+# Build with:          uv build
+# Publish with:        uv run twine upload dist/*
 
 # ---------------------------------------------------------------------------
 # Build system
@@ -37,16 +38,14 @@ license-files = ["LICENSE"]
 authors = [
     {name = "Rhet Turnbull", email = "rturnbull+git@gmail.com"},
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: MacOS X",
     "Intended Audience :: Developers",
     "Operating System :: MacOS :: MacOS X",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -54,11 +53,6 @@ classifiers = [
 # ---------------------------------------------------------------------------
 # Runtime dependencies  (replaces requirements.txt)
 # ---------------------------------------------------------------------------
-# NOTE: pyobjc versioning uses requirements.txt split (more accurate than
-#       the original setup.py): <22.0 + python<3.12 → 9.x; otherwise → 10+
-# NOTE: "pip" is an intentional runtime dependency — osxphotos has
-#       `osxphotos install` / `osxphotos uninstall` commands that call pip
-#       programmatically at runtime.
 dependencies = [
     "beautifulsoup4",
     "bitmath>=1.3.3.1,<3.0.0",
@@ -76,32 +70,18 @@ dependencies = [
     "packaging>=21.3",
     "pathvalidate>=2.4.1,<4.0.0",
     "photoscript>=0.6.0; sys_platform == 'darwin'",
-    "pip",
     "psutil",
     "ptpython>=3.0.20,<4.0.0",
-    # macOS < Monterey (platform_release < 22.0) with python < 3.12 → pyobjc 9.x
-    # All other combinations (Monterey+, or python 3.12+ on older macOS) → pyobjc 10+
-    # See: https://github.com/RhetTbull/osxphotos/issues/1324
-    "pyobjc-core>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-core>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-AppleScriptKit>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-AppleScriptKit>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-AppleScriptObjC>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-AppleScriptObjC>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-AVFoundation>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-AVFoundation>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-Cocoa>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-Cocoa>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-CoreServices>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-CoreServices>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-Metal>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-Metal>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-Photos>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-Photos>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-Quartz>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-Quartz>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
-    "pyobjc-framework-Vision>=9.0,<10.0; sys_platform == 'darwin' and platform_release < '22.0' and python_version < '3.12'",
-    "pyobjc-framework-Vision>=10.0; sys_platform == 'darwin' and (platform_release >= '22.0' or python_version >= '3.12')",
+    "pyobjc-core>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-AppleScriptKit>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-AppleScriptObjC>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-AVFoundation>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-CoreServices>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-Metal>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-Photos>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-Quartz>=10.0; sys_platform == 'darwin'",
+    "pyobjc-framework-Vision>=10.0; sys_platform == 'darwin'",
     "pytimeparse2>=1.4.0,<2.0.0",
     "PyYAML>=6.0.0,<7.0.0",
     "requests>=2.27.1,<3.0.0",
@@ -114,19 +94,20 @@ dependencies = [
     "toml>=0.10.2,<0.12.0",
     "tzdata",
     "utitools>=0.3.0",
+    # `osxphotos install` / `uninstall` / `update` manage packages with uv (not pip)
+    "uv>=0.9.0",
     "whenever>=0.10.0,<0.11.0",
     "wrapt>=2.0.0,<3.0.0",
     "wurlitzer>=3.0.2,<4.0.0",
-    "xdg-base-dirs>=6.0.0; python_version >= '3.10'",
+    "xdg-base-dirs>=6.0.0",
 ]
 
 # ---------------------------------------------------------------------------
-# Optional / dev dependencies  (replaces dev_requirements.txt)
-# Install with:  pip install -e ".[dev]"
+# Dev dependencies  (replaces dev_requirements.txt)
+# Installed by default with:  uv sync
 # ---------------------------------------------------------------------------
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "build",
     "bump-my-version",          # successor to bump2version; reads [tool.bumpversion]
     "cogapp>=3.3.0,<4.0.0",
     "furo",
@@ -258,7 +239,7 @@ pythonpath = ["."]
 [tool.ruff]
 # Docs: https://docs.astral.sh/ruff/
 # Rules: https://docs.astral.sh/ruff/rules/
-target-version = "py310"
+target-version = "py314"
 # 88 is the width the codebase was formatted to with black. The formatter
 # never wraps comments, docstrings, or strings, and line length is not linted
 # (E501 is not selected), so long help strings and comments are left as-is.
@@ -288,7 +269,6 @@ lint.ignore = [
     "RUF059", # unused unpacked variable: same as F841
     "SIM102", # collapsible-if: nested ifs are often clearer
     "SIM117", # combine nested with statements: nested is often clearer (e.g. pytest.raises)
-    "PYI034", # return typing.Self from __iadd__ etc.: Self requires Python 3.11+
     "TRY002", # raise vanilla Exception: changing the type could break callers' except clauses
     "TRY004", # TypeError for type checks: changing ValueError would break callers' except clauses
 ]

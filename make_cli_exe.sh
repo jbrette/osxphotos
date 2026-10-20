@@ -2,8 +2,7 @@
 
 # This will build an stand-alone executable called 'osxphotos' in your ./dist directory
 # using pyinstaller
-# If you need to install pyinstaller:
-# python3 -m pip install --upgrade pyinstaller
+# pyinstaller is installed with the dev dependency group (uv sync)
 
 set -e
-pyinstaller osxphotos.spec
+uv run pyinstaller osxphotos.spec

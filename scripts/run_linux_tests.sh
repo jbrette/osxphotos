@@ -11,17 +11,17 @@
 # NOTE: in above, replace "$HOMEBREW_PREFIX" with the actual path to your Homebrew installation, for example '/opt/homebrew' on Apple Silicon
 #
 # Usage: ./run_linux_tests.sh [--python VERSION] [--build] [PYTEST_ARGS...]
-# Example: ./run_linux_tests.sh --python 3.13 -vv -k export
+# Example: ./run_linux_tests.sh --python 3.14 -vv -k export
 #
 # Use --build to rebuild the custom Docker image with dependencies
-# First time setup: ./run_linux_tests.sh --python 3.13 --build
+# First time setup: ./run_linux_tests.sh --python 3.14 --build
 # If you need to rebuild the image, use the --build flag
 # Once built, you can run tests with ./run_linux_tests.sh
 # You should only need to rebuild the image if you change the Dockerfile or the dependencies in pyproject.toml
 #
 
 # Default arguments
-PYTHON_VERSION="3.13"
+PYTHON_VERSION="3.14"
 PYTEST_ARGS=""
 BUILD_IMAGE=false
 
@@ -80,7 +80,7 @@ docker run --rm -it \
   "$IMAGE_NAME" \
   bash -c "
     # Run tests
-    python -m pytest ${PYTEST_ARGS}
+    uv run --no-sync python -m pytest ${PYTEST_ARGS}
   "
 
 # Only stop colima if we started it

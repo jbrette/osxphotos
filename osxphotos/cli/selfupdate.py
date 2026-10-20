@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import runpy
 import ssl
 import subprocess
 import sys
@@ -12,6 +11,7 @@ import urllib.request
 from collections.abc import Iterable
 
 from packaging.version import parse as version_parse
+from uv import find_uv_bin
 
 VERSION_INFO_URL = "https://pypi.org/pypi/{}/json"
 
@@ -21,36 +21,32 @@ def pyapp() -> bool:
     return os.environ.get("PYAPP") == "1"
 
 
+def uv_pip(args: Iterable[str]) -> int:
+    """Run a `uv pip` subcommand against the Python environment osxphotos is running in.
+
+    Args:
+        args: The `uv pip` subcommand and its arguments, e.g. ["install", "requests"].
+
+    Returns: The exit code of the uv command.
+    """
+    command = [find_uv_bin(), "pip", *args, "--python", sys.executable]
+    return subprocess.run(command, check=False).returncode
+
+
 def install(packages: Iterable[str], upgrade: bool = False) -> int:
-    """Install Python packages into the same environment as the current script using the pip module.
+    """Install Python packages into the same environment as the current script using uv.
 
     Args:
         packages: The names of the packages to install.
         upgrade: Whether to upgrade the packages if they are already installed.
 
-    Returns: The exit code of the pip command.
+    Returns: The exit code of the uv command.
     """
-    args = ["pip", "--disable-pip-version-check", "--verbose", "install"]
+    args = ["install"]
     if upgrade:
         args += ["--upgrade"]
     args += list(packages)
-    sys.argv = args
-
-    # monkey patch sys.exit to catch the exit code when running pip
-    # otherwise, pip.__main__ will call sys.exit and stop execution
-    original_exit = sys.exit
-    exit_code = None
-
-    def _exit(code):
-        nonlocal exit_code
-        exit_code = code
-
-    sys.exit = _exit
-    try:
-        runpy.run_module("pip", run_name="__main__")
-    finally:
-        sys.exit = original_exit
-    return exit_code
+    return uv_pip(args)
 
 
 def update(package: str, version: str, pyapp_binary: str) -> None:

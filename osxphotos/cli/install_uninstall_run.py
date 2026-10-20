@@ -7,11 +7,12 @@ import importlib.util
 import os
 import sys
 import zipfile
-from runpy import run_module, run_path
+from runpy import run_path
 
 import click
 
 from .param_types import PathOrURL
+from .selfupdate import uv_pip
 
 __all__ = ["install", "run", "uninstall", "validate_python_file"]
 
@@ -79,18 +80,17 @@ class RunCommand(click.Command):
 @click.argument("packages", nargs=-1, required=False)
 def install(packages, upgrade, requirements_file):
     """Install Python packages into the same environment as osxphotos"""
-    args = ["pip", "--disable-pip-version-check", "--verbose", "install"]
-    if upgrade:
-        args += ["--upgrade"]
-    if requirements_file:
-        args += ["-r", requirements_file]
     if not requirements_file and not packages:
         raise click.UsageError(
             "Must specify either -r or one or more packages to install"
         )
+    args = ["install"]
+    if upgrade:
+        args += ["--upgrade"]
+    if requirements_file:
+        args += ["-r", requirements_file]
     args += list(packages)
-    sys.argv = args
-    run_module("pip", run_name="__main__")
+    sys.exit(uv_pip(args))
 
 
 @click.command()
@@ -98,8 +98,9 @@ def install(packages, upgrade, requirements_file):
 @click.option("-y", "--yes", is_flag=True, help="Don't ask for confirmation.")
 def uninstall(packages, yes):
     """Uninstall Python packages from the osxphotos environment"""
-    sys.argv = ["pip", "uninstall"] + list(packages) + (["-y"] if yes else [])
-    run_module("pip", run_name="__main__")
+    if not yes:
+        click.confirm(f"Uninstall {', '.join(packages)}?", abort=True)
+    sys.exit(uv_pip(["uninstall", *packages]))
 
 
 @click.command(

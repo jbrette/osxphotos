@@ -4,19 +4,21 @@ These are notes for developers working on osxphotos. They're mostly to help me r
 
 ## Installing osxphotos
 
+osxphotos requires python 3.14 or later and uses [uv](https://docs.astral.sh/uv/) to manage the development environment.
+
 - Clone the repo: `git clone git@github.com:RhetTbull/osxphotos.git`
-- Create a virtual environment and activate it: `python3 -m venv venv` then `source venv/bin/activate`. I use [pyenv](https://github.com/pyenv/pyenv) with [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) to manage my virtual environments. Alternatively, use [uv](https://github.com/astral-sh/uv): `uv venv && source .venv/bin/activate`.
-- Install osxphotos plus all development dependencies in one step:
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/), e.g. `brew install uv`
+- Create the virtual environment (`.venv`) with python 3.14, osxphotos (editable) and all development dependencies in one step:
 
 ```bash
-uv pip install -e ".[dev]"
+uv sync
 ```
 
-The `[dev]` extra installs everything that was previously in `dev_requirements.txt` (pytest, ruff, sphinx, bump-my-version, etc.) as well as the package itself in editable mode. There is no longer a separate `requirements.txt` or `dev_requirements.txt` — `pyproject.toml` is the single source of truth.
+The `dev` dependency group in `pyproject.toml` holds everything that was previously in `dev_requirements.txt` (pytest, ruff, sphinx, bump-my-version, etc.) and is installed by `uv sync` by default. Exact versions are pinned in `uv.lock`. Run tools in the environment with `uv run`, e.g. `uv run osxphotos --help`. To add or change a dependency use `uv add PACKAGE` (or `uv add --dev PACKAGE` for a development tool), which updates both `pyproject.toml` and `uv.lock`.
 
 ## Running tests
 
-- Run all tests: `pytest`
+- Run all tests: `uv run pytest`
 
 See the [test README.md](tests/README.md) for more information on running tests.
 
@@ -30,8 +32,8 @@ If you want to contribute to osxphotos, please open a pull request. Here's how t
 - Create a branch for your changes: `git checkout -b my_branch`
 - Make your changes
 - Add tests for your changes
-- Run the tests: `pytest`
-- Lint and format the code: `ruff check --fix` then `ruff format` (ruff also sorts imports; `ruff check` must pass cleanly)
+- Run the tests: `uv run pytest`
+- Lint and format the code: `uv run ruff check --fix` then `uv run ruff format` (ruff also sorts imports; `ruff check` must pass cleanly)
 - Update the README.md and other files as needed
 - Add your changes using `git add`
 - Commit your changes: `git commit -m "My changes description"`
@@ -51,7 +53,7 @@ For release, follow the following steps:
 0. Create a new branch for the release: `git checkout -b release_v0.75.10`
 1. Bump the version using `bump-my-version` (replaces `bump2version`):
    ```bash
-   bump-my-version bump [major|minor|patch] --verbose
+   uv run bump-my-version bump [major|minor|patch] --verbose
    ```
    This updates `osxphotos/_version.py`, `applecrate.toml`, and the `current_version` in `pyproject.toml` in one step.
 2. Run the `build.sh` script
@@ -59,7 +61,7 @@ For release, follow the following steps:
 4. Merge the changes into the main branch
 5. Checkout the main branch: `git checkout main`
 6. Pull the changes to your local repository: `git pull`
-7. Upload to PyPI: `twine upload dist/osxphotos*.whl dist/*.tar.gz`
+7. Upload to PyPI: `uv run twine upload dist/osxphotos*.whl dist/*.tar.gz`
 8. Create a new release on GitHub: `gh release create "v0.75.10" dist/*`
 9. Pull the changes to your local repository: `git pull`
 
@@ -73,7 +75,7 @@ The project has been fully migrated from `setup.py` to `pyproject.toml`. The fol
 |---|---|
 | `setup.py` | `[project]` section in `pyproject.toml` |
 | `requirements.txt` | `[project].dependencies` in `pyproject.toml` |
-| `dev_requirements.txt` | `[project.optional-dependencies].dev` in `pyproject.toml` |
+| `dev_requirements.txt` | `[dependency-groups].dev` in `pyproject.toml` |
 | `pytest.ini` | `[tool.pytest.ini_options]` in `pyproject.toml` |
 | `.isort.cfg` | `[tool.isort]` in `pyproject.toml` |
 | `.bumpversion.cfg` | `[tool.bumpversion]` in `pyproject.toml` |

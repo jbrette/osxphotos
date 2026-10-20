@@ -2,12 +2,12 @@
 
 I'm still trying to learn sphinx and come up with a workflow for building docs.  Right now it's pretty kludgy.
 
-- `python3 -m pip install -e ".[dev]"`
+- `uv sync`
 - Download and install [MacTeX](https://tug.org/mactex/)
 - Add `/Library/TeX/texbin` to your `$PATH`
 - `cd docsrc`
-- `make html`
-- `make latexpdf`
+- `uv run make html`
+- `uv run make latexpdf`
 - `cp _build/latex/osxphotos.pdf .`
 
 The `build.sh` script in the main repo directory will build the documents for you and is the preferred way to build the docs.
