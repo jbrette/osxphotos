@@ -1,6 +1,5 @@
 # Test special photo types
 
-import pytest
 
 PHOTOS_DB_CLOUD = "./tests/Test-Cloud-10.16.0.photoslibrary/database/photos.db"
 

@@ -10,17 +10,13 @@ import shutil
 import sqlite3
 import tempfile
 import time
-import zoneinfo
-from collections import Counter, namedtuple
+import zoneinfo  # noqa: F401  (needed by eval(repr(photo)))
+from collections import namedtuple
 
 import pytest
 
 import osxphotos
-from osxphotos import PhotosDB
-from osxphotos._constants import _UNKNOWN_PERSON
 from osxphotos.adjustmentsinfo import AdjustmentsInfo
-from osxphotos.exifwriter import ExifWriter
-from osxphotos.platform import get_macos_version, is_macos
 
 PHOTOS_DB = "tests/Test-13.0.0.photoslibrary/database/photos.db"
 PHOTOS_DB_PATH = "tests/Test-13.0.0.photoslibrary/database/Photos.sqlite"
@@ -1119,7 +1115,6 @@ def test_date_invalid():
 
 def test_date_modified_invalid(photosdb):
     """Test date modified is invalid"""
-    from datetime import datetime, timedelta, timezone
 
     # UUID_DICT["date_invalid"] has an invalid modified date that's
     # been manually adjusted in the database

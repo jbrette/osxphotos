@@ -9,3 +9,10 @@ from .photosdb_utils import (
     get_model_version,
     get_photos_version_from_model,
 )
+
+__all__ = [
+    "PhotosDB",
+    "get_db_version",
+    "get_model_version",
+    "get_photos_version_from_model",
+]

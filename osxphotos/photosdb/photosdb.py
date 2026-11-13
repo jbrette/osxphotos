@@ -9,15 +9,11 @@ import logging
 import os
 import os.path
 import pathlib
-import platform
 import sqlite3
-import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any
 from unicodedata import normalize
-
-from rich import print
 
 from osxphotos.platform import check_and_warn_macos_version
 
@@ -46,7 +42,6 @@ from .._constants import (
     BURST_PICK_TYPE_NONE,
     BURST_SELECTED,
 )
-from .._version import __version__
 from ..albuminfo import AlbumInfo, FolderInfo, ImportInfo, ProjectInfo
 from ..datetime_utils import datetime_has_tz, datetime_naive_to_local
 from ..fileutil import FileUtil
@@ -59,7 +54,7 @@ from ..platform import is_macos
 from ..rich_utils import add_rich_markup_tag
 from ..sqlite_utils import sqlite_columns, sqlite_db_is_locked, sqlite_open_ro
 from ..unicode import normalize_unicode
-from ..utils import _check_file_exists, get_last_library_path, noop
+from ..utils import get_last_library_path, noop
 from .photosdb_utils import (
     get_db_version,
     get_model_version,
@@ -67,7 +62,7 @@ from .photosdb_utils import (
 )
 
 if is_macos:
-    import photoscript
+    pass
 
 logger = logging.getLogger("osxphotos")
 

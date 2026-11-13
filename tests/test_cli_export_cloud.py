@@ -2,7 +2,6 @@
 
 import os
 
-import pytest
 from click.testing import CliRunner
 
 UUID_INCLOUD = "F73D96B2-24A6-40B2-B37C-5F82CF3F79E1"  # IMG_0008.MOV

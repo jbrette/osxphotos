@@ -13,7 +13,6 @@ import pathlib
 import re
 import shutil
 import sqlite3
-import sys
 import unicodedata
 from tempfile import TemporaryDirectory
 from zoneinfo import ZoneInfo
@@ -23,8 +22,8 @@ from click.testing import CliRunner
 from pytest import MonkeyPatch, approx
 
 from osxphotos import PhotosDB, QueryOptions
-from osxphotos._constants import OSXPHOTOS_EXPORT_DB, UUID_PATTERN
-from osxphotos.datetime_utils import datetime_remove_tz, get_local_tz
+from osxphotos._constants import UUID_PATTERN
+from osxphotos.datetime_utils import datetime_remove_tz
 from osxphotos.exiftool import get_exiftool_path
 from osxphotos.platform import is_macos
 

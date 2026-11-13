@@ -1,10 +1,8 @@
 """Test dbversion command"""
 
-import pytest
 from click.testing import CliRunner
 
 from osxphotos.cli import dbversion
-from osxphotos.photosdb import PhotosDB
 
 from .test_cli import CLI_PHOTOS_DB
 

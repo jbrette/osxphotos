@@ -2,8 +2,6 @@
 
 from dataclasses import asdict, dataclass
 
-from ._constants import _PHOTOS_4_VERSION
-
 __all__ = ["ScoreInfo"]
 
 

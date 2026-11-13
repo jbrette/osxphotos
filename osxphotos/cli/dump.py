@@ -10,11 +10,9 @@ from osxphotos.cli.click_rich_echo import (
 )
 from osxphotos.cli.template_utils import suggest_template_fields
 from osxphotos.iphoto import is_iphoto_library
-from osxphotos.photoquery import QueryOptions
 from osxphotos.phototemplate import RenderOptions
 
 from .cli_params import (
-    DB_ARGUMENT,
     DB_OPTION,
     DELETED_OPTIONS,
     FIELD_OPTION,

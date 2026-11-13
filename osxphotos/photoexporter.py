@@ -14,10 +14,9 @@ import subprocess
 import typing as t
 from enum import Enum
 
-from ._version import __version__
 from .dictdiff import dictdiff
 from .exif_orientation import fix_exif_orientation
-from .exiftool import ExifTool, exiftool_can_write
+from .exiftool import exiftool_can_write
 from .exifwriter import ExifWriter, exif_options_from_options
 from .export_db import ExportDBTemp
 from .exportoptions import ExportOptions, ExportResults

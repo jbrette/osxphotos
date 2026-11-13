@@ -9,7 +9,6 @@ import pytest
 
 import osxphotos
 from osxphotos.exiftool import get_exiftool_path
-from osxphotos.export_db import ExportDBInMemory
 from osxphotos.photoinfo import PhotoInfoNone
 from osxphotos.phototemplate import (
     PUNCTUATION,
@@ -988,7 +987,6 @@ def test_subst_expand_inplace_3(photosdb):
 
 
 def test_comment(photosdb_comments):
-    import osxphotos
 
     for uuid in COMMENT_UUID_DICT:
         photo = photosdb_comments.get_photo(uuid)
@@ -1057,7 +1055,6 @@ def test_partial_match(photosdb_cloud):
 
 def test_expand_in_place_with_delim(photosdb):
     """Test that substitutions are correct when {DELIM+FIELD} format used"""
-    import osxphotos
 
     photo = photosdb.get_photo(UUID_MULTI_KEYWORDS)
 

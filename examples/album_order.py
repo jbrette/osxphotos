@@ -21,7 +21,6 @@ You may pass optional arguments to adjust the formatting in format:
     The default spacer is " - " and the default format is "d" (no leading zero or padding)
 """
 
-import pathlib
 from functools import cache
 
 from osxphotos import AlbumInfo, FolderInfo, PhotoInfo, PhotosDB

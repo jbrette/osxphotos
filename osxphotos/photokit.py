@@ -30,7 +30,6 @@ from .platform import get_macos_version
 assert sys.platform == "darwin"
 
 import AVFoundation
-import CoreServices
 import Foundation
 import objc
 import Photos

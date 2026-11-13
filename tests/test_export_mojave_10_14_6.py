@@ -4,7 +4,6 @@ import pathlib
 import pytest
 
 import osxphotos
-from osxphotos._constants import _UNKNOWN_PERSON
 from osxphotos.exportoptions import ExportOptions
 from osxphotos.sidecars import exiftool_json_sidecar, xmp_sidecar
 
@@ -123,7 +122,6 @@ def test_export_4(photosdb):
     # test user supplied file already exists and test increment=True (default)
     import os
     import os.path
-    import pathlib
     import tempfile
     import time
 
@@ -171,7 +169,6 @@ def test_export_6(photosdb):
     # and overwrite = True
     import os
     import os.path
-    import pathlib
     import tempfile
     import time
 
@@ -214,8 +211,6 @@ def test_export_7(photosdb):
 
 def test_export_8(photosdb):
     # try to export missing file
-    import os
-    import os.path
     import tempfile
 
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")

@@ -1,13 +1,11 @@
 """Test export for 10.15.7"""
 
-import datetime
 import json
 import os
 import os.path
 import pathlib
 import tempfile
 import time
-import zoneinfo
 
 import pytest
 

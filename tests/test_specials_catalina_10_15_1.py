@@ -1,6 +1,5 @@
 # Test cloud photos
 
-import pytest
 
 PHOTOS_DB_CLOUD = "./tests/Test-Cloud-10.15.1.photoslibrary/database/photos.db"
 

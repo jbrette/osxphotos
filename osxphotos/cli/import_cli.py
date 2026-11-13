@@ -18,8 +18,6 @@ import sys
 import tempfile
 from collections.abc import Callable, Iterable
 from contextlib import suppress
-from functools import cached_property
-from os import PathLike
 from textwrap import dedent
 from typing import TYPE_CHECKING
 
@@ -36,7 +34,7 @@ from osxphotos.photodates import (
     update_photo_time_for_new_timezone,
 )
 from osxphotos.photoinfo_protocol import PhotoInfoProtocol
-from osxphotos.phototz import PhotoTimeZone, PhotoTimeZoneUpdater
+from osxphotos.phototz import PhotoTimeZoneUpdater
 from osxphotos.platform import assert_macos
 from osxphotos.strpdatetime_parts import fmt_has_date_time_codes
 
@@ -58,7 +56,6 @@ from photoscript import Photo, PhotosLibrary
 from osxphotos import sqlite3_datetime
 from osxphotos._constants import (
     DEFAULT_EDITED_SUFFIX,
-    OSXPHOTOS_EXPORT_DB,
     SQLITE_CHECK_SAME_THREAD,
 )
 from osxphotos._version import __version__

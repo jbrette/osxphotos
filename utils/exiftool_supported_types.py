@@ -1,7 +1,6 @@
 """Read the "Supported File Types" table from exiftool.org and build a json file from the table"""
 
 import json
-import sys
 
 import requests
 from bs4 import BeautifulSoup

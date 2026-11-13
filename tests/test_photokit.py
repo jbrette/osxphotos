@@ -13,7 +13,6 @@ if is_macos:
         PHOTOS_VERSION_CURRENT,
         PHOTOS_VERSION_ORIGINAL,
         PHOTOS_VERSION_UNADJUSTED,
-        LivePhotoAsset,
         PhotoAsset,
         PhotoLibrary,
         VideoAsset,

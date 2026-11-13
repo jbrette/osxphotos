@@ -6,13 +6,12 @@ import pathlib
 import sqlite3
 import tempfile
 import time
-import zoneinfo
+import zoneinfo  # noqa: F401  (needed by eval(repr(photo)))
 from collections import namedtuple
 
 import pytest
 
 import osxphotos
-from osxphotos._constants import _UNKNOWN_PERSON
 from osxphotos.adjustmentsinfo import AdjustmentsInfo
 
 PHOTOS_DB = "tests/Test-Ventura-dev_preview-13.0.photoslibrary/database/photos.db"

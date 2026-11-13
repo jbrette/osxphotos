@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-import os
 import re
 from types import SimpleNamespace
 from typing import Any
@@ -15,7 +14,6 @@ from osxmetadata import OSXMetaData
 import osxphotos
 
 from ._constants import TEXT_DETECTION_CONFIDENCE_THRESHOLD
-from .exiftool import ExifToolCaching, get_exiftool_path
 from .phototemplate import PhotoTemplate, RenderOptions
 from .text_detection import detect_text
 

@@ -8,7 +8,7 @@ import pytest
 from osxphotos.platform import is_macos
 
 if is_macos:
-    from osxphotos.fingerprintquery import FingerprintQuery, fingerprint
+    from osxphotos.fingerprintquery import FingerprintQuery
 else:
     pytest.skip(allow_module_level=True)
 

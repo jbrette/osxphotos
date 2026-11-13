@@ -11,7 +11,6 @@ from rich import print
 
 import osxphotos
 from osxphotos._constants import OSXPHOTOS_EXPORT_DB, UUID_PATTERN
-from osxphotos._version import __version__
 from osxphotos.export_db import (
     MAX_EXPORT_RESULTS_DATA_ROWS,
     OSXPHOTOS_EXPORTDB_VERSION,
@@ -41,15 +40,12 @@ from .click_rich_echo import (
     rich_click_echo,
     rich_echo,
     rich_echo_error,
-    set_rich_console,
-    set_rich_theme,
 )
-from .color_themes import get_theme
 from .common import get_photos_db
 from .export import render_and_validate_report
 from .param_types import TemplateString
 from .report_writer import export_report_writer_factory
-from .verbose import get_verbose_console, verbose_print
+from .verbose import verbose_print
 
 
 @click.command(name="exportdb")

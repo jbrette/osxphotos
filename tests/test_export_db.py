@@ -14,7 +14,6 @@ from osxphotos.export_db import (
     ExportDB,
     ExportDBInMemory,
     ExportDBTemp,
-    ExportRecord,
 )
 from osxphotos.export_db_utils import export_db_get_version
 

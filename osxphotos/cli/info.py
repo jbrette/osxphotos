@@ -2,18 +2,14 @@
 
 import datetime
 import json
-import sqlite3
-import sys
 from typing import Any
 
 import click
-import yaml
 
 import osxphotos
 from osxphotos import PhotosDB
 from osxphotos._constants import (
     _DB_TABLE_NAMES,
-    _PHOTOS_4_VERSION,
     _UNKNOWN_PERSON,
     BURST_KEY,
     BURST_PICK_TYPE_NONE,
@@ -23,7 +19,7 @@ from osxphotos.cli.click_rich_echo import rich_echo as echo
 from osxphotos.iphoto import iPhotoDB, is_iphoto_library
 from osxphotos.photoquery import QueryOptions
 
-from .cli_params import DB_ARGUMENT, DB_OPTION, JSON_OPTION
+from .cli_params import DB_OPTION, JSON_OPTION
 from .common import get_photos_db
 from .list import _list_libraries
 

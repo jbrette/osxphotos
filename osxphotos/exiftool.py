@@ -19,7 +19,6 @@ import re
 import shutil
 import subprocess
 import threading
-import time
 from functools import lru_cache  # pylint: disable=syntax-error
 from typing import Any, ClassVar
 

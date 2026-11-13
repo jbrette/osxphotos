@@ -3,7 +3,6 @@
 import inspect
 import re
 import sys
-import typing as t
 
 import click
 from rich.console import Console
@@ -11,7 +10,6 @@ from rich.markdown import Markdown
 
 from osxphotos._constants import (
     EXTENDED_ATTRIBUTE_NAMES,
-    EXTENDED_ATTRIBUTE_NAMES_QUOTED,
     OSXPHOTOS_EXPORT_DB,
     POST_COMMAND_CATEGORIES,
 )

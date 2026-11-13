@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .exiftool import ExifToolCaching, get_exiftool_path
+from .exiftool import get_exiftool_path
 from .photoinfo_protocol import PhotoInfoMixin
 from .phototemplate import PhotoTemplate, RenderOptions
 from .rehydrate import rehydrate_class

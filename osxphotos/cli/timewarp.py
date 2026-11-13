@@ -7,10 +7,8 @@ import sys
 from collections.abc import Callable
 from functools import partial
 from textwrap import dedent
-from typing import cast
 
 import click
-from rich.console import Console
 
 from osxphotos._constants import APP_NAME
 from osxphotos._version import __version__
@@ -25,7 +23,6 @@ from osxphotos.photodates import (
     reset_photo_date_time_tz,
     set_photo_date_added,
     set_photo_date_from_filename,
-    update_datetime_for_new_timezone,
     update_photo_date_time,
     update_photo_from_function,
     update_photo_time_for_new_timezone,
@@ -57,22 +54,19 @@ from .cli_params import (
 )
 from .click_rich_echo import rich_click_echo as echo
 from .click_rich_echo import rich_echo_error as echo_error
-from .color_themes import get_theme
 from .common import OSXPHOTOS_CRASH_LOG
-from .darkmode import is_dark_mode
 from .help import HELP_WIDTH, filter_help_text_for_sphinx, is_sphinx_running, rich_text
 from .param_types import (
     DateOffset,
     DateTimeISO8601,
     FunctionCall,
-    PathOrStdin,
     StrpDateTimePattern,
     TimeOffset,
     TimeString,
     TimezoneOffset,
 )
 from .rich_progress import rich_progress
-from .verbose import get_verbose_console, verbose_print
+from .verbose import get_verbose_console
 
 # format for pretty printing date/times
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S%z"

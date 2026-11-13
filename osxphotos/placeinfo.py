@@ -8,10 +8,8 @@ for additional documentation on reverse geolocation data
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections import namedtuple  # pylint: disable=syntax-error
 
-import yaml
 from bpylist2 import archiver
 
 from .unicode import normalize_unicode

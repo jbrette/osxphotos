@@ -20,7 +20,6 @@ from osxphotos.photoscript_utils import (
 
 from .cli_commands import echo, echo_error
 from .cli_params import DB_OPTION
-from .click_rich_echo import set_rich_theme
 
 
 @click.command(name="show")

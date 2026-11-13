@@ -2,8 +2,6 @@
 
 import pathlib
 
-import pytest
-
 
 def _clear_cache(mod):
     # ensure cache does not leak between tests

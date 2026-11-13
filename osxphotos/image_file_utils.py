@@ -7,7 +7,6 @@ import os
 import pathlib
 import plistlib
 import re
-import subprocess
 from contextlib import suppress
 from functools import cache
 from typing import Any
@@ -29,8 +28,6 @@ if is_macos:
     except ImportError:
         makelive = None
 
-    import objc
-    from Foundation import NSURL, NSURLTypeIdentifierKey
 
 logger = logging.getLogger("osxphotos")
 

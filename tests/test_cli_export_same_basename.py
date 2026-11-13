@@ -1,12 +1,10 @@
 """Test export of photos with same basename (see #2045, #2110)"""
 
-import glob
 import json
 import os
 import pathlib
 from typing import Any
 
-import pytest
 from click.testing import CliRunner
 
 from osxphotos.cli import export

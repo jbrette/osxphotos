@@ -33,9 +33,6 @@ from osxphotos import tempdir
 from osxphotos.platform import get_macos_version, is_macos
 from osxphotos.unicode import normalize_fs_path
 
-if TYPE_CHECKING:
-    from osxphotos.photoinfo import PhotoInfo
-
 T = TypeVar("T", bound=str | pathlib.Path)
 
 logger = logging.getLogger("osxphotos")

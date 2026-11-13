@@ -10,8 +10,7 @@ Represents a single Folder in the Photos library and provides access to the fold
 PhotosDB.folders() returns a list of FolderInfo objects
 """
 
-from datetime import datetime, timedelta, timezone
-from functools import cached_property
+from datetime import datetime
 
 from ._constants import (
     _PHOTOS_4_ALBUM_KIND,

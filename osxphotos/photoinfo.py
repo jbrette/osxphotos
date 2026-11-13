@@ -15,7 +15,6 @@ import os.path
 import pathlib
 import plistlib
 import re
-from datetime import timedelta, timezone
 from functools import cached_property
 from types import SimpleNamespace
 from typing import Any
@@ -35,7 +34,6 @@ from ._constants import (
     _PHOTOS_4_ROOT_FOLDER,
     _PHOTOS_4_VERSION,
     _PHOTOS_5_ALBUM_KIND,
-    _PHOTOS_5_IMPORT_SESSION_ALBUM_KIND,
     _PHOTOS_5_PROJECT_ALBUM_KIND,
     _PHOTOS_5_SHARED_ALBUM_KIND,
     _PHOTOS_5_SHARED_DERIVATIVE_PATH,
@@ -45,7 +43,6 @@ from ._constants import (
     _PHOTOS_8_SHARED_PHOTO_PATH,
     BURST_DEFAULT_PICK,
     BURST_KEY,
-    BURST_NOT_SELECTED,
     BURST_SELECTED,
     SIDECAR_EXIFTOOL,
     SIDECAR_JSON,

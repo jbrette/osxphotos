@@ -2,7 +2,6 @@
 
 import datetime
 import pathlib
-from io import StringIO
 
 import pytest
 import toml

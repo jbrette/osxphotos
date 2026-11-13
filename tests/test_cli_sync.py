@@ -10,7 +10,6 @@ import time
 import pytest
 from click.testing import CliRunner
 
-import osxphotos
 from osxphotos.platform import is_macos
 
 if is_macos:

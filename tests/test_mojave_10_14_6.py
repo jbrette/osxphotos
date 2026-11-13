@@ -1,7 +1,7 @@
 """Test basic methods for Mojave 10.14.6"""
 
 import datetime
-import zoneinfo
+import zoneinfo  # noqa: F401  (needed by eval(repr(photo)))
 from collections import namedtuple
 
 import pytest
@@ -439,7 +439,6 @@ def test_path_edited1(photosdb):
 
 def test_path_derivatives(photosdb):
     # test path_derivatives (not currently implemented for Photos <= 4)
-    import os.path
 
     photos = photosdb.photos(uuid=[UUID_DICT["has_adjustments"]])
     p = photos[0]
@@ -544,7 +543,6 @@ def test_photosdb_repr():
 
 
 def test_photosinfo_repr():
-    import datetime  # needed for eval to work
 
     import osxphotos
 
@@ -681,7 +679,6 @@ def test_is_reference(photosdb):
 
 def test_adjustments(photosdb):
     """test adjustments/AdjustmentsInfo (not implemented for 10.14)"""
-    from osxphotos.adjustmentsinfo import AdjustmentsInfo
 
     photo = photosdb.get_photo(UUID_DICT["has_adjustments"])
     assert photo.adjustments is None

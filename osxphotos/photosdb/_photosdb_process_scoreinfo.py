@@ -2,11 +2,8 @@
 ref: https://simonwillison.net/2020/May/21/dogsheep-photos/
 """
 
-import logging
-
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_4_VERSION
 from ..sqlite_utils import sqlite_open_ro
-from .photosdb_utils import get_db_version
 
 """
     This module should be imported in the class defintion of PhotosDB in photosdb.py

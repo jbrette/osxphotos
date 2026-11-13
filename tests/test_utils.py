@@ -3,10 +3,6 @@
 import pathlib
 import tempfile
 
-import pytest
-
-import osxphotos
-
 UTI_DICT = {"public.jpeg": "jpeg", "com.canon.cr2-raw-image": "cr2"}
 
 from osxphotos.utils import (

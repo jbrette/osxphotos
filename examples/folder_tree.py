@@ -9,7 +9,6 @@ osxphotos run https://raw.githubusercontent.com/RhetTbull/osxphotos/refs/heads/m
 """
 
 import sys
-from pathlib import Path
 
 import osxphotos
 

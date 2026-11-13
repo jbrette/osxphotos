@@ -1,5 +1,3 @@
-import pytest
-
 PHOTOS_DB = "./tests/Test-Movie-4_0.photoslibrary/database/photos.db"
 PHOTOS_DB_PATH = "/Test-Movie-4_0.photoslibrary/database/photos.db"
 PHOTOS_LIBRARY_PATH = "/Test-Movie-4_0.photoslibrary"
@@ -33,7 +31,6 @@ def test_db_version():
 
 
 def test_keywords():
-    import collections
 
     import osxphotos
 

@@ -1,7 +1,5 @@
 """Test PlaceInfo"""
 
-import pytest
-
 PHOTOS_DB = "./tests/Test-10.14.6.photoslibrary/database/photos.db"
 
 UUID_DICT = {"place_uk": "3Jn73XpSQQCluzRBMWRsMA", "no_place": "15uNd7%8RguTEgNPKHfTWw"}

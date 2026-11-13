@@ -12,11 +12,6 @@ from contextlib import contextmanager
 
 import pytest
 
-from osxphotos.datetime_utils import (
-    datetime_naive_to_local,
-    datetime_remove_tz,
-    get_local_tz,
-)
 from osxphotos.platform import is_macos
 
 if is_macos:
@@ -24,7 +19,6 @@ if is_macos:
     from applescript import AppleScript
     from photoscript.utils import ditto
 
-    from .test_catalina_10_15_7 import UUID_DICT_LOCAL
 
 from osxphotos.exiftool import _ExifToolProc
 

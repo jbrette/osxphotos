@@ -4075,7 +4075,6 @@ def photosdb4():
 @pytest.mark.parametrize("uuid_dict", UUID_LIST_5)
 def test_faceinfo_v5(photosdb5, uuid_dict):
     """Test FaceInfo object"""
-    import json
 
     for uuid in uuid_dict:
         photo = photosdb5.get_photo(uuid)
@@ -4101,7 +4100,6 @@ def test_faceinfo_v5_no_face(photosdb5):
 @pytest.mark.parametrize("uuid_dict", UUID_LIST_4)
 def test_faceinfo_v4(photosdb4, uuid_dict):
     """Test FaceInfo object"""
-    import json
 
     for uuid in uuid_dict:
         photo = photosdb4.get_photo(uuid)

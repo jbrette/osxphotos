@@ -10,7 +10,7 @@ import click
 from rich.style import Style
 from rich_theme_manager import Theme, ThemeManager
 
-from .common import get_config_dir, noop
+from .common import get_config_dir
 from .darkmode import is_dark_mode
 
 DEFAULT_THEME_NAME = "default"

@@ -15,7 +15,6 @@ import stat
 import subprocess
 import tempfile
 import types
-import typing as t
 from abc import ABC, abstractmethod
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -26,7 +25,6 @@ if TYPE_CHECKING:
 from tenacity import (
     RetryCallState,
     after_log,
-    before_log,
     retry,
     retry_if_exception,
     stop_after_attempt,

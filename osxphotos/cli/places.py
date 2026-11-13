@@ -6,9 +6,9 @@ import click
 import yaml
 
 import osxphotos
-from osxphotos._constants import _PHOTOS_4_VERSION, _UNKNOWN_PLACE
+from osxphotos._constants import _UNKNOWN_PLACE
 
-from .cli_params import DB_ARGUMENT, DB_OPTION, JSON_OPTION
+from .cli_params import DB_OPTION, JSON_OPTION
 from .common import get_photos_db
 from .list import _list_libraries
 

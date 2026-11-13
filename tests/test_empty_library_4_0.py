@@ -1,5 +1,3 @@
-import pytest
-
 # test empty library
 
 PHOTOS_DB = "./tests/Empty-Library-4.0-3461.7.150.photoslibrary/database/photos.db"
@@ -30,7 +28,6 @@ def test_db_version():
 
 
 def test_persons():
-    import collections
 
     import osxphotos
 
@@ -39,7 +36,6 @@ def test_persons():
 
 
 def test_keywords():
-    import collections
 
     import osxphotos
 
@@ -48,7 +44,6 @@ def test_keywords():
 
 
 def test_album_names():
-    import collections
 
     import osxphotos
 

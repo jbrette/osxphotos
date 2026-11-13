@@ -6,7 +6,6 @@ import datetime
 import json
 import pathlib
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, field, fields
 from enum import Enum
 
@@ -14,7 +13,6 @@ from osxphotos.photoinfo_protocol import PhotoInfoProtocol
 
 from .datetime_utils import (
     datetime_has_tz,
-    datetime_naive_to_utc,
     datetime_remove_tz,
     datetime_tz_to_utc,
     datetime_utc_to_local,

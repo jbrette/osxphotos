@@ -4,8 +4,6 @@ import importlib
 import logging
 import sys
 
-import pytest
-
 import osxphotos
 from osxphotos.debug import is_debug, relocate_debug_options, set_debug
 

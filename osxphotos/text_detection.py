@@ -1,7 +1,6 @@
 """Use Apple's Vision Framework via PyObjC to perform text detection on images (macOS 10.15+ only)"""
 
 import logging
-import sys
 
 from .platform import assert_macos, get_macos_version
 

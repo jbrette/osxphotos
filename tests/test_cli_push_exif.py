@@ -9,7 +9,6 @@ import pathlib
 import shutil
 import sqlite3
 import subprocess
-import sys
 
 import pytest
 from click.testing import CliRunner

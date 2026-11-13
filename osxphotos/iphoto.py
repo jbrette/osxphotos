@@ -44,7 +44,6 @@ import sqlite3
 from collections.abc import Callable
 from functools import cached_property
 from typing import Any, get_type_hints
-from zoneinfo import ZoneInfo
 
 import yaml
 

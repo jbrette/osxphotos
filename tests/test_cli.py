@@ -28,7 +28,6 @@ from osxphotos.cli import (
     albums,
     cli_main,
     export,
-    exportdb,
     keywords,
     labels,
     persons,

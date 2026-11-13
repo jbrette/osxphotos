@@ -7,7 +7,6 @@ import tempfile
 import pytest
 
 import osxphotos
-from osxphotos._constants import _UNKNOWN_PERSON
 from osxphotos.exportoptions import ExportOptions
 from osxphotos.photoexporter import PhotoExporter
 

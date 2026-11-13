@@ -14,7 +14,6 @@ import xattr
 from rich import print
 from rich.console import Console
 
-import osxphotos
 from osxphotos.cli.click_rich_echo import (
     get_rich_console,
     get_rich_theme,

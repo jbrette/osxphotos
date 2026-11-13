@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import atexit
 import datetime
 import inspect
 import json
@@ -79,7 +78,6 @@ from osxphotos.utils import (
     is_photoslibrary_path,
     pluralize,
     terminal,
-    under_test,
 )
 from osxphotos.volume_util import is_path_on_network_volume
 
@@ -94,18 +92,14 @@ if is_macos:
 
     from osxphotos.photokit import (
         check_photokit_authorization,
-        request_photokit_authorization,
     )
     from osxphotos.photosalbum import PhotosAlbum
 
 from osxphotos.iphoto import is_iphoto_library
 
-from .cli_commands import logger
 from .cli_params import (
-    DB_ARGUMENT,
     DB_OPTION,
     DELETED_OPTIONS,
-    JSON_OPTION,
     QUERY_OPTIONS,
     THEME_OPTION,
     TIMESTAMP_OPTION,
@@ -114,7 +108,6 @@ from .cli_params import (
 from .click_rich_echo import rich_click_echo, rich_echo, rich_echo_error
 from .common import (
     CLI_COLOR_ERROR,
-    CLI_COLOR_WARNING,
     OSXPHOTOS_CRASH_LOG,
     OSXPHOTOS_HIDDEN,
     get_photos_db,

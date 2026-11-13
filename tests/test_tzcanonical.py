@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import pytest
-
 from osxphotos.tzcanonical import (
     AbbrevIndex,
     candidates_by_abbrev_and_offset,

@@ -13,13 +13,11 @@ from typing import Any
 
 import tenacity
 import toml
-from rich import print
 
 from osxphotos.photoinfo import PhotoInfo
 from osxphotos.photoinfo_dict import PhotoInfoFromDict, photoinfo_from_dict
 
 from ._constants import OSXPHOTOS_EXPORT_DB, SQLITE_CHECK_SAME_THREAD
-from ._version import __version__
 from .configoptions import ConfigOptions
 from .export_db import ExportDB
 from .fileutil import FileUtil, FileUtilMacOS

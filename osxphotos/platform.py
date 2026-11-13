@@ -25,7 +25,7 @@ if is_macos:
     # succeeds, so the warning is harmless but confusing. Loading the framework first
     # claims the identifier and avoids it entirely.
     try:
-        import Photos
+        import Photos  # noqa: F401  (imported for its side effect, see above)
     except ImportError:
         # pyobjc-framework-Photos is missing; anything that needs PhotoKit will
         # raise a more useful error when it is actually used

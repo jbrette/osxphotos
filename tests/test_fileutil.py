@@ -50,8 +50,6 @@ def test_copy_file_valid_shutil():
     import os.path
     import tempfile
 
-    from osxphotos.fileutil import FileUtil
-
     temp_dir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     src = "tests/test-images/wedding.jpg"
     result = FileUtilShUtil.copy(src, temp_dir.name)
@@ -62,8 +60,6 @@ def test_copy_file_valid_shutil():
 def test_copy_file_invalid_shutil():
     # copy file with invalid src with the shutil implementation
     import tempfile
-
-    from osxphotos.fileutil import FileUtil
 
     temp_dir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     with pytest.raises(Exception) as e:

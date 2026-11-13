@@ -4,7 +4,6 @@ import os
 import pathlib
 
 from osxphotos import ExportResults, PhotoInfo
-from osxphotos.albuminfo import AlbumInfo
 from osxphotos.path_utils import sanitize_dirname
 from osxphotos.phototemplate import RenderOptions
 

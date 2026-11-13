@@ -3,7 +3,6 @@
 import pytest
 
 import osxphotos
-from osxphotos._constants import _UNKNOWN_PERSON, AlbumSortOrder
 
 PHOTOS_DB = "./tests/Test-iPhoto-Projects-10.12.6.photoslibrary"
 

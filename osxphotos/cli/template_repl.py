@@ -29,8 +29,6 @@ from .cli_params import DB_OPTION
 from .click_rich_echo import rich_echo_via_pager
 from .common import get_data_dir
 from .template_utils import (
-    ALL_TEMPLATE_SUBSTITUTIONS,
-    TEMPLATE_LOOKUP,
     suggest_template_fields,
 )
 

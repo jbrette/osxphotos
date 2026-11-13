@@ -1,7 +1,6 @@
 """rich Progress bar factory that can return a rich Progress bar or a mock Progress bar"""
 
 import os
-from typing import Any
 
 from rich.console import Console
 from rich.progress import GetTimeCallable, Progress, ProgressColumn, TaskID

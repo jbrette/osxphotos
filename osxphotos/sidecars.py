@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import pathlib
-from collections.abc import Callable
 from functools import cache
 from typing import TYPE_CHECKING
 

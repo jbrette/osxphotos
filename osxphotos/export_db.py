@@ -26,7 +26,6 @@ import osxphotos
 
 from ._constants import OSXPHOTOS_EXPORT_DB, SQLITE_CHECK_SAME_THREAD
 from ._version import __version__
-from .fileutil import FileUtil
 from .sqlite_utils import (
     sqlite_backup_dbfiles,
     sqlite_delete_backup_files,

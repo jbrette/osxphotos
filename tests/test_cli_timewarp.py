@@ -1,6 +1,5 @@
 """Tests which require user interaction to run for osxphotos timewarp command"""
 
-import datetime
 import os
 import time
 

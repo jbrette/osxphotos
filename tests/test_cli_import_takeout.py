@@ -4,9 +4,7 @@ import os
 import os.path
 import pathlib
 import re
-import shutil
 import sqlite3
-import sys
 import time
 from tempfile import TemporaryDirectory
 
@@ -18,8 +16,6 @@ from osxphotos.exiftool import get_exiftool_path
 from osxphotos.platform import is_macos
 
 if is_macos:
-    from photoscript import Photo
-
     from osxphotos.cli.import_cli import import_main
 else:
     pytest.skip(allow_module_level=True)

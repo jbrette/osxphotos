@@ -1,10 +1,7 @@
 """PhotosDB method for processing comments and likes on shared photos.
 Do not import this module directly"""
 
-import dataclasses
-import datetime
 import logging
-from dataclasses import dataclass
 
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_4_VERSION
 from ..commentinfo import CommentInfo, LikeInfo

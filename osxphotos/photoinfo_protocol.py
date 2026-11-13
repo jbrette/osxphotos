@@ -14,10 +14,9 @@ if TYPE_CHECKING:
     from .exiftool import ExifToolCaching
     from .momentinfo import MomentInfo
     from .personinfo import FaceInfo, PersonInfo
-    from .photoinfo import PhotoInfo
     from .phototables import PhotoTables
     from .phototemplate import RenderOptions
-    from .placeinfo import PlaceInfo, PlaceInfo4, PlaceInfo5
+    from .placeinfo import PlaceInfo4, PlaceInfo5
     from .scoreinfo import ScoreInfo
     from .searchinfo import SearchInfo
 

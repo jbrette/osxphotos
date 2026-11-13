@@ -2,7 +2,6 @@
 
 import datetime
 import os
-import pathlib
 
 from osxphotos.photoinfo_file import PhotoInfoFromFile
 from osxphotos.photosdb import PhotosDB

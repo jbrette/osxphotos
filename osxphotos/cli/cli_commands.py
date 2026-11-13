@@ -15,15 +15,10 @@ import click
 
 from osxphotos.photoquery import QueryOptions, query_options_from_kwargs
 from osxphotos.photosdb import PhotosDB
-from osxphotos.sqlitekvstore import SQLiteKVStore
 
 from .cli_params import (
     _DB_PARAMETER,
     _QUERY_PARAMETERS_DICT,
-    DB_OPTION,
-    THEME_OPTION,
-    TIMESTAMP_OPTION,
-    VERBOSE_OPTION,
 )
 from .click_rich_echo import rich_click_echo as echo
 from .click_rich_echo import rich_echo_error as echo_error

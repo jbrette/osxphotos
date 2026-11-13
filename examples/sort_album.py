@@ -1,10 +1,8 @@
 """Sort a Photos album by size; run with `osxphotos run sort_album.py [--ascend] ALBUM"""
 
-import sys
-
 import click
 import Photos
-from Foundation import NSError, NSIndexSet, NSPredicate, NSRange
+from Foundation import NSIndexSet, NSRange
 
 from osxphotos.cli import echo, echo_error
 from osxphotos.photokit_utils import wait_for_photokit_authorization

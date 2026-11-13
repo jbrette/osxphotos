@@ -2,7 +2,6 @@
 
 import json
 
-import pytest
 from click.testing import CliRunner
 
 from osxphotos.cli.compare import compare

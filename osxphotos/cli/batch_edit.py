@@ -26,13 +26,11 @@ from .cli_params import (
     THEME_OPTION,
     VERBOSE_OPTIONS,
 )
-from .param_types import PathOrStdin
-from .timewarp import unique_photos
 
 assert_macos()
 
 import photoscript
-from photoscript import Photo, PhotosLibrary
+from photoscript import PhotosLibrary
 
 from osxphotos.photosalbum import PhotosAlbumPhotoScript
 

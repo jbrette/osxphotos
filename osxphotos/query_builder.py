@@ -2,7 +2,7 @@
 
 import os.path
 import pathlib
-from functools import cache, lru_cache
+from functools import cache
 
 from mako.template import Template
 

@@ -13,7 +13,6 @@ from .datetime_utils import (
     datetime_remove_tz,
     datetime_to_new_tz,
     datetime_tz_to_utc,
-    datetime_utc_to_local,
 )
 from .exiftool import ExifTool
 from .exifutils import ExifDateTime, get_exif_date_time_offset

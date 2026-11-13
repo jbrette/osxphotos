@@ -7,13 +7,10 @@ import click
 from rich import print
 
 import osxphotos
-from osxphotos._constants import _PHOTOS_4_VERSION, _UNKNOWN_PLACE
 from osxphotos.photoquery import query_options_from_kwargs
 
 from .cli_params import (
-    DB_ARGUMENT,
     DB_OPTION,
-    JSON_OPTION,
     QUERY_OPTIONS,
     TIMESTAMP_OPTION,
     VERBOSE_OPTION,

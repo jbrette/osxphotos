@@ -1,6 +1,5 @@
 """Basic tests for Photos 7 on macOS 12.0.0 Developer Beta"""
 
-import collections
 import datetime
 import os
 import os.path
@@ -8,7 +7,7 @@ import pathlib
 import sqlite3
 import tempfile
 import time
-import zoneinfo
+import zoneinfo  # noqa: F401  (needed by eval(repr(photo)))
 from collections import Counter, namedtuple
 from unittest import mock
 from zoneinfo import ZoneInfo

@@ -1,7 +1,5 @@
 """test ExportResults class"""
 
-import pytest
-
 from osxphotos.exportoptions import ExportResults
 
 EXPORT_RESULT_ATTRIBUTES = ExportResults().attributes

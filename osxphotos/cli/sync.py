@@ -21,7 +21,7 @@ from osxphotos.photoquery import (
     QueryOptions,
     query_options_from_kwargs,
 )
-from osxphotos.photosalbum import PhotosAlbum, PhotosAlbumPhotoScriptByPath
+from osxphotos.photosalbum import PhotosAlbumPhotoScriptByPath
 from osxphotos.photosdb.photosdb_utils import get_db_version
 from osxphotos.phototemplate import PhotoTemplate, RenderOptions
 from osxphotos.platform import assert_macos

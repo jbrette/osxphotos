@@ -1,5 +1,3 @@
-import pytest
-
 import osxphotos
 
 # TODO: put some of this code into a pre-function

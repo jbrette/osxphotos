@@ -2,8 +2,6 @@
 
 import pytest
 
-from osxphotos._constants import _UNKNOWN_PERSON
-
 PHOTOS_DB = "./tests/Test-10.15.5.photoslibrary/database/photos.db"
 PHOTOS_DB_PATH = "/Test-10.15.5.photoslibrary/database/photos.db"
 PHOTOS_LIBRARY_PATH = "/Test-10.15.5.photoslibrary"
@@ -343,7 +341,6 @@ def test_search_info(photosdb):
 
 
 def test_labels_normalized(photosdb):
-    import logging
 
     for uuid in LABELS_NORMALIZED_DICT:
         photo = photosdb.photos(uuid=[uuid])[0]
@@ -354,7 +351,6 @@ def test_labels_normalized(photosdb):
 
 
 def test_labels(photosdb):
-    import logging
 
     for uuid in LABELS_DICT:
         photo = photosdb.photos(uuid=[uuid])[0]

@@ -6,14 +6,12 @@ import datetime
 import os
 import pathlib
 import re
-import tempfile
 
 import bitmath
 import click
 import pytimeparse2
 from strpdatetime import strpdatetime
 
-from osxphotos import tempdir
 from osxphotos.cli.template_utils import suggest_template_fields
 from osxphotos.export_db_utils import export_db_get_version
 from osxphotos.photoinfo import PhotoInfoNone

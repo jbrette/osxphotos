@@ -9,7 +9,6 @@ import click
 
 from osxphotos import PhotosDB, iPhotoDB
 from osxphotos._constants import OSXPHOTOS_EXPORT_DB
-from osxphotos._version import __version__
 from osxphotos.configoptions import ConfigOptions, ConfigOptionsLoadError
 from osxphotos.export_db import ExportDB, ExportDBInMemory
 from osxphotos.export_db_utils import export_db_get_config

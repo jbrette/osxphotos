@@ -18,9 +18,7 @@ from whenever import Date, PlainDateTime, Time, ZonedDateTime
 
 from osxphotos.strpdatetime_parts import (
     date_str_matches_date_time_codes,
-    fmt_has_date_time_codes,
 )
-from osxphotos.timezones import convert_offset_timezone_to_etc
 
 from ._constants import _DB_TABLE_NAMES, SQLITE_CHECK_SAME_THREAD
 from .datetime_utils import (
@@ -28,8 +26,6 @@ from .datetime_utils import (
     datetime_naive_to_local,
     datetime_remove_tz,
     datetime_to_new_tz,
-    datetime_tz_to_utc,
-    datetime_utc_to_local,
     get_local_tz,
     utc_offset_seconds,
 )

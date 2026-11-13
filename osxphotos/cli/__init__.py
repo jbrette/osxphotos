@@ -111,6 +111,11 @@ if is_macos:
 install_traceback()
 
 __all__ = [
+    "DB_OPTION",
+    "DEBUG_OPTIONS",
+    "JSON_OPTION",
+    "OSXPHOTOS_HIDDEN",
+    "_list_libraries",
     "abort",
     "about",
     "albums",
@@ -123,9 +128,11 @@ __all__ = [
     "dump",
     "echo",
     "echo_error",
+    "exiftool",
     "exiftool_cli",
     "export",
     "exportdb",
+    "get_photos_db",
     "grep",
     "help",
     "info",
@@ -147,7 +154,9 @@ __all__ = [
     "set_debug",
     "snap",
     "template_repl",
+    "theme",
     "tutorial",
+    "uninstall",
     "verbose",
     "version",
 ]

@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from osxphotos.photoinfo_dict import PhotoInfoFromDict, photoinfo_from_dict
-from osxphotos.photoinfo_protocol import PhotoInfoProtocol
 from osxphotos.photosdb import PhotosDB
 
 PHOTOSDB = "tests/Test-13.0.0.photoslibrary"

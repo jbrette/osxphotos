@@ -9,7 +9,7 @@ import pathlib
 
 import osxphotos
 from osxphotos._constants import SIDECAR_XMP
-from osxphotos.cli import echo, selection_command, verbose
+from osxphotos.cli import echo, selection_command
 from osxphotos.exportoptions import ExportOptions
 from osxphotos.sidecars import SidecarWriter
 

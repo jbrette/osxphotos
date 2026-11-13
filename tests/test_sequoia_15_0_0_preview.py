@@ -9,17 +9,13 @@ import pathlib
 import sqlite3
 import tempfile
 import time
-import zoneinfo
-from collections import Counter, namedtuple
+import zoneinfo  # noqa: F401  (needed by eval(repr(photo)))
+from collections import namedtuple
 
 import pytest
 
 import osxphotos
-from osxphotos import PhotosDB
-from osxphotos._constants import _UNKNOWN_PERSON
 from osxphotos.adjustmentsinfo import AdjustmentsInfo
-from osxphotos.exifwriter import ExifWriter
-from osxphotos.platform import get_macos_version, is_macos
 
 PHOTOS_DB = "./tests/Test-15.0.0_Dev_Preview.photoslibrary/database/photos.db"
 PHOTOS_DB_PATH = "/Test-15.0.0_Dev_Preview.photoslibrary/database/Photos.sqlite"

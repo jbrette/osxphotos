@@ -257,7 +257,6 @@ lint.ignore = [
     "E721",   # type comparison (use isinstance())
     "E722",   # bare except
     "E741",   # ambiguous variable name
-    "F401",   # unused import
     "F403",   # from module import *
     "F405",   # may be undefined or from star imports
     "F541",   # f-string without placeholders
@@ -304,6 +303,8 @@ exclude = [
 ]
 # report writers keep their output file open for the writer's lifetime
 "osxphotos/cli/report_writer.py" = ["SIM115"]
+# every import is part of the namespace handed to the interactive REPL
+"osxphotos/cli/repl.py" = ["F401"]
 # closures defined in a loop are only called within that loop iteration
 "tests/test_fileutil.py" = ["B023"]
 "tests/test_gitignorefile_cache.py" = ["B023"]

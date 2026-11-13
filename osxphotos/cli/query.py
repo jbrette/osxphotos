@@ -1,7 +1,5 @@
 """query command for osxphotos CLI"""
 
-import sys
-
 import click
 
 import osxphotos
@@ -21,19 +19,15 @@ if is_macos:
     from osxphotos.photosalbum import PhotosAlbum
 
 from .cli_params import (
-    DB_ARGUMENT,
     DB_OPTION,
     DELETED_OPTIONS,
     FIELD_OPTION,
     JSON_OPTION,
     QUERY_OPTIONS,
-    make_click_option_decorator,
 )
 from .color_themes import get_default_theme
 from .common import (
     CLI_COLOR_ERROR,
-    CLI_COLOR_WARNING,
-    OSXPHOTOS_HIDDEN,
     get_photos_db,
     require_macos,
 )

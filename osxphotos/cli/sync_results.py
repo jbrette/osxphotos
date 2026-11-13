@@ -5,8 +5,6 @@ from __future__ import annotations
 import datetime
 import json
 
-from osxphotos.photoinfo import PhotoInfo
-
 SYNC_PROPERTIES = [
     "albums",
     "description",

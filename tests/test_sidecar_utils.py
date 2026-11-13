@@ -101,8 +101,6 @@ def test_get_sidecar_file_with_template(tmp_path, data):
     for file in data["files"]:
         (tmp_path / file).touch()
 
-    import logging
-
     sidecar_name = get_sidecar_file_with_template(
         tmp_path / data["files"][0],
         data["sidecar"],
