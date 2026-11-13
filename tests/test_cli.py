@@ -2901,7 +2901,7 @@ def test_export_exiftool_merge_sidecar():
             json_file = f"{CLI_EXIFTOOL_MERGE[uuid]['File:FileName']}.json"
             assert json_file in files
 
-            with open(json_file, "r") as fp:
+            with open(json_file) as fp:
                 exif = json.load(fp)[0]
 
             for key in CLI_EXIFTOOL_MERGE[uuid]:
@@ -4164,7 +4164,7 @@ def test_export_sidecar():
         assert sorted(files) == sorted(CLI_EXPORT_SIDECAR_FILENAMES)
 
         # testing that rating isn't included for non iPhoto libraries
-        with open(CLI_EXPORT_SIDECAR_XMP, "r") as fp:
+        with open(CLI_EXPORT_SIDECAR_XMP) as fp:
             xmp = fp.read()
         assert "<xmp:Rating>" not in xmp
 
@@ -4189,7 +4189,7 @@ def test_export_sidecar_iphoto():
             ],
         )
         assert result.exit_code == 0
-        with open("wedding.jpg.xmp", "r") as fp:
+        with open("wedding.jpg.xmp") as fp:
             xmp = fp.read()
         assert "<xmp:Rating>5</xmp:Rating>" in xmp
 
@@ -4346,7 +4346,7 @@ def test_export_sidecar_templates():
         )
         assert result.exit_code == 0
         assert os.path.isfile(CLI_TEMPLATE_SIDECAR_FILENAME)
-        with open(CLI_TEMPLATE_SIDECAR_FILENAME, "r") as jsonfile:
+        with open(CLI_TEMPLATE_SIDECAR_FILENAME) as jsonfile:
             exifdata = json.load(jsonfile)
         # order of multi-value templates is indeterminate so verify substrings instead of equality
         for tag in ["XMP:Description", "EXIF:ImageDescription"]:
@@ -4388,7 +4388,7 @@ def test_export_sidecar_templates_exiftool():
         )
         assert result.exit_code == 0
         assert os.path.isfile(CLI_TEMPLATE_SIDECAR_FILENAME)
-        with open(CLI_TEMPLATE_SIDECAR_FILENAME, "r") as jsonfile:
+        with open(CLI_TEMPLATE_SIDECAR_FILENAME) as jsonfile:
             exifdata = json.load(jsonfile)
         # order of multi-value templates is indeterminate so verify substrings instead of equality
         for tag in ["Description", "ImageDescription"]:
@@ -5652,7 +5652,7 @@ def test_export_sidecar_keyword_template():
             """
         )[0]
 
-        with open("Pumkins2.jpg.json", "r") as json_file:
+        with open("Pumkins2.jpg.json") as json_file:
             json_got = json.load(json_file)[0]
 
         # some gymnastics to account for different sort order in different pythons
@@ -7159,7 +7159,7 @@ def test_export_report():
         assert result.exit_code == 0
         assert "Wrote export report" in result.output
         assert os.path.exists("report.csv")
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -7181,7 +7181,7 @@ def test_export_report():
             ],
         )
         assert result.exit_code == 0
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -7205,7 +7205,7 @@ def test_export_report():
             ],
         )
         assert result.exit_code == 0
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -7240,7 +7240,7 @@ def test_export_report_append_new():
         assert result.exit_code == 0
         assert "Wrote export report" in result.output
         assert os.path.exists("report.csv")
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -7272,7 +7272,7 @@ def test_export_report_json():
         assert result.exit_code == 0
         assert "Wrote export report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert sorted(filenames) == sorted(UUID_REPORT[0]["filenames"])
@@ -7293,7 +7293,7 @@ def test_export_report_json():
             ],
         )
         assert result.exit_code == 0
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert sorted(filenames) == sorted(UUID_REPORT[1]["filenames"])
@@ -7316,7 +7316,7 @@ def test_export_report_json():
             ],
         )
         assert result.exit_code == 0
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert sorted(filenames) == sorted(
@@ -7350,7 +7350,7 @@ def test_export_report_json_append():
         assert result.exit_code == 0
         assert "Wrote export report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert sorted(filenames) == sorted(UUID_REPORT[0]["filenames"])
@@ -10312,7 +10312,7 @@ def test_export_export_dir_template():
         )
         assert result.exit_code == 0
         assert os.path.isfile(CLI_TEMPLATE_SIDECAR_FILENAME)
-        with open(CLI_TEMPLATE_SIDECAR_FILENAME, "r") as jsonfile:
+        with open(CLI_TEMPLATE_SIDECAR_FILENAME) as jsonfile:
             exifdata = json.load(jsonfile)
         assert exifdata[0]["XMP:Description"] == isolated_cwd
 
@@ -10343,7 +10343,7 @@ def test_export_filepath_template():
         )
         assert result.exit_code == 0
         assert os.path.isfile(CLI_TEMPLATE_SIDECAR_FILENAME)
-        with open(CLI_TEMPLATE_SIDECAR_FILENAME, "r") as jsonfile:
+        with open(CLI_TEMPLATE_SIDECAR_FILENAME) as jsonfile:
             exifdata = json.load(jsonfile)
         assert exifdata[0]["XMP:Description"] == os.path.join(
             isolated_cwd, CLI_TEMPLATE_FILENAME
@@ -10834,7 +10834,7 @@ def test_export_description_template_conditional():
             ],
         )
         assert result.exit_code == 0
-        with open(f"{FILENAME_EMPTY_TITLE}.json", "r") as fp:
+        with open(f"{FILENAME_EMPTY_TITLE}.json") as fp:
             json_got = json.load(fp)[0]
             assert (
                 json_got["EXIF:ImageDescription"] == DESCRIPTION_VALUE_TITLE_CONDITIONAL

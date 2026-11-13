@@ -1144,7 +1144,7 @@ def test_import_report():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.csv")
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -1161,7 +1161,7 @@ def test_import_report():
             ],
         )
         assert result.exit_code == 0
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -1179,7 +1179,7 @@ def test_import_report():
             ],
         )
         assert result.exit_code == 0
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -1211,7 +1211,7 @@ def test_import_report_append():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             records = json.load(f)
         assert records[0]["filename"] == pathlib.Path(TEST_IMAGE_1).name
 
@@ -1237,7 +1237,7 @@ def test_import_report_json():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert filenames == [pathlib.Path(TEST_IMAGE_1).name]
@@ -1255,7 +1255,7 @@ def test_import_report_json():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert filenames == [pathlib.Path(TEST_IMAGE_1).name]
@@ -1274,7 +1274,7 @@ def test_import_report_json():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert filenames == [

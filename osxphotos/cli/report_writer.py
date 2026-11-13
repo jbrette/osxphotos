@@ -148,7 +148,7 @@ class ExportReportWriterJSON(ReportWriterABC):
 
         self._first_record_written = False
         if append and os.path.exists(self.output_file):
-            with open(self.output_file, "r") as fh:
+            with open(self.output_file) as fh:
                 existing_data = json.load(fh)
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")
@@ -595,7 +595,7 @@ class SyncReportWriterJSON(ReportWriterABC):
 
         self._first_record_written = False
         if append and os.path.exists(self.output_file):
-            with open(self.output_file, "r") as fh:
+            with open(self.output_file) as fh:
                 existing_data = json.load(fh)
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")
@@ -898,7 +898,7 @@ class PushExifReportWriterJSON(ReportWriterABC):
 
         self._first_record_written = False
         if append and os.path.exists(self.output_file):
-            with open(self.output_file, "r") as fh:
+            with open(self.output_file) as fh:
                 existing_data = json.load(fh)
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")

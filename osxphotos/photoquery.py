@@ -382,7 +382,7 @@ def load_uuid_from_file(filename: str) -> list[str]:
     if not pathlib.Path(filename).is_file():
         raise FileNotFoundError(f"Could not find file {filename}")
 
-    with open(filename, "r") as f:
+    with open(filename) as f:
         return _load_uuid_from_stream(f)
 
 

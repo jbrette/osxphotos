@@ -27,7 +27,7 @@ class MockProgress:
     def __init__(self, *args, **kwargs):
         self.tasks = []
         self.live = False
-        self.console = kwargs.get("console", None)
+        self.console = kwargs.get("console")
         self.auto_refresh = kwargs.get("auto_refresh", True)
         self.transient = kwargs.get("transient", False)
 

@@ -526,7 +526,7 @@ def get_latest_version() -> tuple[str | None, str]:
         return None, e
 
 
-def pluralize(count: int | None | Iterable, singular: str, plural: str) -> str:
+def pluralize(count: int | Iterable | None, singular: str, plural: str) -> str:
     """Return singular or plural based on count"""
     if isinstance(count, Iterable):
         return singular if len(count) == 1 else plural

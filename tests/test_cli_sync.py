@@ -124,7 +124,7 @@ def test_sync_export_import():
             assert TEST_ALBUM_NAME in [album.title for album in photo.albums]
 
         # check report
-        with open("test_report.json", "r") as f:
+        with open("test_report.json") as f:
             report = json.load(f)
         report_data = {record["uuid"]: record for record in report}
         for uuid in [UUID_TEST_PHOTO_1, UUID_TEST_PHOTO_2]:
@@ -195,7 +195,7 @@ def test_sync_export_import_csv():
         assert os.path.exists("test_report.csv")
 
         # check report
-        with open("test_report.csv", "r") as f:
+        with open("test_report.csv") as f:
             report_data = csv.DictReader(f)
             for row in report_data:
                 if row["uuid"] == UUID_TEST_PHOTO_1:
@@ -292,7 +292,7 @@ def test_sync_export_import_location():
             assert TEST_ALBUM_NAME_LOCATION in [album.title for album in photo.albums]
 
         # check report
-        with open("test_report_location.json", "r") as f:
+        with open("test_report_location.json") as f:
             report = json.load(f)
         report_data = {record["uuid"]: record for record in report}
         for uuid in [UUID_TEST_PHOTO_3]:
@@ -385,7 +385,7 @@ def test_sync_export_import_location_in_folder():
             )
 
         # check report
-        with open("test_report_location_folder.json", "r") as f:
+        with open("test_report_location_folder.json") as f:
             report = json.load(f)
         report_data = {record["uuid"]: record for record in report}
         for uuid in [UUID_TEST_PHOTO_4, UUID_TEST_PHOTO_5]:

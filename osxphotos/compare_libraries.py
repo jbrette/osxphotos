@@ -209,7 +209,7 @@ def photo_diff(photo_a: PhotoInfo, photo_b: PhotoInfo) -> list[list[Any]]:
     diffs = [
         diff
         for diff in diffs
-        if not diff[0] in ("library", "face_info", "labels", "filename", "uuid")
+        if diff[0] not in ("library", "face_info", "labels", "filename", "uuid")
         and not diff[0].startswith("path")
         and not diff[0].startswith("score")
     ]

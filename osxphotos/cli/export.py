@@ -1977,7 +1977,7 @@ def export_cli(
 
     if photos and only_new:
         # ignore previously exported files
-        previous_uuids = {uuid: 1 for uuid in export_db.get_previous_uuids()}
+        previous_uuids = dict.fromkeys(export_db.get_previous_uuids(), 1)
         photos = [p for p in photos if p.uuid not in previous_uuids]
 
     # skip syndicated photos which are not saved to library and don't have a path
@@ -3533,7 +3533,7 @@ def run_post_function(
         tuple[
             Callable[
                 [osxphotos.PhotoInfo, ExportResults, Callable[[Any], None]],
-                None | ExportResults,
+                ExportResults | None,
             ],
             str,
         ],

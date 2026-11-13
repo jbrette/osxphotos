@@ -270,8 +270,10 @@ class SidecarWriter(_ExifMixin):
                 not (options.update or options.force_update)
                 or ((options.update or options.force_update) and not sidecar_exists)
                 or (
-                    (options.update or options.force_update)
-                    and (sidecar_digest != sidecar_record.digest)
+                    (
+                        (options.update or options.force_update)
+                        and (sidecar_digest != sidecar_record.digest)
+                    )
                     or (not sidecar_sig_matches and not sidecar_content_matches)
                 )
             )

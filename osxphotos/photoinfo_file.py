@@ -213,7 +213,7 @@ def render_photo_template_from_filepath(
 
     Returns: list of rendered strings
     """
-    if not "{" in template:
+    if "{" not in template:
         exiftool_path = None
 
     photoinfo = PhotoInfoFromFile(

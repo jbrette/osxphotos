@@ -476,7 +476,7 @@ class PhotosDB:
         keywords = {
             k: len(self._dbkeywords_keyword[k]) for k in self._dbkeywords_keyword
         }
-        keywords |= {k: 0 for k in self.keywords_without_photo}
+        keywords |= dict.fromkeys(self.keywords_without_photo, 0)
         keywords = dict(sorted(keywords.items(), key=lambda kv: kv[1], reverse=True))
         return keywords
 

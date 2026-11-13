@@ -113,7 +113,7 @@ def get_debug_flags(arg_names: list, argv: list) -> dict:
     # argv[0] is the program name
     # argv[1] is the command
     # argv[2:] are the arguments
-    args = {arg_name: False for arg_name in arg_names}
+    args = dict.fromkeys(arg_names, False)
     for arg_name in arg_names:
         if arg_name in argv[1:]:
             args[arg_name] = True

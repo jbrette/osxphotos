@@ -355,7 +355,7 @@ def test_exiftool_json_sidecar(photosdb):
     uuid = EXIF_JSON_UUID
     photo = photosdb.get_photo(uuid)
 
-    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}.json"), "r") as fp:
+    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}.json")) as fp:
         json_expected = json.load(fp)[0]
 
     json_got = exiftool_json_sidecar(photo)
@@ -372,7 +372,7 @@ def test_exiftool_json_sidecar_ignore_date_modified(photosdb):
     photo = photosdb.get_photo(uuid)
 
     with open(
-        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_ignore_date_modified.json"), "r"
+        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_ignore_date_modified.json")
     ) as fp:
         json_expected = json.load(fp)[0]
 
@@ -422,9 +422,7 @@ def test_exiftool_json_sidecar_keyword_template(photosdb):
     uuid = EXIF_JSON_UUID
     photo = photosdb.get_photo(uuid)
 
-    with open(
-        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_keyword_template.json"), "r"
-    ) as fp:
+    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_keyword_template.json")) as fp:
         json_expected = json.load(fp)
     json_got = exiftool_json_sidecar(
         photo, ExportOptions(keyword_template=["{folder_album}"])
@@ -444,7 +442,7 @@ def test_exiftool_json_sidecar_use_persons_keyword(photosdb):
     photo = photosdb.get_photo(uuid)
 
     with open(
-        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_persons_as_keywords.json"), "r"
+        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_persons_as_keywords.json")
     ) as fp:
         json_expected = json.load(fp)[0]
 
@@ -458,9 +456,7 @@ def test_exiftool_json_sidecar_use_albums_keywords(photosdb):
     uuid = UUID_DICT["xmp"]
     photo = photosdb.get_photo(uuid)
 
-    with open(
-        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_albums_as_keywords.json"), "r"
-    ) as fp:
+    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_albums_as_keywords.json")) as fp:
         json_expected = json.load(fp)[0]
 
     json_got = exiftool_json_sidecar(photo, ExportOptions(use_albums_as_keywords=True))
@@ -478,7 +474,7 @@ def test_exiftool_sidecar(photosdb):
     uuid = EXIF_JSON_UUID
     photo = photosdb.get_photo(uuid)
 
-    with open(pathlib.Path(SIDECAR_DIR) / f"{uuid}_no_tag_groups.json", "r") as fp:
+    with open(pathlib.Path(SIDECAR_DIR) / f"{uuid}_no_tag_groups.json") as fp:
         json_expected = fp.read()
 
     json_got = exiftool_json_sidecar(photo, tag_groups=False)
@@ -510,7 +506,7 @@ def test_xmp_sidecar(photosdb):
     uuid = UUID_DICT["xmp"]
     photos = photosdb.photos(uuid=[uuid])
 
-    with open(f"tests/sidecars/{uuid}.xmp", "r") as file:
+    with open(f"tests/sidecars/{uuid}.xmp") as file:
         xmp_expected = file.read()
     xmp_got = xmp_sidecar(photos[0], extension="jpg")
     assert xmp_got == xmp_expected
@@ -522,7 +518,7 @@ def test_xmp_sidecar_extension(photosdb):
     uuid = UUID_DICT["xmp"]
     photos = photosdb.photos(uuid=[uuid])
 
-    with open(f"tests/sidecars/{uuid}.xmp", "r") as file:
+    with open(f"tests/sidecars/{uuid}.xmp") as file:
         xmp_expected = file.read()
         xmp_expected_lines = [line.strip() for line in xmp_expected.split("\n")]
 

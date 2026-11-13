@@ -366,7 +366,7 @@ def test_cli_push_exif_report_json(monkeypatch):
             ],
         )
         assert result.exit_code == 0
-        with open("report.json", "r") as fp:
+        with open("report.json") as fp:
             report_data = json.load(fp)
         assert len(report_data) == 14
         missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]

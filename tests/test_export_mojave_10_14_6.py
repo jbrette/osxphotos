@@ -334,7 +334,7 @@ def test_exiftool_json_sidecar(photosdb):
     uuid = UUID_DICT["location"]
     photo = photosdb.get_photo(uuid)
 
-    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}.json"), "r") as fp:
+    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}.json")) as fp:
         json_expected = json.load(fp)[0]
 
     json_got = exiftool_json_sidecar(photo)

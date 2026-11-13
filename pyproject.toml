@@ -245,6 +245,11 @@ target-version = "py314"
 # (E501 is not selected), so long help strings and comments are left as-is.
 line-length    = 88
 
+# Rule families shared with the other uv/ruff projects (E F W I N UP B C4 SIM RUF),
+# added on top of ruff's default set. Line length stays 88 (the fleet uses 100) so
+# the codebase is not reformatted.
+lint.extend-select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+
 # TODO: Most of these ignores can be removed after code cleanup.
 # Added to make ruff pass with code in its current state.
 lint.ignore = [
@@ -271,6 +276,14 @@ lint.ignore = [
     "SIM117", # combine nested with statements: nested is often clearer (e.g. pytest.raises)
     "TRY002", # raise vanilla Exception: changing the type could break callers' except clauses
     "TRY004", # TypeError for type checks: changing ValueError would break callers' except clauses
+    # From the shared rule families (extend-select above).
+    "E501",   # line too long: also ignored in the other projects; the formatter owns width
+    "N801", "N802", "N803", "N806", "N818", # names mirror Photos/PhotoKit/ObjC APIs and the public API
+    "RUF001", "RUF002", "RUF003", # ambiguous unicode: intentional in test data and messages
+    # TODO: cleanup candidates, need manual edits (no safe autofix)
+    "W291", "W293", # trailing whitespace, mostly inside multi-line strings
+    "B007", "B024", "B027", "B904", "B905",
+    "C416", "E731", "RUF005", "SIM105", "SIM108",
 ]
 
 exclude = [

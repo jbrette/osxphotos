@@ -2434,7 +2434,7 @@ def write_json_report(
     """Write report to JSON file"""
     records = [v.asjsondict() for v in report_data.values()]
     if append and pathlib.Path(report_file).exists():
-        with open(report_file, "r") as f:
+        with open(report_file) as f:
             existing_records = json.load(f)
         records.extend(existing_records)
     with open(report_file, "w") as f:

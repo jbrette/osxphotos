@@ -83,7 +83,8 @@ def is_raw_pair(filepath1: str | os.PathLike, filepath2: str | os.PathLike) -> b
     return (
         is_raw_image(filepath1)
         and (is_image_file(filepath2) and not is_raw_image(filepath2))
-        or is_raw_image(filepath2)
+    ) or (
+        is_raw_image(filepath2)
         and (is_image_file(filepath1) and not is_raw_image(filepath1))
     )
 

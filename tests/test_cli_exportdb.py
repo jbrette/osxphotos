@@ -82,7 +82,7 @@ def test_export_cleanup_exportdb_report():
             [".", "--report", "report.json", "0"],
         )
         assert results.exit_code == 0
-        with open("report.json", "r") as fd:
+        with open("report.json") as fd:
             report = json.load(fd)
         deleted_dirs = [x for x in report if x["cleanup_deleted_directory"]]
         deleted_files = [x for x in report if x["cleanup_deleted_file"]]

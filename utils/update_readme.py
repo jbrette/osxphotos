@@ -90,7 +90,7 @@ def replace_text(text, start_tag, stop_tag, replacement_text, prefix="", postfix
 def main():
     """update README.md"""
 
-    with open("README.md", "r") as file:
+    with open("README.md") as file:
         new_readme = file.read()
 
     # update the template substitution table

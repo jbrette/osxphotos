@@ -56,7 +56,7 @@ def compare_dicts(
     dict1: dict[Any, Any],
     dict2: dict[Any, Any],
     tolerance: float = 0.0001,
-    ignore_keys: None | list[Any] = None,
+    ignore_keys: list[Any] | None = None,
 ):
     """Compare two dictionaries recursively with tolerance for floats"""
     for key in dict1.keys() | dict2.keys():

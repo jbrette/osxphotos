@@ -33,6 +33,6 @@ def _get_query_string(query_name, photos_ver):
         if not query_file.is_file():
             raise FileNotFoundError(f"Query file '{query_file}' not found")
 
-    with open(query_file, "r") as f:
+    with open(query_file) as f:
         query_string = f.read()
     return query_string

@@ -88,7 +88,7 @@ def get_sidecar_filetype(filepath: str | pathlib.Path) -> SidecarFileType:
         return SidecarFileType.XMP
     elif filepath.suffix.lower() == ".json":
         # could be exiftool or osxphotos or Google Takeout
-        with open(filepath, "r") as fp:
+        with open(filepath) as fp:
             try:
                 metadata = json.load(fp)
             except json.JSONDecodeError:
@@ -264,7 +264,7 @@ def metadata_from_sidecar(
         return metadata_from_metadata_dict(metadata)
 
     if sidecar_type in (SidecarFileType.exiftool, SidecarFileType.osxphotos):
-        with open(filepath, "r") as fp:
+        with open(filepath) as fp:
             try:
                 metadata = json.load(fp)[0]
             except (json.JSONDecodeError, IndexError) as e:
@@ -279,7 +279,7 @@ def metadata_from_sidecar(
 
 def metadata_from_google_takeout(filepath: str | pathlib.Path) -> MetaData:
     """Read metadata from Google Takeout JSON file"""
-    with open(filepath, "r") as fp:
+    with open(filepath) as fp:
         try:
             metadata = json.load(fp)
         except json.JSONDecodeError as e:

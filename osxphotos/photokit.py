@@ -346,10 +346,9 @@ class PhotoAsset:
         resources = self._resources()
         for resource in resources:
             if (
-                self.isphoto
-                and resource.type() == Photos.PHAssetResourceTypePhoto
-                or not self.isphoto
-                and resource.type() == Photos.PHAssetResourceTypeVideo
+                self.isphoto and resource.type() == Photos.PHAssetResourceTypePhoto
+            ) or (
+                not self.isphoto and resource.type() == Photos.PHAssetResourceTypeVideo
             ):
                 return resource.originalFilename()
         return None

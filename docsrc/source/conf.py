@@ -31,7 +31,7 @@ about = {}
 this_directory = pathlib.Path(__file__).parent
 version_file = this_directory.parent.parent / "osxphotos" / "_version.py"
 # get version info from _version
-with open(version_file, mode="r", encoding="utf-8") as f:
+with open(version_file, encoding="utf-8") as f:
     exec(f.read(), about)  # noqa: S102 trusted version file in this repo
 
 # The full version, including alpha/beta/rc tags

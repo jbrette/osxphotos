@@ -1613,7 +1613,7 @@ def get_template_help():
     """Return help for template system as markdown string"""
     # TODO: would be better to use importlib.abc.ResourceReader but I can't find a single example of how to do this
     help_file = pathlib.Path(__file__).parent / "phototemplate.md"
-    with open(help_file, "r") as fd:
+    with open(help_file) as fd:
         md = fd.read()
     return md
 

@@ -551,7 +551,7 @@ def photo_inspect(db, theme, detect_text, template, beta):
                             Panel(
                                 inspect_photo(
                                     photo,
-                                    detected_text=detected_text_cache.get(uuid, None),
+                                    detected_text=detected_text_cache.get(uuid),
                                     templates=template,
                                     beta=beta,
                                 ),

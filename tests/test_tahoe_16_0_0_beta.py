@@ -36,7 +36,7 @@ def photosdb():
 @pytest.fixture(scope="session")
 def expected_photoinfo():
     """Load expected PhotoInfo JSON data."""
-    with open(TEST_JSON, "r") as f:
+    with open(TEST_JSON) as f:
         return json.load(f)
 
 
