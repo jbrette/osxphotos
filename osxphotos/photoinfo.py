@@ -414,7 +414,7 @@ class PhotoInfo:
         if not self._info["hasAdjustments"]:
             return None
 
-        if edit_id := self._info["edit_resource_id"]:
+        if self._info["edit_resource_id"]:
             try:
                 photopath = self._get_predicted_path_edited_4()
             except ValueError as e:

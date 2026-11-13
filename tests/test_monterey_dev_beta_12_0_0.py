@@ -781,7 +781,7 @@ def test_export_3(photosdb):
     filename2 = f"{filename2.stem} (1){filename2.suffix}"
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     got_dest_2 = photos[0].export(dest)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -800,7 +800,7 @@ def test_export_4(photosdb):
     filename2 = f"osxphotos-export-2-test-{timestamp} (1).jpg"
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest = photos[0].export(dest, filename)[0]
+    photos[0].export(dest, filename)[0]
     got_dest_2 = photos[0].export(dest, filename)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -854,9 +854,7 @@ def test_export_7(photosdb):
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
-    filename = photos[0].filename
-
-    got_dest = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     with pytest.raises(Exception) as e:
         # try to export again with increment = False
         assert photos[0].export(dest, increment=False)
@@ -880,8 +878,6 @@ def test_export_9(photosdb):
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["no_adjustments"]])
-
-    filename = photos[0].filename
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, edited=True)
@@ -951,8 +947,6 @@ def test_export_13(photosdb):
         i += 1
 
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
-
-    filename = photos[0].filename
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest)
@@ -1189,7 +1183,7 @@ def test_raw(photosdb):
 def test_verbose(capsys):
     """test verbose output in PhotosDB()"""
 
-    photosdb = osxphotos.PhotosDB(dbfile=PHOTOS_DB, verbose=print)
+    osxphotos.PhotosDB(dbfile=PHOTOS_DB, verbose=print)
     captured = capsys.readouterr()
     assert "Processing database" in captured.out
 

@@ -119,7 +119,7 @@ def time_string_to_datetime(time: str) -> datetime.time:
     for dt_format in time_formats:
         try:
             parsed_dt = datetime.datetime.strptime(time, dt_format).time()
-        except ValueError as e:
+        except ValueError:
             pass
         else:
             return parsed_dt

@@ -47,7 +47,7 @@ class AdjustmentsInfo:
 
         try:
             self._adjustments = self._decode_adjustments_from_plist(self._plist)
-        except Exception as e:
+        except Exception:
             logger.debug(f"Could not decode adjustments data: {plist_file}")
             self._adjustments = None
 
@@ -126,7 +126,7 @@ class AdjustmentsInfo:
         with open(str(plist_file), "rb") as fd:
             try:
                 plist_dict = plistlib.load(fd)
-            except Exception as e:
+            except Exception:
                 logger.debug(f"Could not load plist file: {plist_file}")
                 plist_dict = {}
         return plist_dict

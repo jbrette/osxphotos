@@ -27,7 +27,7 @@ def test_export_add_to_album(addalbum_library):
     from osxphotos.cli import export
 
     runner = CliRunner()
-    cwd = os.getcwd()
+    os.getcwd()
     with runner.isolated_filesystem():
         EXPORT_ALBUM = "OSXPhotos Export"
         SKIP_ALBUM = "OSXPhotos Skipped"
@@ -107,7 +107,7 @@ def test_query_add_to_album(addalbum_library):
     from osxphotos.cli import query
 
     runner = CliRunner()
-    cwd = os.getcwd()
+    os.getcwd()
     with runner.isolated_filesystem():
         QUERY_ALBUM = "OSXPhotos Query"
 
@@ -131,7 +131,7 @@ def test_query_add_to_album_multiple_results(addalbum_library):
     from osxphotos.cli import query
 
     runner = CliRunner()
-    cwd = os.getcwd()
+    os.getcwd()
     with runner.isolated_filesystem():
         QUERY_ALBUM = "OSXPhotos Query"
 

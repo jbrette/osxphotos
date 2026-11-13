@@ -48,14 +48,14 @@ def main(export_path, export_db_path):
     exportdb = ExportDB(export_db_path, export_path)
     export_results = exportdb.get_export_results(0)
     if not export_results:
-        echo_error(f"[error]No report results found[/]")
+        echo_error("[error]No report results found[/]")
         sys.exit(1)
 
     echo(f"Export date: [date]{export_results.datetime}")
     for filename in export_results.metadata_changed:
         try:
             uuid = exportdb.get_file_record(filename).uuid
-        except Exception as e:
+        except Exception:
             uuid = None
         echo(f"[filename]{filename}[/] ([uuid]{uuid}[/])")
 

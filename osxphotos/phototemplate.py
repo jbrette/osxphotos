@@ -1581,7 +1581,7 @@ class PhotoTemplate:
 
     def get_photo_bool_attribute(self, attr, default, bool_val):
         """Return the boolean value for a photo attribute"""
-        return bool_val if (val := getattr(self.photo, attr)) else default
+        return bool_val if getattr(self.photo, attr) else default
 
 
 def parse_default_kv(default, default_dict):

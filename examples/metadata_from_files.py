@@ -112,7 +112,7 @@ def main(
     for file in files:
         matches = fq.possible_duplicates(file)
         if matches:
-            parent_path = os.path.dirname(file)
+            os.path.dirname(file)
             for uuid, date, filename in matches:
                 echo(
                     f"Found match for file [filename]{file}[/] in Photos: "

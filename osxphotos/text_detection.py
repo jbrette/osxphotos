@@ -41,7 +41,7 @@ def detect_text(img_path: str, orientation: int | None = None) -> list:
     with objc.autorelease_pool():
         input_url = NSURL.fileURLWithPath_(img_path)
 
-        with pipes() as (out, err):
+        with pipes() as (_out, _err):
             # capture stdout and stderr from system calls
             # otherwise, Quartz.CIImage.imageWithContentsOfURL_
             # prints to stderr something like:
@@ -67,7 +67,7 @@ def detect_text(img_path: str, orientation: int | None = None) -> list:
         vision_request = (
             Vision.VNRecognizeTextRequest.alloc().initWithCompletionHandler_(handler)
         )
-        error = vision_handler.performRequests_error_([vision_request], None)
+        vision_handler.performRequests_error_([vision_request], None)
 
         for result in results:
             result[0] = str(result[0])

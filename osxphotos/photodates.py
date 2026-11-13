@@ -327,7 +327,7 @@ def update_photo_time_for_new_timezone(
     photo_date = cast(datetime.datetime, photo.date)
     old_timezone_offset = tz.offset_for_date(photo_date)
     delta = old_timezone_offset - new_timezone.offset_for_date(photo_date)
-    new_date = update_datetime_for_new_timezone(
+    update_datetime_for_new_timezone(
         photo_date, tz.tzinfo(photo_date), new_timezone.tzinfo(photo_date)
     )
     new_photo_date = update_datetime(
@@ -427,7 +427,7 @@ def set_photo_date_from_filename(
             verbose(
                 f"[warning]Warning: timezone set to {date.tzinfo} for [filepath]{filepath}[/] but --set-timezone not specified so timezone will not be applied[/]"
             )
-            timezone_seconds, timezone_str, timezone_name = PhotoTimeZone(
+            timezone_seconds, _timezone_str, _timezone_name = PhotoTimeZone(
                 library_path
             ).get_timezone(photo)
             local_date = datetime_remove_tz(datetime_to_new_tz(date, timezone_seconds))
@@ -438,7 +438,7 @@ def set_photo_date_from_filename(
             date = local_date
         else:
             # if timezone, need to update timezone and also the date/time to match
-            photo_tz_sec, _, photo_tz_name = PhotoTimeZone(
+            photo_tz_sec, _, _photo_tz_name = PhotoTimeZone(
                 library_path=library_path
             ).get_timezone(photo)
             tz_new_secs = int(utc_offset_seconds(date))
@@ -463,7 +463,7 @@ def set_photo_date_from_filename(
                 tz_updater.update_photo(photo)
 
     date = combine_date_time(photo, filepath, parse_date, date)
-    new_date = update_photo_date_time(
+    update_photo_date_time(
         library_path=library_path,
         photo=photo,
         date=date.date(),
@@ -748,5 +748,5 @@ def apply_tz_to_date(dt: datetime.datetime, tz: str) -> datetime.datetime:
     """
     try:
         return datetime_naive_to_local(dt).astimezone(ZoneInfo(tz))
-    except Exception as e:
+    except Exception:
         return dt

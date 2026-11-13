@@ -841,7 +841,7 @@ class ExportDB:
         """
         try:
             version_info = self._get_database_version(conn)
-        except Exception as e:
+        except Exception:
             version_info = (__version__, "4.3")
 
         max_version = float(OSXPHOTOS_EXPORTDB_VERSION)
@@ -2088,7 +2088,7 @@ class ExportRecord:
         ).fetchone():
             try:
                 return datetime.datetime.fromisoformat(row[0]) if row[0] else None
-            except Exception as e:
+            except Exception:
                 return None
 
         raise ValueError(

@@ -1101,7 +1101,7 @@ def import_cli(
     if (timezone or set_timezone) and not force:
         click.confirm(
             rich_text(
-                f":warning-emoji: Using --timezone or --set-timezone will directly modify "
+                ":warning-emoji: Using --timezone or --set-timezone will directly modify "
                 "the Photos library database using undocumented features. "
                 "While this functionality has been well tested, it is possible this may "
                 "corrupt, damage, or destroy your Photos library. "
@@ -2684,7 +2684,7 @@ def collect_files_to_import(
             if filename_matches_patterns(os.path.basename(f), glob)
         ]
 
-    verbose(f"Getting absolute path of each import file...", level=2)
+    verbose("Getting absolute path of each import file...", level=2)
     files_to_import = [pathlib.Path(f).absolute() for f in files_to_import]
 
     # keep only image files, video files, and .aae files
@@ -2973,7 +2973,7 @@ def file_type_for_import_group(
             file_type |= FILE_TYPE_AUTO_LIVE_PAIR
             file_type |= FILE_TYPE_SHOULD_STAGE_FILES
         if has_aae(file_tuple):
-            if non_apple_aae_file := has_non_apple_aae(file_tuple):
+            if has_non_apple_aae(file_tuple):
                 file_type |= FILE_TYPE_HAS_NON_APPLE_AAE
                 file_type |= FILE_TYPE_SHOULD_STAGE_FILES
             else:

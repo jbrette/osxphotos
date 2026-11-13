@@ -28,7 +28,7 @@ def _process_scoreinfo(self):
 
     if self._db_version <= _PHOTOS_4_VERSION:
         raise NotImplementedError(
-            f"search info not implemented for this database version"
+            "search info not implemented for this database version"
         )
     else:
         _process_scoreinfo_5(self)

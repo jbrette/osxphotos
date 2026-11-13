@@ -72,10 +72,8 @@ def test_subst_strftime_today(photosdb):
     photo_template = osxphotos.PhotoTemplate(photo)
     photo_template.today = DATETIME_TODAY
     options = RenderOptions()
-    rendered, unmatched = photo_template.render(
-        "{today.strftime,%Y-%m-%d-%H%M%S}", options
-    )
+    rendered, _ = photo_template.render("{today.strftime,%Y-%m-%d-%H%M%S}", options)
     assert rendered[0] == "2020-06-21-130000"
 
-    rendered, unmatched = photo.render_template("{today.strftime}")
+    rendered, _unmatched = photo.render_template("{today.strftime}")
     assert rendered[0] == "_"

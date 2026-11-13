@@ -252,36 +252,6 @@ def query_options_from_kwargs(**kwargs) -> QueryOptions:
     is loaded.
     """
     # sanity check input args
-    nonexclusive = [
-        "added_after",
-        "added_before",
-        "added_in_last",
-        "album",
-        "duplicate",
-        "exif",
-        "external_edit",
-        "folder",
-        "from_date",
-        "from_time",
-        "has_raw",
-        "keyword",
-        "label",
-        "max_size",
-        "min_size",
-        "name",
-        "person",
-        "query_eval",
-        "query_function",
-        "regex",
-        "selected",
-        "to_date",
-        "to_time",
-        "uti",
-        "uuid",
-        "uuid_from_file",
-        "year",
-        "newest_first",
-    ]
     exclusive = [
         ("burst", "not_burst"),
         ("cloudasset", "not_cloudasset"),

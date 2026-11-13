@@ -50,7 +50,7 @@ def test_sidecar_xmp(photosdb):
 
         # update the exif and ensure no warnings or errors
         exif = ExifTool(filepath)
-        output, warning, error = exif.run_commands("-tagsfromfile", xmppath, "-all:all")
+        _, warning, error = exif.run_commands("-tagsfromfile", xmppath, "-all:all")
         assert not warning
         assert not error
 
@@ -58,7 +58,7 @@ def test_sidecar_xmp(photosdb):
         test_xmp = str(pathlib.Path(dest) / "test.xmp")
         FileUtil.copy(xmppath, test_xmp)
         exif = ExifTool(test_xmp)
-        output, warning, error = exif.run_commands(
+        __, warning, error = exif.run_commands(
             "-tagsfromfile", xmppath, "-all:all", test_xmp, no_file=True
         )
         assert not warning

@@ -222,7 +222,6 @@ def export_db_check_signatures(
     notmatched = 0
     skipped = 0
     for row in rows:
-        filepath_normalized = row[0]
         filepath = row[1]
         filepath = export_dir / filepath
         if not filepath.exists():
@@ -290,7 +289,6 @@ def export_db_touch_files(
     not_touched = 0
     skipped = 0
     for row in rows:
-        filepath_normalized = row[0]
         filepath = row[1]
         filepath = export_dir / filepath
         uuid = row[2]
@@ -596,7 +594,6 @@ def export_db_get_last_export_dir(filepath: str | os.PathLike) -> str | None:
     """Return path to last export directory from database"""
     filepath = pathlib.Path(filepath)
     if export_db_path := find_export_db_for_filepath(filepath):
-        export_root = pathlib.Path(export_db_path).parent
         exportdb = ExportDB(export_db_path, None)
         return exportdb.get_last_export_directory()
     return None

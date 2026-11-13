@@ -139,7 +139,7 @@ def repl(ctx, cli_obj, db, emacs, beta, **kwargs):
             f"- selected: list of PhotoInfo objects for any photos selected in Photos (len={len(selected)}); "
             "will dynamically update as photos are selected in Photos"
         )
-    print(f"\nThe following functions may be helpful:")
+    print("\nThe following functions may be helpful:")
     print(
         "- get_photo(uuid): return a PhotoInfo object for photo with uuid; e.g. get_photo('B13F4485-94E0-41CD-AF71-913095D62E31')"
     )

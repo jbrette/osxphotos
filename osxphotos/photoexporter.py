@@ -1439,7 +1439,7 @@ class PhotoExporter:
                         )
 
                     if options.fix_orientation:
-                        fixed, msg = fix_exif_orientation(self.photo, src, options)
+                        _fixed, msg = fix_exif_orientation(self.photo, src, options)
                         verbose(msg)
 
                 try:

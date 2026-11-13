@@ -29,7 +29,7 @@ def expected_photoinfo():
 
 
 def _normalize_for_comparison(obj):
-    tests_root = str(TEST_JSON.parent)
+    str(TEST_JSON.parent)
     if isinstance(obj, dict):
         return {k: _normalize_for_comparison(v) for k, v in obj.items()}
     if isinstance(obj, list):

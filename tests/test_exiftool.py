@@ -543,7 +543,7 @@ def test_exiftool_terminate():
 
     import osxphotos.exiftool
 
-    exif1 = osxphotos.exiftool.ExifTool(TEST_FILE_ONE_KEYWORD)
+    osxphotos.exiftool.ExifTool(TEST_FILE_ONE_KEYWORD)
 
     # Use pgrep to find actual exiftool processes (more reliable than ps)
     try:

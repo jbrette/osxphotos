@@ -77,7 +77,7 @@ def _network_via_mount(path: pathlib.Path) -> bool | None:
     for line in out.splitlines():
         # Example: "//server/share on /Volumes/Share (smbfs, nodev, nosuid, ... )"
         try:
-            before_on, after_on = line.split(" on ", 1)
+            _before_on, after_on = line.split(" on ", 1)
             mnt_point, rest = after_on.split(" (", 1)
             fstype = rest.split(",", 1)[0].strip()
         except ValueError:

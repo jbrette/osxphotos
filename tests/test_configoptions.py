@@ -60,7 +60,7 @@ def test_load_from_file_error(tmpdir):
     cfg.write_to_file(str(cfg_file))
     # try to load with a section that doesn't exist in the TOML file
     with pytest.raises(ConfigOptionsLoadError):
-        cfg2 = ConfigOptions("FOO", VARS).load_from_file(str(cfg_file))
+        ConfigOptions("FOO", VARS).load_from_file(str(cfg_file))
 
 
 def test_asdict():

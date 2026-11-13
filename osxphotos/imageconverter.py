@@ -92,7 +92,7 @@ class ImageConverter:
             input_url = NSURL.fileURLWithPath_(input_path)
             output_url = NSURL.fileURLWithPath_(output_path)
 
-            with pipes() as (out, err):
+            with pipes() as (_out, _err):
                 # capture stdout and stderr from system calls
                 # otherwise, Quartz.CIImage.imageWithContentsOfURL_
                 # prints to stderr something like:

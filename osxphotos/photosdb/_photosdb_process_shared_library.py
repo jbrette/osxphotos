@@ -38,7 +38,7 @@ def _process_shared_library_info_8(photosdb: PhotosDB):
     db = photosdb._tmp_db
     zasset = _DB_TABLE_NAMES[photosdb._photos_ver]["ASSET"]
 
-    (conn, cursor) = sqlite_open_ro(db)
+    (_conn, cursor) = sqlite_open_ro(db)
 
     result = cursor.execute(
         f""" 

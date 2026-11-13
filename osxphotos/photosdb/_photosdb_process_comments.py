@@ -44,7 +44,7 @@ def _process_comments_5(photosdb):
 
     asset_table = _DB_TABLE_NAMES[photosdb._photos_ver]["ASSET"]
 
-    (conn, cursor) = sqlite_open_ro(db)
+    (conn, _cursor) = sqlite_open_ro(db)
 
     results = conn.execute(
         """

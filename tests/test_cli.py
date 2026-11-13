@@ -1298,7 +1298,7 @@ def test_about():
     """Test about"""
 
     runner = CliRunner()
-    cwd = os.getcwd()
+    os.getcwd()
     result = runner.invoke(about, [])
     assert result.exit_code == 0
     assert "MIT License" in result.output
@@ -2264,7 +2264,7 @@ def test_export_using_hardlinks_incompat_options():
     runner = CliRunner()
     cwd = os.getcwd()
     photosdb = osxphotos.PhotosDB(dbfile=CLI_PHOTOS_DB)
-    photo = photosdb.photos(uuid=[CLI_EXPORT_UUID])[0]
+    photosdb.photos(uuid=[CLI_EXPORT_UUID])[0]
 
     # pylint: disable=not-context-manager
     with isolated_filesystem_here():
@@ -2636,7 +2636,7 @@ def test_export_exiftool_path():
 def test_export_exiftool_path_render_template():
     """test --exiftool-path with {exiftool:} template rendering"""
 
-    exiftool_source = osxphotos.exiftool.get_exiftool_path()
+    osxphotos.exiftool.get_exiftool_path()
 
     # monkey patch get_exiftool_path so it returns None
     get_exiftool_path = osxphotos.exiftool.get_exiftool_path
@@ -2748,7 +2748,7 @@ def test_export_exiftool_duplicate_keywords():
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
         for uuid in CLI_EXIFTOOL_DUPLICATE_KEYWORDS:
-            result = runner.invoke(
+            runner.invoke(
                 export,
                 [
                     "--library",
@@ -4592,7 +4592,7 @@ def test_export_live():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             ["--library", os.path.join(cwd, LIVE_PHOTOS_DB), ".", "--live", "-V"],
         )
@@ -4605,7 +4605,7 @@ def test_export_skip_live():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             ["--library", os.path.join(cwd, LIVE_PHOTOS_DB), ".", "--skip-live", "-V"],
         )
@@ -4618,7 +4618,7 @@ def test_export_raw():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             [
                 "--library",
@@ -4652,7 +4652,7 @@ def test_export_raw_original():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             ["--library", os.path.join(cwd, RAW_PHOTOS_DB), ".", "--skip-edited", "-V"],
         )
@@ -4665,7 +4665,7 @@ def test_export_raw_edited():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             [
                 "--library",
@@ -4684,7 +4684,7 @@ def test_export_raw_edited_original():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export, ["--library", os.path.join(cwd, RAW_PHOTOS_DB), ".", "-V"]
         )
         files = glob.glob("*")
@@ -5001,7 +5001,7 @@ def test_export_filename_template_long_description():
             ],
         )
         assert result.exit_code == 0
-        files = glob.glob("*.*")
+        glob.glob("*.*")
         for fname in CLI_EXPORTED_FILENAME_TEMPLATE_LONG_DESCRIPTION:
             assert pathlib.Path(fname).is_file()
 
@@ -5258,7 +5258,7 @@ def test_export_exif(exiftag, exifvalue, files_expected):
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             [
                 "--library",
@@ -5738,7 +5738,7 @@ def test_export_force_update():
         try:
             conn = sqlite3.connect(dbpath)
             c = conn.cursor()
-        except sqlite3.Error as e:
+        except sqlite3.Error:
             pytest.exit("An error occurred opening sqlite file")
 
         # photo is IMG_4547.jpg
@@ -5848,8 +5848,8 @@ def test_export_update_complex():
         try:
             conn = sqlite3.connect(dbpath)
             c = conn.cursor()
-        except sqlite3.Error as e:
-            pytest.exit(f"An error occurred opening sqlite file")
+        except sqlite3.Error:
+            pytest.exit("An error occurred opening sqlite file")
 
         # photo is IMG_4547.jpg
         c.execute(
@@ -7926,7 +7926,7 @@ def test_export_cleanup_keep_leading_slash():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        tmpdir = os.getcwd()
+        os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -7961,11 +7961,11 @@ def test_export_cleanup_keep_leading_slash():
                 "--update",
                 "--cleanup",
                 "--keep",
-                f"/keep_me/",
+                "/keep_me/",
                 "--keep",
-                f"/keep_me.txt",
+                "/keep_me.txt",
                 "--keep",
-                f"/*.db",
+                "/*.db",
                 "--dry-run",
             ],
         )
@@ -7985,11 +7985,11 @@ def test_export_cleanup_keep_leading_slash():
                 "--update",
                 "--cleanup",
                 "--keep",
-                f"/keep_me/",
+                "/keep_me/",
                 "--keep",
-                f"/keep_me.txt",
+                "/keep_me.txt",
                 "--keep",
-                f"/*.db",
+                "/*.db",
             ],
         )
         assert "Deleted: 2 files, 2 directories" in result.output
@@ -8102,7 +8102,7 @@ def test_export_cleanup_osxphotos_keep():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        tmpdir = os.getcwd()
+        os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -8179,7 +8179,7 @@ def test_export_cleanup_osxphotos_keep_keep():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        tmpdir = os.getcwd()
+        os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -9173,7 +9173,7 @@ def test_export_xattr_template_dry_run():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        test_dir = os.getcwd()
+        os.getcwd()
         for uuid in CLI_FINDER_TAGS:
             result = runner.invoke(
                 export,
@@ -9579,7 +9579,7 @@ def test_export_burst_uuid(local_photosdb: osxphotos.PhotosDB):
                 ],
             )
             assert result.exit_code == 0
-            assert f"exported: 1" in result.output
+            assert "exported: 1" in result.output
 
 
 @pytest.mark.skipif(

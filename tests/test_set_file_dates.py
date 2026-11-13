@@ -83,7 +83,7 @@ def test_set_file_dates_creation_date():
         import Foundation
 
         file_url = Foundation.NSURL.fileURLWithPath_(tmp_path)
-        creation_date_value, error = file_url.resourceValuesForKeys_error_(
+        creation_date_value, _error = file_url.resourceValuesForKeys_error_(
             [Foundation.NSURLCreationDateKey], None
         )
 
@@ -112,7 +112,7 @@ def test_set_file_dates_modification_date():
         import Foundation
 
         file_url = Foundation.NSURL.fileURLWithPath_(tmp_path)
-        mod_date_value, error = file_url.resourceValuesForKeys_error_(
+        mod_date_value, _error = file_url.resourceValuesForKeys_error_(
             [Foundation.NSURLContentModificationDateKey], None
         )
 
@@ -141,7 +141,7 @@ def test_set_file_dates_access_date():
         import Foundation
 
         file_url = Foundation.NSURL.fileURLWithPath_(tmp_path)
-        access_date_value, error = file_url.resourceValuesForKeys_error_(
+        access_date_value, _error = file_url.resourceValuesForKeys_error_(
             [Foundation.NSURLContentAccessDateKey], None
         )
 
@@ -172,7 +172,7 @@ def test_set_file_dates_creation_and_modification():
         import Foundation
 
         file_url = Foundation.NSURL.fileURLWithPath_(tmp_path)
-        date_values, error = file_url.resourceValuesForKeys_error_(
+        date_values, _error = file_url.resourceValuesForKeys_error_(
             [
                 Foundation.NSURLCreationDateKey,
                 Foundation.NSURLContentModificationDateKey,
@@ -215,7 +215,7 @@ def test_set_file_dates_all_three_dates():
         import Foundation
 
         file_url = Foundation.NSURL.fileURLWithPath_(tmp_path)
-        date_values, error = file_url.resourceValuesForKeys_error_(
+        date_values, _error = file_url.resourceValuesForKeys_error_(
             [
                 Foundation.NSURLCreationDateKey,
                 Foundation.NSURLContentModificationDateKey,
@@ -260,7 +260,7 @@ def test_set_file_dates_pathlib_path():
         import Foundation
 
         file_url = Foundation.NSURL.fileURLWithPath_(str(tmp_path))
-        mod_date_value, error = file_url.resourceValuesForKeys_error_(
+        mod_date_value, _error = file_url.resourceValuesForKeys_error_(
             [Foundation.NSURLContentModificationDateKey], None
         )
 
@@ -289,7 +289,7 @@ def test_set_file_dates_directory():
         import Foundation
 
         file_url = Foundation.NSURL.fileURLWithPath_(str(tmp_path))
-        date_values, error = file_url.resourceValuesForKeys_error_(
+        date_values, _error = file_url.resourceValuesForKeys_error_(
             [
                 Foundation.NSURLCreationDateKey,
                 Foundation.NSURLContentModificationDateKey,
@@ -327,7 +327,7 @@ def test_set_file_dates_default_date_type():
         import Foundation
 
         file_url = Foundation.NSURL.fileURLWithPath_(tmp_path)
-        creation_date_value, error = file_url.resourceValuesForKeys_error_(
+        creation_date_value, _error = file_url.resourceValuesForKeys_error_(
             [Foundation.NSURLCreationDateKey], None
         )
 

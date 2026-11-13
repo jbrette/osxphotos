@@ -1007,7 +1007,7 @@ def test_import_favorite_rating():
 def test_import_glob():
     """Test import with --glob"""
     cwd = os.getcwd()
-    test_image_1 = os.path.join(cwd, TEST_IMAGE_1)
+    os.path.join(cwd, TEST_IMAGE_1)
     runner = CliRunner()
     result = runner.invoke(
         import_main,
@@ -1023,7 +1023,7 @@ def test_import_glob():
 def test_import_glob_walk():
     """Test import with --walk --glob"""
     cwd = os.getcwd()
-    test_image_1 = os.path.join(cwd, TEST_IMAGE_1)
+    os.path.join(cwd, TEST_IMAGE_1)
     runner = CliRunner()
     result = runner.invoke(
         import_main,
@@ -2207,7 +2207,7 @@ def test_import_exportdb_sidecar_sidecar_ignore_date(tmp_path):
 @pytest.mark.test_import
 def test_import_aae(tmp_path):
     """Test import with aae files; test that invalid AAE are ignored during import"""
-    cwd = os.getcwd()
+    os.getcwd()
     shutil.copy(TEST_IMAGE_VALID_AAE, os.path.join(tmp_path, "valid_aae.jpg"))
     shutil.copy(TEST_AAE_VALID_AAE, os.path.join(tmp_path, "valid_aae.aae"))
     shutil.copy(TEST_IMAGE_INVALID_AAE, os.path.join(tmp_path, "invalid_aae.jpg"))

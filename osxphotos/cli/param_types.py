@@ -163,7 +163,7 @@ class BitMathSize(click.ParamType):
             try:
                 value = int(value)
                 value = bitmath.Byte(value)
-            except ValueError as e:
+            except ValueError:
                 self.fail(
                     f"{value} must be specified as bytes or using SI/NIST units. "
                     + "For example, the following are all valid and equivalent sizes: '1048576' '1.048576MB', '1 MiB'."
@@ -210,7 +210,7 @@ class FunctionCall(click.ParamType):
 
         try:
             function = load_function(filename_validated, funcname)
-        except Exception as e:
+        except Exception:
             self.fail(f"Could not load function {funcname} from {filename_validated}")
 
         return (function, value)
@@ -227,7 +227,7 @@ class ExportDBType(click.ParamType):
             if export_db_name.is_file():
                 # verify it's actually an osxphotos export_db
                 # export_db_get_version will raise an error if it's not valid
-                osxphotos_ver, export_db_ver = export_db_get_version(value)
+                _osxphotos_ver, _export_db_ver = export_db_get_version(value)
             return value
         except Exception:
             self.fail(f"{value} exists but is not a valid osxphotos export database. ")
@@ -329,11 +329,11 @@ class TimezoneOffset(click.ParamType):
             offset_seconds = utc_offset_string_to_seconds(value)
             tz = Timezone(offset_seconds)
             return tz
-        except ValueError as e:
+        except ValueError:
             try:
                 # might be named timezone
                 return Timezone(value)
-            except ValueError as e:
+            except ValueError:
                 self.fail(
                     f"Invalid timezone format or name: {value}. "
                     "Valid format for timezone offset: '±HH:MM', '±H:MM', or '±HHMM' or named timezone such as 'America/Los_Angeles'"

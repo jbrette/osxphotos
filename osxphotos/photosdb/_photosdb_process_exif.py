@@ -28,7 +28,7 @@ def _process_exifinfo_4(photosdb):
     """process exif info for Photos <= 4
     photosdb: PhotosDB instance"""
     photosdb._db_exifinfo_uuid = {}
-    raise NotImplementedError(f"search info not implemented for this database version")
+    raise NotImplementedError("search info not implemented for this database version")
 
 
 def _process_exifinfo_5(photosdb):
@@ -39,7 +39,7 @@ def _process_exifinfo_5(photosdb):
 
     asset_table = _DB_TABLE_NAMES[photosdb._photos_ver]["ASSET"]
 
-    (conn, cursor) = sqlite_open_ro(db)
+    (conn, _cursor) = sqlite_open_ro(db)
 
     result = conn.execute(
         f"""

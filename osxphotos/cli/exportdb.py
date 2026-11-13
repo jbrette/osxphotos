@@ -426,7 +426,7 @@ def exportdb(
                 rich_echo(f"[filepath]{last_path}[/]")
                 sys.exit(0)
             else:
-                rich_echo(f"No last export directory found")
+                rich_echo("No last export directory found")
                 sys.exit(1)
 
     if save_config:
@@ -683,7 +683,7 @@ def exportdb(
         db = get_photos_db(db)
         if not db:
             rich_echo_error(
-                f"[error]Could not find Photos library; use --library to specify path to library[/error]"
+                "[error]Could not find Photos library; use --library to specify path to library[/error]"
             )
             sys.exit(1)
         exportdb = ExportDB(dbfile=export_db, export_dir=export_dir)

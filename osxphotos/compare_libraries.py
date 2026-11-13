@@ -247,7 +247,7 @@ def compare_photos_libraries(
     signature_function = signature_function or photo_signature
     diff_function = diff_function or photo_diff
 
-    verbose(f"Comparing libraries:")
+    verbose("Comparing libraries:")
     verbose(f"library_a = {library_a.library_path}")
     verbose(f"library_b = {library_b.library_path}")
 

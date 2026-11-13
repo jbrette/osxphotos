@@ -150,7 +150,7 @@ def scan_for_files(directory: str, uuid_dict: dict):
     for dirpath, dirname, filenames in os.walk(directory):
         for filename in filenames:
             if match := uuid_regex.match(filename):
-                stem, ext = splitext(filename)
+                _stem, ext = splitext(filename)
                 # .plist and .aae files may hold data on adjustments but these
                 # are not useful by themselves so skip them
                 if ext.lower() in [".plist", ".aae"]:

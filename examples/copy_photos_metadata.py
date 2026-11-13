@@ -76,28 +76,28 @@ def copy_metadata(
         if not dry_run:
             dest_photo.title = src.title
     else:
-        verbose(f"No title to set")
+        verbose("No title to set")
 
     if src.description:
         verbose(f"Setting description: {src.description}")
         if not dry_run:
             dest_photo.description = src.description
     else:
-        verbose(f"No description to set")
+        verbose("No description to set")
 
     if src.keywords:
         verbose(f"Setting keywords: {', '.join(src.keywords)}")
         if not dry_run:
             dest_photo.keywords = src.keywords
     else:
-        verbose(f"No keywords to set")
+        verbose("No keywords to set")
 
     if src.location:
         verbose(f"Setting location: {src.location}")
         if not dry_run:
             dest_photo.location = src.location
     else:
-        verbose(f"No location to set")
+        verbose("No location to set")
 
     if src.date:
         verbose(f"Setting date: {src.date}")
@@ -107,7 +107,7 @@ def copy_metadata(
                 datetime_utc_to_local(datetime_tz_to_utc(src.date))
             )
     else:
-        verbose(f"No date to set")
+        verbose("No date to set")
 
     # Add destination photo to source photo's albums, preserving folder structure
     if src.album_info:

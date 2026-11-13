@@ -25,7 +25,7 @@ def photoscript_object_from_uuid(
     """Return a photoscript object from a uuid"""
     photos_database = get_db_path_for_library(photos_database)
     photos_version = get_photos_library_version(photos_database)
-    connection, cursor = sqlite_open_ro(photos_database)
+    connection, _cursor = sqlite_open_ro(photos_database)
     uuid = uuid.upper()
     if _uuid_is_asset(uuid, connection, photos_version):
         return photoscript.Photo(uuid)
@@ -43,7 +43,7 @@ def photoscript_object_from_name(
     """Return a photoscript object from a name"""
     photos_database = get_db_path_for_library(photos_database)
     photos_version = get_photos_library_version(photos_database)
-    connection, cursor = sqlite_open_ro(photos_database)
+    connection, _cursor = sqlite_open_ro(photos_database)
     connection.create_function("CASEFOLD", 1, casefold)
     if uuid := _asset_uuid_for_name(name, connection, photos_version):
         return photoscript.Photo(uuid)

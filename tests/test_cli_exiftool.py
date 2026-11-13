@@ -142,7 +142,7 @@ def test_export_exiftool_album_keyword():
             ],
         )
         assert result.exit_code == 0
-        assert f"exported: 0, updated: 0, skipped: 3" in result.output
+        assert "exported: 0, updated: 0, skipped: 3" in result.output
 
 
 @pytest.mark.skipif(exiftool_path is None, reason="exiftool not installed")

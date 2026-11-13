@@ -82,7 +82,7 @@ class TempDiskImage:
     def unmount(self):
         try:
             if self._mount_point:
-                hdiutil = subprocess.run(
+                subprocess.run(
                     ["/usr/bin/hdiutil", "detach", self._mount_point],
                     check=True,
                     text=True,

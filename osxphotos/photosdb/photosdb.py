@@ -1720,7 +1720,7 @@ class PhotosDB:
         but it works so don't touch it.
         """
 
-        logger.debug(f"_process_database5")
+        logger.debug("_process_database5")
         verbose = self._verbose
         (conn, c) = sqlite_open_ro(self._tmp_db)
 
@@ -1754,7 +1754,7 @@ class PhotosDB:
         )
 
         # Look for all combinations of persons and pictures
-        logger.debug(f"Getting information about persons")
+        logger.debug("Getting information about persons")
 
         # get info to associate persons with photos
         # then get detected faces in each photo and link to persons
@@ -2684,7 +2684,7 @@ class PhotosDB:
 
         if self._db_version <= _PHOTOS_4_VERSION:
             raise NotImplementedError(
-                f"Moment info implemented for this database version"
+                "Moment info implemented for this database version"
             )
         else:
             self._process_moment_5()
@@ -2695,7 +2695,7 @@ class PhotosDB:
         self._db_moment_pk = {}
 
         results = self.execute(
-            f"""
+            """
             SELECT
             Z_PK,
             ZTIMEZONEOFFSET,

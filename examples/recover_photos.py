@@ -177,7 +177,7 @@ def get_original_filename(path: pathlib.Path) -> str:
         original_filename = xattr.getxattr(
             str(path), "com.apple.assetsd.originalFilename"
         ).decode()
-    except Exception as e:
+    except Exception:
         original_filename = path.name
 
     return fix_raw_pair_name(path, original_filename)
@@ -219,7 +219,7 @@ def get_uuid(path: pathlib.Path) -> str:
     try:
         uuid = xattr.getxattr(str(path), "com.apple.assetsd.UUID").decode()
         print(f"{uuid=}")
-    except Exception as e:
+    except Exception:
         uuid = path.stem
     return uuid
 
@@ -370,7 +370,7 @@ def export_file(
                 error_count += 1
 
     if edited_output_path or aae_output_path:
-        verbose(f"Renaming edited group")
+        verbose("Renaming edited group")
         if not dry_run:
             edited_group = [output_path]
             if edited_output_path:

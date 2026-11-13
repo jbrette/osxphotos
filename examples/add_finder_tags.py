@@ -222,7 +222,7 @@ def collect_files(
     #         if filename_matches_patterns(os.path.basename(f), glob)
     #     ]
 
-    echo(f"Getting absolute path of each file...")
+    echo("Getting absolute path of each file...")
     files_list = [pathlib.Path(f).absolute() for f in files_list]
 
     # keep only image files, video files, and .aae files

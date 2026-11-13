@@ -26,10 +26,10 @@ def test_list_directory():
 
     temp_dir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     temp_dir_name = pathlib.Path(temp_dir.name)
-    file1 = (temp_dir_name / "file1.jpg").touch()
-    file2 = (temp_dir_name / "File2.JPG").touch()
-    file3 = (temp_dir_name / "File.png").touch()
-    file4 = (temp_dir_name / "document.pdf").touch()
+    (temp_dir_name / "file1.jpg").touch()
+    (temp_dir_name / "File2.JPG").touch()
+    (temp_dir_name / "File.png").touch()
+    (temp_dir_name / "document.pdf").touch()
 
     files = list_directory(temp_dir.name, glob="*.jpg")
     assert len(files) == 2

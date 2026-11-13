@@ -671,7 +671,7 @@ def test_subst_unknown_val(photosdb_places):
     photo = photosdb_places.photos(uuid=[UUID_DICT["place_dc"]])[0]
 
     template = "{created.year}/{foo}"
-    rendered, unknown = photo.render_template(template)
+    _rendered, unknown = photo.render_template(template)
     # assert rendered[0] == "2020/{foo}"
     assert unknown == ["foo"]
 
@@ -695,7 +695,7 @@ def test_subst_unknown_val_with_default(photosdb_places):
     photo = photosdb_places.photos(uuid=[UUID_DICT["place_dc"]])[0]
 
     template = "{created.year}/{foo,bar}"
-    rendered, unknown = photo.render_template(template)
+    _rendered, unknown = photo.render_template(template)
     # assert rendered[0] == "2020/{foo,bar}"
     assert unknown == ["foo"]
 
@@ -788,11 +788,7 @@ def test_subst_multi_0_2_0_default_val_unknown_val(photosdb):
     photo = photosdb.photos(uuid=[UUID_DICT["0_2_0"]])[0]
 
     template = "{created.year}/{album,NOALBUM}/{keyword,NOKEYWORD}/{person}/{foo}/{baz}"
-    expected = [
-        "2019/NOALBUM/wedding/_/{foo}/{baz}",
-        "2019/NOALBUM/flowers/_/{foo}/{baz}",
-    ]
-    rendered, unknown = photo.render_template(template)
+    _rendered, unknown = photo.render_template(template)
     # assert sorted(rendered) == sorted(expected)
     assert unknown == ["foo", "baz"]
 
@@ -805,11 +801,7 @@ def test_subst_multi_0_2_0_default_val_unknown_val_2(photosdb):
     photo = photosdb.photos(uuid=[UUID_DICT["0_2_0"]])[0]
 
     template = "{created.year}/{album,NOALBUM}/{keyword,NOKEYWORD}/{person}/{foo,bar}/{baz,bar}"
-    expected = [
-        "2019/NOALBUM/wedding/_/{foo,bar}/{baz,bar}",
-        "2019/NOALBUM/flowers/_/{foo,bar}/{baz,bar}",
-    ]
-    rendered, unknown = photo.render_template(template)
+    _rendered, unknown = photo.render_template(template)
     # assert sorted(rendered) == sorted(expected)
     assert unknown == ["foo", "baz"]
 
@@ -941,10 +933,10 @@ def test_subst_strftime(photosdb_places):
     setlocale(locale.LC_ALL, "en_US")
     photo = photosdb_places.photos(uuid=[UUID_DICT["place_dc"]])[0]
 
-    rendered, unmatched = photo.render_template("{created.strftime,%Y-%m-%d-%H%M%S}")
+    rendered, _ = photo.render_template("{created.strftime,%Y-%m-%d-%H%M%S}")
     assert rendered[0] == "2020-02-04-190738"
 
-    rendered, unmatched = photo.render_template("{created.strftime}")
+    rendered, _unmatched = photo.render_template("{created.strftime}")
     assert rendered[0] == "_"
 
 
@@ -957,7 +949,7 @@ def test_subst_expand_inplace_1(photosdb):
     template = "{person}"
     expected = ["Katie,Suzy"]
     options = RenderOptions(expand_inplace=True)
-    rendered, unknown = photo.render_template(template, options)
+    rendered, _unknown = photo.render_template(template, options)
     assert sorted(rendered) == sorted(expected)
 
 
@@ -969,7 +961,7 @@ def test_subst_expand_inplace_2(photosdb):
     template = "{person}-{keyword}"
     expected = ["Katie,Suzy-Kids"]
     options = RenderOptions(expand_inplace=True)
-    rendered, unknown = photo.render_template(template, options)
+    rendered, _unknown = photo.render_template(template, options)
     assert sorted(rendered) == sorted(expected)
 
 
@@ -982,7 +974,7 @@ def test_subst_expand_inplace_3(photosdb):
     expected = ["Katie; Suzy-Kids"]
 
     options = RenderOptions(expand_inplace=True, inplace_sep="; ")
-    rendered, unknown = photo.render_template(template, options)
+    rendered, _unknown = photo.render_template(template, options)
     assert sorted(rendered) == sorted(expected)
 
 
@@ -1204,7 +1196,7 @@ def test_function_bad(photosdb):
     """Test invalid {function}"""
     photo = photosdb.get_photo(UUID_MULTI_KEYWORDS)
     with pytest.raises(ValueError):
-        rendered, _ = photo.render_template(
+        _rendered, _ = photo.render_template(
             "{function:tests/template_function.py::foobar}"
         )
 
@@ -1235,7 +1227,7 @@ def test_function_filter_bad(photosdb):
     # bad field raises SyntaxError
     # bad function raises ValueError
     with pytest.raises((SyntaxError, ValueError)):
-        rendered, _ = photo.render_template(
+        _rendered, _ = photo.render_template(
             "{photo.original_filename|function:tests/template_filter.py::foobar}"
         )
 
@@ -1403,7 +1395,7 @@ def test_bad_slice(photosdb):
     # bad field raises SyntaxError
     # bad function raises ValueError
     with pytest.raises((SyntaxError, ValueError)):
-        rendered, _ = photo.render_template("{photo.original_filename|slice(1:2:3:4)}")
+        _rendered, _ = photo.render_template("{photo.original_filename|slice(1:2:3:4)}")
 
 
 def test_bad_sslice(photosdb):
@@ -1412,7 +1404,9 @@ def test_bad_sslice(photosdb):
     # bad field raises SyntaxError
     # bad function raises ValueError
     with pytest.raises((SyntaxError, ValueError)):
-        rendered, _ = photo.render_template("{photo.original_filename|sslice(1:2:3:4)}")
+        _rendered, _ = photo.render_template(
+            "{photo.original_filename|sslice(1:2:3:4)}"
+        )
 
 
 def test_location_latitude_longitude(photosdb):
@@ -1487,7 +1481,7 @@ def test_path_invalid_property(photosdb_places):
     """Test path filter with chained properties"""
     photo = photosdb_places.photos(uuid=[UUID_DICT["place_dc"]])[0]
     with pytest.raises(SyntaxError):
-        rendered, _ = photo.render_template("{photo.path|path.parent.foo}")
+        _rendered, _ = photo.render_template("{photo.path|path.parent.foo}")
 
 
 def test_datetime(photosdb_places):

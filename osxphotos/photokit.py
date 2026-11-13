@@ -584,7 +584,7 @@ class PhotoAsset:
         """
 
         with objc.autorelease_pool():
-            with pipes() as (out, err):
+            with pipes() as (_out, _err):
                 filename = (
                     pathlib.Path(filename)
                     if filename
@@ -911,7 +911,7 @@ class VideoAsset(PhotoAsset):
             ValueError if dest is not a valid directory
         """
 
-        with objc.autorelease_pool(), pipes() as (out, err):
+        with objc.autorelease_pool(), pipes() as (_out, _err):
             if self.slow_mo and version == PHOTOS_VERSION_CURRENT:
                 return [
                     self._export_slow_mo(
@@ -1182,7 +1182,7 @@ class LivePhotoAsset(PhotoAsset):
             PhotoKitExportError if error during export
         """
 
-        with objc.autorelease_pool(), pipes() as (out, err):
+        with objc.autorelease_pool(), pipes() as (_out, _err):
             filename = (
                 pathlib.Path(filename)
                 if filename

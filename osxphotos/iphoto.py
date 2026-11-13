@@ -1890,7 +1890,7 @@ class iPhotoPhotoInfo:
         logger.debug(f"Returning default value for {name}; not implemented for iPhoto")
         try:
             return default_return_value(self._attributes[name])
-        except Exception as e:
+        except Exception:
             # on <= Python 3.9, default_return_value can raise exception for Union types
             logger.warning("Error getting default value for {name}: {e}")
             return None

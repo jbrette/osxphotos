@@ -141,7 +141,7 @@ def add_locations(
 
     try:
         query_options = query_options_from_kwargs(**kwargs)
-    except IncompatibleQueryOptions as e:
+    except IncompatibleQueryOptions:
         echo_error("Incompatible query options")
         echo_error(ctx.obj.group.commands["repl"].get_help(ctx))
         ctx.exit(1)

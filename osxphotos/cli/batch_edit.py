@@ -187,7 +187,7 @@ def batch_edit(
     if not photos:
         # need this check here to avoid photosdb.photos() from retrieving all photos
         echo_error(
-            f"[error] No photos found to process. Select photos in the Photos app or use the one of the query options."
+            "[error] No photos found to process. Select photos in the Photos app or use the one of the query options."
         )
         raise click.Abort()
 
@@ -430,9 +430,9 @@ def set_photo_favorite(
 ):
     """Set or clear photo favorite status"""
     if set_favorite:
-        verbose(f"Setting [i]favorite[/] flag")
+        verbose("Setting [i]favorite[/] flag")
     if clear_favorite:
-        verbose(f"Clearing [i]favorite[/] flag")
+        verbose("Clearing [i]favorite[/] flag")
 
     if not dry_run:
         ps_photo = photoscript_photo(photo)

@@ -105,7 +105,7 @@ class AssetTable(Table):
 
     def rows(self) -> list[Any]:
         """Return row2 for this photo from the ZASSET table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         cursor.execute(
             f"SELECT * FROM {self.asset_table} WHERE ZUUID = ?", (self.uuid,)
         )
@@ -113,7 +113,7 @@ class AssetTable(Table):
 
     def _get_column(self, column: str) -> tuple[Any]:
         """Get column value for this photo from the ZASSET table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         cursor.execute(
             f"SELECT {column} FROM {self.asset_table} WHERE ZUUID = ?",
             (self.uuid,),
@@ -136,7 +136,7 @@ class AdditionalAttributesTable(Table):
 
     def rows(self) -> list[tuple[Any]]:
         """Return rows for this photo from the ZADDITIONALASSETATTRIBUTES table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZADDITIONALASSETATTRIBUTES.*
                     FROM ZADDITIONALASSETATTRIBUTES
                     JOIN {self.asset_table} ON {self.asset_table}.Z_PK = ZADDITIONALASSETATTRIBUTES.ZASSET
@@ -147,7 +147,7 @@ class AdditionalAttributesTable(Table):
 
     def _get_column(self, column: str) -> tuple[Any]:
         """Get column value for this photo from the ZADDITIONALASSETATTRIBUTES table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZADDITIONALASSETATTRIBUTES.{column}
                     FROM ZADDITIONALASSETATTRIBUTES
                     JOIN {self.asset_table} ON {self.asset_table}.Z_PK = ZADDITIONALASSETATTRIBUTES.ZASSET
@@ -172,7 +172,7 @@ class ExtendedAttributesTable(Table):
 
     def rows(self) -> list[tuple[Any]]:
         """Return rows for this photo from the ZEXTENDEDATTRIBUTES table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZEXTENDEDATTRIBUTES.*
                     FROM ZEXTENDEDATTRIBUTES
                     JOIN {self.asset_table} ON {self.asset_table}.Z_PK = ZEXTENDEDATTRIBUTES.ZASSET
@@ -183,7 +183,7 @@ class ExtendedAttributesTable(Table):
 
     def _get_column(self, column: str) -> tuple[Any]:
         """Get column value for this photo from the ZEXTENDEDATTRIBUTES table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZEXTENDEDATTRIBUTES.{column}
                     FROM ZEXTENDEDATTRIBUTES
                     JOIN {self.asset_table} ON {self.asset_table}.Z_PK = ZEXTENDEDATTRIBUTES.ZASSET
@@ -208,7 +208,7 @@ class DetectedFaceTable(Table):
 
     def rows(self) -> list[tuple[Any]]:
         """Return rows for this photo from the ZDETECTEDFACE table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZDETECTEDFACE.*
                     FROM ZDETECTEDFACE
                     JOIN {self.asset_table} ON {self.asset_table}.Z_PK = ZDETECTEDFACE.ZASSET
@@ -219,7 +219,7 @@ class DetectedFaceTable(Table):
 
     def _get_column(self, column: str) -> tuple[Any]:
         """Get column value for this photo from the ZDETECTEDFACE table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZDETECTEDFACE.{column}
                     FROM ZDETECTEDFACE
                     JOIN {self.asset_table} ON {self.asset_table}.Z_PK = ZDETECTEDFACE.ZASSET
@@ -244,7 +244,7 @@ class PersonTable(Table):
 
     def rows(self) -> list[tuple[Any]]:
         """Return rows for this photo from the ZPERSON table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         person_fk = _DB_TABLE_NAMES[self.version]["DETECTED_FACE_PERSON_FK"]
         asset_fk = _DB_TABLE_NAMES[self.version]["DETECTED_FACE_ASSET_FK"]
         sql = f"""  SELECT ZPERSON.*
@@ -258,7 +258,7 @@ class PersonTable(Table):
 
     def _get_column(self, column: str) -> tuple[Any]:
         """Get column value for this photo from the ZPERSON table."""
-        conn, cursor = self.db.get_db_connection()
+        _conn, cursor = self.db.get_db_connection()
         person_fk = _DB_TABLE_NAMES[self.version]["DETECTED_FACE_PERSON_FK"]
         asset_fk = _DB_TABLE_NAMES[self.version]["DETECTED_FACE_ASSET_FK"]
         sql = f"""  SELECT ZPERSON.{column}

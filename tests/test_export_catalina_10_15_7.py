@@ -134,7 +134,7 @@ def test_export_3(photosdb):
     filename2 = f"{filename2.stem} (1){filename2.suffix}"
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest_1 = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     got_dest_2 = photos[0].export(dest)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -153,7 +153,7 @@ def test_export_4(photosdb):
     filename2 = f"osxphotos-export-2-test-{timestamp} (1).jpg"
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest_1 = photos[0].export(dest, filename)[0]
+    photos[0].export(dest, filename)[0]
     got_dest_2 = photos[0].export(dest, filename)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -208,9 +208,9 @@ def test_export_7(photosdb):
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
     filename = photos[0].filename
-    expected_dest = os.path.join(dest, filename)
+    os.path.join(dest, filename)
 
-    got_dest = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     with pytest.raises(Exception) as e:
         # try to export again with increment = False
         assert photos[0].export(dest, increment=False)
@@ -250,7 +250,7 @@ def test_export_10(photosdb):
 
     timestamp = time.time()
     filename = f"osxphotos-export-test-{timestamp}.jpg"
-    expected_dest = os.path.join(dest, filename)
+    os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, filename, edited=True)
@@ -306,7 +306,7 @@ def test_export_13(photosdb):
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
     filename = photos[0].filename
-    expected_dest = os.path.join(dest, filename)
+    os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest)
@@ -518,7 +518,7 @@ def test_xmp_sidecar_extension(photosdb):
 
     with open(f"tests/sidecars/{uuid}.xmp") as file:
         xmp_expected = file.read()
-        xmp_expected_lines = [line.strip() for line in xmp_expected.split("\n")]
+        [line.strip() for line in xmp_expected.split("\n")]
 
     xmp_got = xmp_sidecar(photos[0])
     assert xmp_got == xmp_expected

@@ -3654,7 +3654,7 @@ def run_cleanup_command(
                         photo = photoinfo_from_dict(
                             json.loads(photo_info), exiftool=exiftool_path
                         )
-                    except Exception as e:
+                    except Exception:
                         pass
             for command_template in cleanup_command:
                 if should_return:

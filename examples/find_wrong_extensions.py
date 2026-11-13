@@ -42,7 +42,7 @@ def check_photo_extensions(photos: list[osxphotos.PhotoInfo]):
         original_suffix = pathlib.Path(p.original_filename).suffix.lower()
         try:
             original_filename_uti = uti_for_suffix(original_suffix).lower()
-        except Exception as e:
+        except Exception:
             original_filename_uti = None
         original_uti = p.uti_original.lower()
 
@@ -68,7 +68,7 @@ def check_photo_extensions(photos: list[osxphotos.PhotoInfo]):
                 or uti_for_extension != uti_for_suffix(pathlib.Path(p.path).suffix)
             ):
                 mismatch += 1
-        except Exception as e:
+        except Exception:
             pass
 
         if mismatch:
