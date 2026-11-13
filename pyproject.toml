@@ -233,6 +233,10 @@ filename = "applecrate.toml"
 [tool.mypy]
 # Same settings as the other uv/ruff projects. Run: uv run mypy
 python_version = "3.14"
+# Check as macOS even in Linux CI: photokit.py and others are guarded by
+# sys.platform == "darwin", which mypy would otherwise treat as unreachable.
+# Linux importability is covered by the Ubuntu test job.
+platform = "darwin"
 strict = true
 warn_unused_configs = true
 warn_redundant_casts = true
