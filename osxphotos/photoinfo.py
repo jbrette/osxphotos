@@ -15,10 +15,9 @@ import os.path
 import pathlib
 import plistlib
 import re
-from datetime import timedelta, timezone
 from functools import cached_property
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -35,7 +34,6 @@ from ._constants import (
     _PHOTOS_4_ROOT_FOLDER,
     _PHOTOS_4_VERSION,
     _PHOTOS_5_ALBUM_KIND,
-    _PHOTOS_5_IMPORT_SESSION_ALBUM_KIND,
     _PHOTOS_5_PROJECT_ALBUM_KIND,
     _PHOTOS_5_SHARED_ALBUM_KIND,
     _PHOTOS_5_SHARED_DERIVATIVE_PATH,
@@ -45,7 +43,6 @@ from ._constants import (
     _PHOTOS_8_SHARED_PHOTO_PATH,
     BURST_DEFAULT_PICK,
     BURST_KEY,
-    BURST_NOT_SELECTED,
     BURST_SELECTED,
     SIDECAR_EXIFTOOL,
     SIDECAR_JSON,
@@ -57,7 +54,7 @@ from .albuminfo import AlbumInfo, ImportInfo, ProjectInfo
 from .bookmark import resolve_bookmark_path
 from .commentinfo import CommentInfo, LikeInfo
 from .exifinfo import ExifInfo, exifinfo_factory
-from .exiftool import ExifToolCaching, get_exiftool_path
+from .exiftool import ExifTool, ExifToolCaching, get_exiftool_path
 from .exportoptions import ExportOptions
 from .media_analysis import get_caption, get_media_analysis_results
 from .momentinfo import MomentInfo
@@ -98,6 +95,23 @@ class PhotoInfo:
     including keywords, persons, albums, uuid, path, etc.
     """
 
+    # lazily computed values memoized on first access; declared without values so
+    # the hasattr / AttributeError caching in the properties keeps working
+    _path: str | None
+    _path_edited: str | None
+    _path_edited_live_photo: str | None
+    _albums: list[str]
+    _faceinfo: list[FaceInfo]
+    _adjustmentinfo: AdjustmentsInfo
+    _uti_original: str
+    _place: PlaceInfo4 | PlaceInfo5 | None
+    _owner: str | None
+    _scoreinfo: ScoreInfo
+    _search_info: SearchInfo
+    _search_info_normalized: SearchInfo
+    _exiftool: ExifTool | None
+    _detected_text_cache: dict[float, list[tuple[str, float]]]
+
     def __init__(self, db: osxphotos.PhotosDB, uuid: str, info: dict[str, Any]):
         self._uuid: str = uuid
         self._info: dict[str, Any] = info
@@ -120,9 +134,9 @@ class PhotoInfo:
             and self.raw_original
         ):
             # return the JPEG version as that's what Photos 5+ does
-            return self._info["raw_pair_info"]["filename"]
+            return cast(str, self._info["raw_pair_info"]["filename"])
         else:
-            return self._info["filename"]
+            return cast(str, self._info["filename"])
 
     @property
     def original_filename(self) -> str:
@@ -142,7 +156,7 @@ class PhotoInfo:
     @property
     def date(self) -> datetime.datetime:
         """Asset creation date as timezone aware datetime object"""
-        return self._info["imageDate"]
+        return cast(datetime.datetime, self._info["imageDate"])
 
     @property
     def date_original(self) -> datetime.datetime:
@@ -179,12 +193,12 @@ class PhotoInfo:
     @property
     def tzoffset(self) -> int:
         """Timezone offset from UTC in seconds for the Photo creation date"""
-        return self._info["imageTimeZoneOffsetSeconds"]
+        return cast(int, self._info["imageTimeZoneOffsetSeconds"])
 
     @property
     def tzname(self) -> str | None:
         """Timezone name for the asset creation date; on Photos version < 5, returns None"""
-        return self._info["imageTimeZoneName"]
+        return cast("str | None", self._info["imageTimeZoneName"])
 
     @property
     def path(self) -> str | None:
@@ -193,7 +207,7 @@ class PhotoInfo:
             return self._path
         except AttributeError:
             self._path = None
-            photopath = None
+            photopath: str | None = None
             if self._info["isMissing"] == 1:
                 return photopath  # path would be meaningless until downloaded
 
@@ -223,13 +237,15 @@ class PhotoInfo:
         if self.syndicated and not self.saved_to_library:
             # path for "shared with you" syndicated photos that have not yet been saved to the library
             return self._path_syndication()
+        directory: str = self._info["directory"]
+        filename: str = self._info["filename"]
         return (
-            os.path.join(self._info["directory"], self._info["filename"])
-            if self._info["directory"].startswith("/")
+            os.path.join(directory, filename)
+            if directory.startswith("/")
             else os.path.join(
                 self._db._masters_path,
-                self._info["directory"],
-                self._info["filename"],
+                directory,
+                filename,
             )
         )
 
@@ -417,7 +433,7 @@ class PhotoInfo:
         if not self._info["hasAdjustments"]:
             return None
 
-        if edit_id := self._info["edit_resource_id"]:
+        if self._info["edit_resource_id"]:
             try:
                 photopath = self._get_predicted_path_edited_4()
             except ValueError as e:
@@ -501,11 +517,10 @@ class PhotoInfo:
             library = self._db._library_path
             directory = self._uuid[0]  # first char of uuid
             filename = f"{self._uuid}_2_100_a.mov"
-            photopath = os.path.join(
+            live_path = os.path.join(
                 library, "resources", "renders", directory, filename
             )
-            if not os.path.isfile(photopath):
-                photopath = None
+            photopath = live_path if os.path.isfile(live_path) else None
         else:
             photopath = None
 
@@ -546,25 +561,27 @@ class PhotoInfo:
             filestem = pathlib.Path(self._info["filename"]).stem
             # raw_ext = get_preferred_uti_extension(self._info["UTI_raw"])
 
+            filepath: str
             if self._info["directory"].startswith("/"):
                 filepath = self._info["directory"]
             else:
                 filepath = os.path.join(self._db._masters_path, self._info["directory"])
 
+            photopath: str | None
             if raw_file := list_directory(filepath, startswith=f"{filestem}_4"):
-                photopath = pathlib.Path(filepath) / raw_file[0]
-                photopath = str(photopath) if photopath.is_file() else None
+                raw_path = pathlib.Path(filepath) / raw_file[0]
+                photopath = str(raw_path) if raw_path.is_file() else None
             else:
                 photopath = None
         else:
             # is a reference
             try:
-                photopath = (
+                ref_path = (
                     pathlib.Path("/Volumes")
                     / self._info["raw_volume"]
                     / self._info["raw_relative_path"]
                 )
-                photopath = str(photopath) if photopath.is_file() else None
+                photopath = str(ref_path) if ref_path.is_file() else None
             except KeyError:
                 # don't have the path details
                 photopath = None
@@ -574,6 +591,7 @@ class PhotoInfo:
     def _path_raw_4(self) -> str | None:
         """Return path_raw for Photos <= version 4"""
         vol = self._info["raw_info"]["volume"]
+        photopath: str | None
         if vol is not None:
             photopath = os.path.join(
                 "/Volumes", vol, self._info["raw_info"]["imagePath"]
@@ -592,7 +610,7 @@ class PhotoInfo:
     @property
     def description(self) -> str:
         """long / extended description of picture"""
-        return self._info["extendedDescription"]
+        return cast(str, self._info["extendedDescription"])
 
     @property
     def persons(self) -> list[str]:
@@ -733,7 +751,7 @@ class PhotoInfo:
                 downloaded from cloud to local storate their status in the database might still show
                 isMissing = 1
         """
-        return self._info["isMissing"] == 1
+        return cast(bool, self._info["isMissing"] == 1)
 
     @property
     def hasadjustments(self) -> bool:
@@ -807,12 +825,14 @@ class PhotoInfo:
     @property
     def external_edit(self) -> bool:
         """Returns True if picture was edited outside of Photos using external editor"""
-        return self._info["adjustmentFormatID"] == "com.apple.Photos.externalEdit"
+        return cast(
+            bool, self._info["adjustmentFormatID"] == "com.apple.Photos.externalEdit"
+        )
 
     @property
     def favorite(self) -> bool:
         """True if picture is marked as favorite"""
-        return self._info["favorite"] == 1
+        return cast(bool, self._info["favorite"] == 1)
 
     @property
     def flagged(self) -> bool:
@@ -827,17 +847,17 @@ class PhotoInfo:
     @property
     def hidden(self) -> bool:
         """True if picture is hidden"""
-        return self._info["hidden"] == 1
+        return cast(bool, self._info["hidden"] == 1)
 
     @property
     def visible(self) -> bool:
         """True if picture is visble"""
-        return self._info["visible"]
+        return cast(bool, self._info["visible"])
 
     @property
     def intrash(self) -> bool:
         """True if picture is in trash ('Recently Deleted' folder)"""
-        return self._info["intrash"]
+        return cast(bool, self._info["intrash"])
 
     @property
     def date_trashed(self) -> datetime.datetime | None:
@@ -874,7 +894,7 @@ class PhotoInfo:
         """returns True if photos is in a shared iCloud album otherwise false
         Only valid on Photos 5; returns None on older versions"""
         if self._db._db_version > _PHOTOS_4_VERSION:
-            return self._info["shared"]
+            return cast("bool | None", self._info["shared"])
         else:
             return None
 
@@ -884,16 +904,16 @@ class PhotoInfo:
         for example: public.jpeg or com.apple.quicktime-movie
         """
         if self._db._db_version <= _PHOTOS_4_VERSION and self.hasadjustments:
-            return self._info["UTI_edited"]
+            return cast(str, self._info["UTI_edited"])
         elif (
             self._db._db_version <= _PHOTOS_4_VERSION
             and self.has_raw
             and self.raw_original
         ):
             # return UTI of the non-raw image to match Photos 5+ behavior
-            return self._info["raw_pair_info"]["UTI"]
+            return cast(str, self._info["raw_pair_info"]["UTI"])
         else:
-            return self._info["UTI"]
+            return cast(str, self._info["UTI"])
 
     @property
     def uti_original(self) -> str:
@@ -929,7 +949,7 @@ class PhotoInfo:
         if self._db._db_version >= _PHOTOS_5_VERSION:
             return self.uti if self.hasadjustments else None
         else:
-            return self._info["UTI_edited"]
+            return cast("str | None", self._info["UTI_edited"])
 
     @property
     def uti_raw(self) -> str | None:
@@ -938,7 +958,7 @@ class PhotoInfo:
         Returns None if no associated RAW image
         """
         if self._db._photos_ver < 7:
-            return self._info["UTI_raw"]
+            return cast("str | None", self._info["UTI_raw"])
 
         if rawpath := self.path_raw:
             return get_uti_for_extension(pathlib.Path(rawpath).suffix)
@@ -948,12 +968,12 @@ class PhotoInfo:
     @property
     def ismovie(self) -> bool:
         """Returns True if file is a movie, otherwise False"""
-        return self._info["type"] == _MOVIE_TYPE
+        return cast(bool, self._info["type"] == _MOVIE_TYPE)
 
     @property
     def isphoto(self) -> bool:
         """Returns True if file is an image, otherwise False"""
-        return self._info["type"] == _PHOTO_TYPE
+        return cast(bool, self._info["type"] == _PHOTO_TYPE)
 
     @property
     def incloud(self) -> bool | None:
@@ -961,7 +981,7 @@ class PhotoInfo:
         False if photo is cloud asset and not yet synched to cloud
         None if photo is not cloud asset
         """
-        return self._info["incloud"]
+        return cast("bool | None", self._info["incloud"])
 
     @property
     def iscloudasset(self) -> bool:
@@ -979,12 +999,12 @@ class PhotoInfo:
     @property
     def isreference(self) -> bool:
         """Returns True if photo is a reference (not copied to the Photos library), otherwise False"""
-        return self._info["isreference"]
+        return cast(bool, self._info["isreference"])
 
     @property
     def burst(self) -> bool:
         """Returns True if photo is part of a Burst photo set, otherwise False"""
-        return self._info["burst"]
+        return cast(bool, self._info["burst"])
 
     @property
     def burst_selected(self) -> bool:
@@ -1046,7 +1066,7 @@ class PhotoInfo:
     @property
     def live_photo(self) -> bool:
         """Returns True if photo is a live photo, otherwise False"""
-        return self._info["live_photo"]
+        return cast(bool, self._info["live_photo"])
 
     @cached_property
     def path_live_photo(self) -> str | None:
@@ -1084,9 +1104,8 @@ class PhotoInfo:
 
         photopath = self._path_5_shared()
         if photopath:
-            photopath = pathlib.Path(photopath).with_suffix(".MOV")
-            if not path_exists(photopath):
-                photopath = None
+            live_path = pathlib.Path(photopath).with_suffix(".MOV")
+            return str(live_path) if path_exists(live_path) else None
         return photopath
 
     def _path_live_photo_4(self) -> str | None:
@@ -1163,10 +1182,10 @@ class PhotoInfo:
                 return str(path)
             # path didn't exist so try to resolve from the bookmark data
             # this only works on macOS
-            if is_macos:
-                if path := resolve_bookmark_path(bookmark):
-                    if path.exists():
-                        return str(path)
+            if (
+                is_macos and (path := resolve_bookmark_path(bookmark))
+            ) and path.exists():
+                return str(path)
         return None
 
     @cached_property
@@ -1197,26 +1216,27 @@ class PhotoInfo:
                 f"resources/derivatives/masters/{directory}/{self.uuid}_4_5005_c.jpeg"
             )
 
-        derivative_path = (
+        derivative_dir = (
             pathlib.Path(self._db._library_path)
             .joinpath(derivative_path)
             .joinpath(directory)
         )
-        thumb_path = pathlib.Path(self._db._library_path).joinpath(thumb_path)
+        thumb_file = pathlib.Path(self._db._library_path).joinpath(thumb_path)
 
         # find all files that start with uuid in derivative path
         # skip .THM files (these are actually low-res thumbnails in JPEG format but with .THM extension)
-        if derivative_path.is_dir():
+        derivatives: list[str]
+        if derivative_dir.is_dir():
             derivatives = find_files_by_prefix(
-                derivative_path, self.uuid, ignore_ext=".THM"
+                derivative_dir, self.uuid, ignore_ext=".THM"
             )
         else:
             derivatives = []
 
         # previews may be missing from derivatives path
         # there are what appear to be low res thumbnails in the "masters" subfolder
-        if path_exists(thumb_path):
-            derivatives.append(str(thumb_path))
+        if path_exists(thumb_file):
+            derivatives.append(str(thumb_file))
 
         # ensure .mov is first in list as poster image could be larger than the movie preview
         if (
@@ -1241,8 +1261,11 @@ class PhotoInfo:
 
         derivatives_path = derivatives_root / nn_id / file_id
         if derivatives_path.is_dir():
-            files = derivatives_path.glob("*")
-            files = sorted(files, reverse=True, key=lambda f: f.stat().st_size)
+            files = sorted(
+                derivatives_path.glob("*"),
+                reverse=True,
+                key=lambda f: f.stat().st_size,
+            )
             return [str(filename) for filename in files]
 
         # didn't find derivatives path
@@ -1250,8 +1273,11 @@ class PhotoInfo:
             if subdir.is_dir():
                 derivatives_path = derivatives_root / subdir / file_id
                 if derivatives_path.is_dir():
-                    files = derivatives_path.glob("*")
-                    files = sorted(files, reverse=True, key=lambda f: f.stat().st_size)
+                    files = sorted(
+                        derivatives_path.glob("*"),
+                        reverse=True,
+                        key=lambda f: f.stat().st_size,
+                    )
                     return [str(filename) for filename in files]
 
         # didn't find a derivatives path
@@ -1261,14 +1287,14 @@ class PhotoInfo:
         """Return paths to all derivative (preview) files for shared iCloud photos in Photos >= 5"""
         directory = self._uuid[0]  # first char of uuid
         # only 1 derivative for shared photos and it's called 'UUID_4_5005_c.jpeg'
-        derivative_path = (
+        derivative_dir = (
             _PHOTOS_8_SHARED_DERIVATIVE_PATH
             if self._db._photos_ver >= 8
             else _PHOTOS_5_SHARED_DERIVATIVE_PATH
         )
         derivative_path = (
             pathlib.Path(self._db._library_path)
-            / derivative_path
+            / derivative_dir
             / f"{directory}/{self.uuid}_4_5005_c.jpeg"
         )
         return [str(derivative_path)] if path_exists(derivative_path) else []
@@ -1276,37 +1302,37 @@ class PhotoInfo:
     @property
     def panorama(self) -> bool:
         """Returns True if photo is a panorama, otherwise False"""
-        return self._info["panorama"]
+        return cast(bool, self._info["panorama"])
 
     @property
     def slow_mo(self) -> bool:
         """Returns True if photo is a slow motion video, otherwise False"""
-        return self._info["slow_mo"]
+        return cast(bool, self._info["slow_mo"])
 
     @property
     def time_lapse(self) -> bool:
         """Returns True if photo is a time lapse video, otherwise False"""
-        return self._info["time_lapse"]
+        return cast(bool, self._info["time_lapse"])
 
     @property
     def hdr(self) -> bool:
         """Returns True if photo is an HDR photo, otherwise False"""
-        return self._info["hdr"]
+        return cast(bool, self._info["hdr"])
 
     @property
     def screenshot(self) -> bool:
         """Returns True if photo is a screenshot, otherwise False"""
-        return self._info["screenshot"]
+        return cast(bool, self._info["screenshot"])
 
     @property
     def screen_recording(self) -> bool:
         """Returns True if video is a screen_recording, otherwise False"""
-        return self._info["screen_recording"]
+        return cast(bool, self._info["screen_recording"])
 
     @property
     def portrait(self) -> bool:
         """Returns True if photo is a portrait, otherwise False"""
-        return self._info["portrait"]
+        return cast(bool, self._info["portrait"])
 
     @property
     def spatial(self) -> int:
@@ -1322,7 +1348,7 @@ class PhotoInfo:
     @property
     def selfie(self) -> bool:
         """Returns True if photo is a selfie (front facing camera), otherwise False"""
-        return self._info["selfie"]
+        return cast(bool, self._info["selfie"])
 
     @property
     def place(self) -> PlaceInfo4 | PlaceInfo5 | None:
@@ -1363,7 +1389,7 @@ class PhotoInfo:
     @property
     def has_raw(self) -> bool:
         """returns True if photo has an associated raw image (that is, it's a RAW+JPEG pair), otherwise False"""
-        return self._info["has_raw"]
+        return cast(bool, self._info["has_raw"])
 
     @property
     def israw(self) -> bool:
@@ -1375,30 +1401,30 @@ class PhotoInfo:
         """returns True if associated raw image and the raw image is selected in Photos
         via "Use RAW as Original "
         otherwise returns False"""
-        return self._info["raw_is_original"]
+        return cast(bool, self._info["raw_is_original"])
 
     @property
     def height(self) -> int:
         """returns height of the current photo version in pixels"""
-        return self._info["height"]
+        return cast(int, self._info["height"])
 
     @property
     def width(self) -> int:
         """returns width of the current photo version in pixels"""
-        return self._info["width"]
+        return cast(int, self._info["width"])
 
     @property
     def orientation(self) -> int:
         """returns EXIF orientation of the current photo version as int or 0 if current orientation cannot be determined"""
         if self._db._db_version <= _PHOTOS_4_VERSION:
-            return self._info["orientation"]
+            return cast(int, self._info["orientation"])
 
         # For Photos 5+, try to get the adjusted orientation
         if not self.hasadjustments:
-            return self._info["orientation"]
+            return cast(int, self._info["orientation"])
 
         if self.adjustments:
-            return self.adjustments.adj_orientation
+            return cast(int, self.adjustments.adj_orientation)
         else:
             # can't reliably determine orientation for edited photo if adjustmentinfo not available
             return 0
@@ -1406,33 +1432,34 @@ class PhotoInfo:
     @property
     def original_height(self) -> int:
         """returns height of the original photo version in pixels"""
-        return self._info["original_height"]
+        return cast(int, self._info["original_height"])
 
     @property
     def original_width(self) -> int:
         """returns width of the original photo version in pixels"""
-        return self._info["original_width"]
+        return cast(int, self._info["original_width"])
 
     @property
     def original_orientation(self) -> int:
         """returns EXIF orientation of the original photo version as int"""
-        return self._info["original_orientation"]
+        return cast(int, self._info["original_orientation"])
 
     @property
     def original_filesize(self) -> int:
         """returns filesize of original photo in bytes as int"""
-        return self._info["original_filesize"]
+        return cast(int, self._info["original_filesize"])
 
     @property
     def duplicates(self) -> list[PhotoInfo]:
         """return list of PhotoInfo objects for possible duplicates (matching signature of original size, date, height, width) or empty list if no matching duplicates"""
         signature = self._db._duplicate_signature(self.uuid)
-        duplicates = []
+        duplicates: list[PhotoInfo] = []
         try:
             for uuid in self._db._db_signatures[signature]:
                 if uuid != self.uuid:
-                    # found a possible duplicate
-                    duplicates.append(self._db.get_photo(uuid))
+                    # found a possible duplicate; signatures are built from the
+                    # database's own photos so get_photo() always finds it
+                    duplicates.append(cast(PhotoInfo, self._db.get_photo(uuid)))
         except KeyError:
             # don't expect this to happen as the signature should be in db
             logger.warning(f"Did not find signature for {self.uuid} in _db_signatures")
@@ -1459,11 +1486,11 @@ class PhotoInfo:
             return self._owner
 
     @property
-    def score(self) -> ScoreInfo:
+    def score(self) -> ScoreInfo | None:
         """Computed score information for a photo
 
         Returns:
-            ScoreInfo instance
+            ScoreInfo instance or None on Photos <= 4
         """
 
         if self._db._db_version <= _PHOTOS_4_VERSION:
@@ -1594,7 +1621,10 @@ class PhotoInfo:
             return None
 
         try:
-            return self._db._db_syndication_uuid[self.uuid]["syndication_history"] != 0
+            return cast(
+                "bool | None",
+                self._db._db_syndication_uuid[self.uuid]["syndication_history"] != 0,
+            )
         except KeyError:
             return False
 
@@ -1656,7 +1686,8 @@ class PhotoInfo:
         if self._db._db_version <= _PHOTOS_4_VERSION:
             return []
 
-        return self.search_info.labels
+        search_info = self.search_info
+        return search_info.labels if search_info else []
 
     @property
     def labels_normalized(self) -> list[str]:
@@ -1666,14 +1697,15 @@ class PhotoInfo:
         if self._db._db_version <= _PHOTOS_4_VERSION:
             return []
 
-        return self.search_info_normalized.labels
+        search_info = self.search_info_normalized
+        return search_info.labels if search_info else []
 
     @property
     def comments(self) -> list[CommentInfo]:
         """Returns list of CommentInfo objects for any comments on the photo (sorted by date)"""
         try:
             return self._db._db_comments_uuid[self.uuid]["comments"]
-        except:
+        except Exception:
             return []
 
     @property
@@ -1681,7 +1713,7 @@ class PhotoInfo:
         """Returns list of LikeInfo objects for any likes on the photo (sorted by date)"""
         try:
             return self._db._db_comments_uuid[self.uuid]["likes"]
-        except:
+        except Exception:
             return []
 
     @cached_property
@@ -1704,7 +1736,7 @@ class PhotoInfo:
             return exifinfo_factory(None)
 
     @property
-    def exiftool(self) -> ExifToolCaching | None:
+    def exiftool(self) -> ExifTool | None:
         """Returns a ExifToolCaching (read-only instance of ExifTool) object for the photo.
         Requires that exiftool (https://exiftool.org/) be installed
         If exiftool not installed, logs warning and returns None
@@ -1762,17 +1794,17 @@ class PhotoInfo:
     @cached_property
     def cloud_guid(self) -> str:
         """Returns the GUID of the photo in iCloud (Photos 5+ only)"""
-        return self._info["cloudMasterGUID"]
+        return cast(str, self._info["cloudMasterGUID"])
 
     @cached_property
     def cloud_owner_hashed_id(self) -> str:
         """Returns the hashed iCloud ID of the owner of the shared photo (Photos 5+ only)"""
-        return self._info["cloudownerhashedpersonid"]
+        return cast(str, self._info["cloudownerhashedpersonid"])
 
     @cached_property
     def fingerprint(self) -> str | None:
         """Returns fingerprint of original photo as a string or None if not available"""
-        return self._info["masterFingerprint"]
+        return cast("str | None", self._info["masterFingerprint"])
 
     @cached_property
     def media_analysis(self) -> dict[str, Any]:
@@ -1785,7 +1817,7 @@ class PhotoInfo:
         return get_caption(get_media_analysis_results(self)) or ""
 
     def detected_text(
-        self, confidence_threshold=TEXT_DETECTION_CONFIDENCE_THRESHOLD
+        self, confidence_threshold: float = TEXT_DETECTION_CONFIDENCE_THRESHOLD
     ) -> list[tuple[str, float]]:
         """Detects text in photo and returns lists of results as (detected text, confidence)
 
@@ -1816,7 +1848,7 @@ class PhotoInfo:
             ]
             return self._detected_text_cache[confidence_threshold]
 
-    def _detected_text(self):
+    def _detected_text(self) -> list[list[Any]]:
         """detect text in photo, either from cached extended attribute or by attempting text detection"""
         assert_macos()
 
@@ -1828,9 +1860,10 @@ class PhotoInfo:
             return []
 
         md = OSXMetaData(path)
+        detected_text: list[list[Any]] | None
         try:
 
-            def decoder(val):
+            def decoder(val: bytes) -> Any:
                 """Decode value from JSON"""
                 return json.loads(val.decode("utf-8"))
 
@@ -1843,7 +1876,7 @@ class PhotoInfo:
             orientation = self.orientation or None
             detected_text = detect_text(path, orientation)
 
-            def encoder(obj):
+            def encoder(obj: Any) -> bytes:
                 """Encode value as JSON"""
                 val = json.dumps(obj)
                 return val.encode("utf-8")
@@ -1856,12 +1889,12 @@ class PhotoInfo:
     @property
     def _longitude(self) -> float:
         """Returns longitude, in degrees"""
-        return self._info["longitude"]
+        return cast(float, self._info["longitude"])
 
     @property
     def _latitude(self) -> float:
         """Returns latitude, in degrees"""
-        return self._info["latitude"]
+        return cast(float, self._info["latitude"])
 
     def render_template(
         self, template_str: str, options: RenderOptions | None = None
@@ -1881,24 +1914,24 @@ class PhotoInfo:
 
     def export(
         self,
-        dest,
-        filename=None,
-        edited=False,
-        live_photo=False,
-        raw_photo=False,
-        export_as_hardlink=False,
-        overwrite=False,
-        increment=True,
-        sidecar_json=False,
-        sidecar_exiftool=False,
-        sidecar_xmp=False,
-        use_photos_export=False,
-        timeout=120,
-        exiftool=False,
-        use_albums_as_keywords=False,
-        use_persons_as_keywords=False,
-        keyword_template=None,
-        description_template=None,
+        dest: str,
+        filename: str | None = None,
+        edited: bool = False,
+        live_photo: bool = False,
+        raw_photo: bool = False,
+        export_as_hardlink: bool = False,
+        overwrite: bool = False,
+        increment: bool = True,
+        sidecar_json: bool = False,
+        sidecar_exiftool: bool = False,
+        sidecar_xmp: bool = False,
+        use_photos_export: bool = False,
+        timeout: int = 120,
+        exiftool: bool = False,
+        use_albums_as_keywords: bool = False,
+        use_persons_as_keywords: bool = False,
+        keyword_template: list[str] | None = None,
+        description_template: str | None = None,
         render_options: RenderOptions | None = None,
     ) -> list[str]:
         """Export a photo
@@ -1988,7 +2021,7 @@ class PhotoInfo:
         results = exporter.export(dest, filename=filename, options=options)
         return results.exported
 
-    def _get_album_uuids(self, project=False) -> list[str]:
+    def _get_album_uuids(self, project: bool = False) -> list[str]:
         """Return list of album UUIDs this photo is found in
 
             Filters out albums in the trash and any special album types
@@ -2266,9 +2299,10 @@ class PhotoInfo:
             The shallow representation is used internally by export as it contains only the subset of data needed for export.
         """
 
-        def default(o):
+        def default(o: Any) -> str | None:
             if isinstance(o, (datetime.date, datetime.datetime)):
                 return o.isoformat()
+            return None
 
         cache_key = (indent, shallow)
         if cache_key in self._json_cache:
@@ -2301,9 +2335,10 @@ class PhotoInfo:
         # for computing hexdigest so we can ignore them
         # also don't use visible because it changes based on Photos UI state
 
-        def default(o):
+        def default(o: Any) -> str | None:
             if isinstance(o, (datetime.date, datetime.datetime)):
                 return o.isoformat()
+            return None
 
         dict_data = self.asdict(shallow=True)
 
@@ -2319,7 +2354,7 @@ class PhotoInfo:
                 dict_data[k] = sorted(v, key=lambda v: v if v is not None else "")
         return json.dumps(dict_data, sort_keys=True, default=default)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Compare two PhotoInfo objects for equality"""
         # Can't just compare the two __dicts__ because some methods (like albums)
         # memoize their value once called in an instance variable (e.g. self._albums)
@@ -2331,7 +2366,7 @@ class PhotoInfo:
             )
         return False
 
-    def __ne__(self, other) -> bool:
+    def __ne__(self, other: object) -> bool:
         """Compare two PhotoInfo objects for inequality"""
         return not self.__eq__(other)
 
@@ -2343,10 +2378,10 @@ class PhotoInfo:
 class PhotoInfoNone:
     """Mock class that returns None for all attributes"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def __getattribute__(self, name):
+    def __getattribute__(self, name: str) -> None:
         return None
 
 
@@ -2354,7 +2389,7 @@ def frozen_photoinfo_factory(photo: PhotoInfo) -> SimpleNamespace:
     """Return a frozen SimpleNamespace object for a PhotoInfo object"""
     photo_json = photo.json()
 
-    def _object_hook(d: dict[Any, Any]):
+    def _object_hook(d: dict[Any, Any]) -> dict[Any, Any] | SimpleNamespace:
         if not d:
             return d
 
@@ -2370,7 +2405,7 @@ def frozen_photoinfo_factory(photo: PhotoInfo) -> SimpleNamespace:
     frozen = json.loads(photo_json, object_hook=lambda d: _object_hook(d))
 
     # add on json() method to frozen object
-    def _json(*args):
+    def _json(*args: Any) -> str:
         return photo_json
 
     frozen.json = _json
@@ -2378,7 +2413,9 @@ def frozen_photoinfo_factory(photo: PhotoInfo) -> SimpleNamespace:
     # add hexdigest property to frozen object
     frozen.hexdigest = photo.hexdigest
 
-    def detected_text(confidence_threshold=TEXT_DETECTION_CONFIDENCE_THRESHOLD):
+    def detected_text(
+        confidence_threshold: float = TEXT_DETECTION_CONFIDENCE_THRESHOLD,
+    ) -> list[tuple[str, float]]:
         """Detects text in photo and returns lists of results as (detected text, confidence)
 
         confidence_threshold: float between 0.0 and 1.0. If text detection confidence is below this threshold,
@@ -2390,7 +2427,10 @@ def frozen_photoinfo_factory(photo: PhotoInfo) -> SimpleNamespace:
         """
 
         try:
-            return frozen._detected_text_cache[confidence_threshold]
+            return cast(
+                list[tuple[str, float]],
+                frozen._detected_text_cache[confidence_threshold],
+            )
         except (AttributeError, KeyError) as e:
             if isinstance(e, AttributeError):
                 frozen._detected_text_cache = {}
@@ -2406,9 +2446,12 @@ def frozen_photoinfo_factory(photo: PhotoInfo) -> SimpleNamespace:
                 for text, confidence in detected_text
                 if confidence >= confidence_threshold
             ]
-            return frozen._detected_text_cache[confidence_threshold]
+            return cast(
+                list[tuple[str, float]],
+                frozen._detected_text_cache[confidence_threshold],
+            )
 
-    def _detected_text():
+    def _detected_text() -> list[list[Any]]:
         """detect text in photo, either from cached extended attribute or by attempting text detection"""
         path = (
             frozen.path_edited
@@ -2420,9 +2463,10 @@ def frozen_photoinfo_factory(photo: PhotoInfo) -> SimpleNamespace:
             return []
 
         md = OSXMetaData(path)
+        detected_text: list[list[Any]] | None
         try:
 
-            def decoder(val):
+            def decoder(val: bytes) -> Any:
                 """Decode value from JSON"""
                 return json.loads(val.decode("utf-8"))
 
@@ -2435,7 +2479,7 @@ def frozen_photoinfo_factory(photo: PhotoInfo) -> SimpleNamespace:
             orientation = frozen.orientation or None
             detected_text = detect_text(path, orientation)
 
-            def encoder(obj):
+            def encoder(obj: Any) -> bytes:
                 """Encode value as JSON"""
                 val = json.dumps(obj)
                 return val.encode("utf-8")
@@ -2448,4 +2492,4 @@ def frozen_photoinfo_factory(photo: PhotoInfo) -> SimpleNamespace:
     frozen.detected_text = detected_text
     frozen._detected_text = _detected_text
 
-    return frozen
+    return cast(SimpleNamespace, frozen)

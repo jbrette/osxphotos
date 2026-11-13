@@ -1,7 +1,6 @@
-__all__ = ["PyReplQuitter", "embed_repl"]
-""" Custom Python REPL based on ptpython that allows quitting with custom keywords instead of 'quit()' """
+"""Custom Python REPL based on ptpython that allows quitting with custom keywords instead of 'quit()'
 
-""" This file is distributed under the same license as the ptpython package:
+This file is distributed under the same license as the ptpython package:
 
 Copyright (c) 2015, Jonathan Slenders (ptpython), (c) 2021 Rhet Turnbull (this file)
 
@@ -33,22 +32,26 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+import builtins
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine, Sequence
+from contextlib import AbstractContextManager
+from pathlib import Path
+from typing import Any
 
-from ptpython.repl import (
-    ContextManager,
-    DummyContext,
-    PythonRepl,
-    builtins,
-    patch_stdout_context,
-)
+from prompt_toolkit.patch_stdout import patch_stdout as patch_stdout_context
+from prompt_toolkit.utils import DummyContext
+from ptpython.repl import PythonRepl
+
+__all__ = ["PyReplQuitter", "embed_repl"]
 
 
 class PyReplQuitter(PythonRepl):
     """Custom pypython repl that allows quitting REPL with custom commands"""
 
-    def __init__(self, *args, quit_words: list[str] | None = None, **kwargs):
+    def __init__(
+        self, *args: Any, quit_words: list[str] | None = None, **kwargs: Any
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.quit_words = quit_words or ["quit", "q"]
 
@@ -59,17 +62,17 @@ class PyReplQuitter(PythonRepl):
 
 
 def embed_repl(
-    globals=None,
-    locals=None,
+    globals: dict[str, Any] | None = None,
+    locals: dict[str, Any] | None = None,
     configure: Callable[[PythonRepl], None] | None = None,
     vi_mode: bool = False,
     history_filename: str | None = None,
     title: str | None = None,
-    startup_paths=None,
+    startup_paths: Sequence[str | Path] | None = None,
     patch_stdout: bool = False,
     return_asyncio_coroutine: bool = False,
     quit_words: list[str] | None = None,
-) -> None:
+) -> Coroutine[Any, Any, None] | None:
     """
     Call this to embed  Python shell at the current point in your program.
     It's similar to 'IPython.embed' and 'bpython.embed'. ::
@@ -91,13 +94,14 @@ def embed_repl(
             "__builtins__": builtins,
         }
 
-    locals = locals or globals
+    repl_globals = globals
+    repl_locals = locals or globals
 
-    def get_globals():
-        return globals
+    def get_globals() -> dict[str, Any]:
+        return repl_globals
 
-    def get_locals():
-        return locals
+    def get_locals() -> dict[str, Any]:
+        return repl_locals
 
     # Create REPL.
     repl = PyReplQuitter(
@@ -116,13 +120,13 @@ def embed_repl(
         configure(repl)
 
     # Start repl.
-    patch_context: ContextManager = (
+    patch_context: AbstractContextManager[None] = (
         patch_stdout_context() if patch_stdout else DummyContext()
     )
 
     if return_asyncio_coroutine:
 
-        async def coroutine():
+        async def coroutine() -> None:
             with patch_context:
                 await repl.run_async()
 
@@ -130,3 +134,4 @@ def embed_repl(
     else:
         with patch_context:
             repl.run()
+        return None

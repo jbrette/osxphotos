@@ -2,7 +2,8 @@
 
 import os.path
 import pathlib
-from functools import cache, lru_cache
+from functools import cache
+from typing import Any, cast
 
 from mako.template import Template
 
@@ -13,7 +14,7 @@ __all__ = ["get_query"]
 QUERY_DIR = os.path.join(os.path.dirname(__file__), "queries")
 
 
-def get_query(query_name, photos_ver, **kwargs):
+def get_query(query_name: str, photos_ver: float, **kwargs: Any) -> str:
     """Return sqlite query string for an attribute and a given database version"""
 
     # there can be a single query for multiple database versions or separate queries for each version
@@ -21,11 +22,11 @@ def get_query(query_name, photos_ver, **kwargs):
     query_string = _get_query_string(query_name, photos_ver)
     asset_table = _DB_TABLE_NAMES[photos_ver]["ASSET"]
     query_template = Template(query_string)
-    return query_template.render(asset_table=asset_table, **kwargs)
+    return cast(str, query_template.render(asset_table=asset_table, **kwargs))
 
 
 @cache
-def _get_query_string(query_name, photos_ver):
+def _get_query_string(query_name: str, photos_ver: float) -> str:
     """Return sqlite query string for an attribute and a given database version"""
     query_file = pathlib.Path(QUERY_DIR) / f"{query_name}.sql.mako"
     if not query_file.is_file():
@@ -33,6 +34,6 @@ def _get_query_string(query_name, photos_ver):
         if not query_file.is_file():
             raise FileNotFoundError(f"Query file '{query_file}' not found")
 
-    with open(query_file, "r") as f:
+    with open(query_file) as f:
         query_string = f.read()
     return query_string

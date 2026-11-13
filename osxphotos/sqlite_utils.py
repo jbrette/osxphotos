@@ -10,6 +10,7 @@ import shutil
 import sqlite3
 import subprocess
 import tempfile
+from typing import cast
 
 from ._constants import SQLITE_CHECK_SAME_THREAD
 from .fileutil import FileUtil, FileUtilMacOS
@@ -32,7 +33,7 @@ __all__ = [
 ]
 
 
-def get_sqlite_cli() -> str:
+def get_sqlite_cli() -> str | None:
     """Returns path to sqlite3 command line tool"""
     return shutil.which("sqlite3")
 
@@ -40,7 +41,7 @@ def get_sqlite_cli() -> str:
 class _SQLiteTempCopyConnection(sqlite3.Connection):
     """sqlite3 connection that cleans up an associated temporary directory."""
 
-    _tempdir: tempfile.TemporaryDirectory | None = None
+    _tempdir: tempfile.TemporaryDirectory[str] | None = None
 
     def close(self) -> None:
         """Close connection and clean up temporary database copy."""
@@ -84,7 +85,7 @@ def sqlite_open_ro(
 
 
 def _sqlite_temp_copy_dbfiles(
-    dbpath: str | pathlib.Path, tempdir: tempfile.TemporaryDirectory
+    dbpath: str | pathlib.Path, tempdir: tempfile.TemporaryDirectory[str]
 ) -> pathlib.Path:
     """Copy sqlite database files to tempdir and return copied database path."""
     dbpath = pathlib.Path(dbpath)
@@ -118,7 +119,8 @@ def sqlite_open_ro_with_temp_copy(
     except Exception:
         tempdir.cleanup()
         raise
-    conn._tempdir = tempdir
+    # factory=_SQLiteTempCopyConnection makes conn an instance of that class
+    cast(_SQLiteTempCopyConnection, conn)._tempdir = tempdir
     return conn, cursor
 
 
@@ -167,10 +169,10 @@ def sqlite_backup_dbfiles(dbpath: str | pathlib.Path) -> list[str]:
     fileutil = FileUtilMacOS if is_macos else FileUtil
     backup_files = []
     for suffix in ["", "-wal", "-shm"]:
-        src = pathlib.Path(dbpath + suffix)
+        src = pathlib.Path(f"{dbpath}{suffix}")
         if not src.exists():
             continue
-        dst = pathlib.Path(dbpath + suffix + ".bak")
+        dst = pathlib.Path(f"{dbpath}{suffix}.bak")
         if dst.exists():
             dst.unlink()
         fileutil.copy(src, dst)
@@ -195,7 +197,7 @@ def sqlite_delete_dbfiles(dbpath: str | pathlib.Path) -> list[str]:
 
     deleted_files = []
     for suffix in ["", "-wal", "-shm"]:
-        src = pathlib.Path(dbpath + suffix)
+        src = pathlib.Path(f"{dbpath}{suffix}")
         if not src.exists():
             continue
         src.unlink()
@@ -213,7 +215,7 @@ def sqlite_delete_backup_files(dbpath: str | pathlib.Path) -> list[str]:
     """
     deleted_files = []
     for suffix in ["", "-wal", "-shm"]:
-        src = pathlib.Path(dbpath + suffix + ".bak")
+        src = pathlib.Path(f"{dbpath}{suffix}.bak")
         if not src.exists():
             continue
         src.unlink()
@@ -247,7 +249,7 @@ def sqlite_db_is_ok(dbpath: str | pathlib.Path) -> bool:
     return not sqlite_check_integrity(dbpath)
 
 
-def sqlite_repair_db(dbpath: str | pathlib.Path):
+def sqlite_repair_db(dbpath: str | pathlib.Path) -> None:
     """Attempt to repair a corrupt sqlite database file at dbpath
 
     Args:

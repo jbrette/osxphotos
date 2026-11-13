@@ -23,6 +23,14 @@ class PushResults:
 
     # Note: __init__ docs above added in the class docstring so they are picked up by sphinx
 
+    _datetime: str
+    written: list[str]
+    updated: list[str]
+    skipped: list[str]
+    missing: list[str]
+    error: list[tuple[str, str]]
+    warning: list[tuple[str, str]]
+
     __slots__ = [
         "_datetime",
         "error",
@@ -35,7 +43,7 @@ class PushResults:
 
     def __init__(
         self,
-    ):
+    ) -> None:
         """PushResults data class to hold results of push-exif.
 
         See class docstring for details.
@@ -55,8 +63,8 @@ class PushResults:
         """Return datetime when ExportResults was created"""
         return self._datetime
 
-    def __iadd__(self, other) -> Self:
-        if type(other) != PushResults:
+    def __iadd__(self, other: object) -> Self:
+        if type(other) is not PushResults:
             raise TypeError("Can only add PushResults to PushResults")
 
         for attribute in self.attributes:

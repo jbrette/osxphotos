@@ -8,7 +8,7 @@ from osxphotos.cli.export import _is_retryable_export_exception
 def test_is_retryable_export_exception_false_for_existing_destination():
     """File-exists export failures should not be retried."""
     exception = Exception(
-        'Error Domain=NSCocoaErrorDomain Code=516 "file couldn’t be copied" '
+        'Error Domain=NSCocoaErrorDomain Code=516 "file couldn’t be copied" '  # noqa: RUF001  (Apple's message)
         "because an item with the same name already exists. "
         'NSUnderlyingError=Error Domain=NSPOSIXErrorDomain Code=17 "File exists"'
     )

@@ -371,10 +371,7 @@ def main():
     print("=" * 70)
 
     # Check for custom library path
-    if len(sys.argv) > 1:
-        library_path = Path(sys.argv[1])
-    else:
-        library_path = get_photos_library_path()
+    library_path = Path(sys.argv[1]) if len(sys.argv) > 1 else get_photos_library_path()
 
     if not library_path.exists():
         print(f"\nError: Photos library not found at {library_path}")

@@ -57,7 +57,7 @@ def test_export_exiftool():
 
         exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
         for key in CLI_EXIFTOOL[uuid]:
-            if type(exif[key]) == list:
+            if type(exif[key]) is list:
                 assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
             else:
                 assert exif[key] == CLI_EXIFTOOL[uuid][key]
@@ -142,7 +142,7 @@ def test_export_exiftool_album_keyword():
             ],
         )
         assert result.exit_code == 0
-        assert f"exported: 0, updated: 0, skipped: 3" in result.output
+        assert "exported: 0, updated: 0, skipped: 3" in result.output
 
 
 @pytest.mark.skipif(exiftool_path is None, reason="exiftool not installed")
@@ -246,7 +246,7 @@ def test_export_exiftool_load_config():
 
         exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
         for key in CLI_EXIFTOOL[uuid]:
-            if type(exif[key]) == list:
+            if type(exif[key]) is list:
                 assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
             else:
                 assert exif[key] == CLI_EXIFTOOL[uuid][key]

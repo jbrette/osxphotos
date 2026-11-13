@@ -5,6 +5,7 @@ import re
 import zoneinfo
 from functools import cache
 from math import floor
+from typing import Literal, cast
 
 from .platform import is_macos
 from .timeutils import timezone_for_offset
@@ -57,7 +58,7 @@ def format_offset_time(offset: int) -> str:
     return f"{sign}{hours:02d}:{minutes:02d}"
 
 
-def match_etc_tzname(tz_string: str) -> tuple[str, str] | bool:
+def match_etc_tzname(tz_string: str) -> tuple[str, int] | Literal[False]:
     """Check if the timezone string matches the '±X' tzname format.
 
     Args:
@@ -100,7 +101,7 @@ def etc_tzname_to_etc(tz_string: str) -> str:
     return f"Etc/GMT{sign}{hh}"
 
 
-def convert_offset_timezone_to_etc(tz_string: str):
+def convert_offset_timezone_to_etc(tz_string: str) -> str:
     """
     Convert a timezone string like 'GMT-0800', 'UTC+0500', etc. to matching 'Etc/GMT±X' string if possible
 
@@ -148,14 +149,6 @@ def convert_offset_timezone_to_etc(tz_string: str):
     raise ValueError(f"Invalid timezone offset: {total_offset} minutes")
 
 
-class Timezone:
-    """Create Timezone object from either name (str) or offset from GMT (int)"""
-
-    # this is a dummy class to allow use of Timezone in param_types.py
-    def __init__(self, tz: str | int):
-        pass
-
-
 if is_macos:
     import Foundation
     import objc
@@ -179,28 +172,28 @@ if is_macos:
         def __init__(self, tz: str | float):
             with objc.autorelease_pool():
                 self._from_offset = False
+                ns_tz: Foundation.NSTimeZone | None
                 if isinstance(tz, str):
                     # the NSTimeZone methods return nil if the timezone is invalid
-                    self.timezone = ns_timezone_with_name(tz)
-                    if not self.timezone:
+                    ns_tz = ns_timezone_with_name(tz)
+                    if not ns_tz:
                         # try the canonical name (this is a fallback best guess; I've seen Photos databases with invalid timezones like "IDT")
                         if canonical_timezone := abbrev_to_canonical_timezone(
                             tz.upper()
                         ):
-                            self.timezone = ns_timezone_with_name(canonical_timezone)
+                            ns_tz = ns_timezone_with_name(canonical_timezone)
                         elif match_etc_tzname(tz):
-                            self.timezone = ns_timezone_with_name(etc_tzname_to_etc(tz))
-                        if not self.timezone:
+                            ns_tz = ns_timezone_with_name(etc_tzname_to_etc(tz))
+                        if not ns_tz:
                             raise ValueError(f"Invalid timezone: {tz}")
                 elif isinstance(tz, (int, float)):
-                    self.timezone = Foundation.NSTimeZone.timeZoneForSecondsFromGMT_(
-                        int(tz)
-                    )
-                    if not self.timezone:
+                    ns_tz = Foundation.NSTimeZone.timeZoneForSecondsFromGMT_(int(tz))
+                    if not ns_tz:
                         raise ValueError(f"Invalid timezone offset: {tz}")
                     self._from_offset = True
                 else:
                     raise TypeError("Timezone must be a string or an int")
+                self.timezone: Foundation.NSTimeZone = ns_tz
                 self._name = self.timezone.name()
 
         @property
@@ -240,15 +233,15 @@ if is_macos:
                     f"Could not get ZoneInfo for {dt} with offset {self.offset}"
                 ) from e
 
-        def __str__(self):
+        def __str__(self) -> str:
             return self.name
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return self.name
 
-        def __eq__(self, other):
+        def __eq__(self, other: object) -> bool:
             if isinstance(other, Timezone):
-                return self.timezone == other.timezone
+                return bool(self.timezone == other.timezone)
             return False
 
 else:
@@ -258,7 +251,7 @@ else:
         """Get list of valid timezones"""
         return sorted(zoneinfo.available_timezones())
 
-    class Timezone:
+    class Timezone:  # type: ignore[no-redef]  # non-macOS implementation; mypy cannot treat is_macos as a platform constant
         """Create Timezone object from either name (str) or offset from GMT (int)"""
 
         def __init__(self, tz: str | float):
@@ -271,22 +264,23 @@ else:
                         try:
                             self.timezone = zoneinfo.ZoneInfo(tz_canonical)
                             self._name = tz_canonical
-                        except Exception as e:
+                        except Exception as e_canonical:
                             if match_etc_tzname(tz):
                                 tz_name = etc_tzname_to_etc(tz)
-                                self.timezone = ns_timezone_with_name(tz_name)
+                                self.timezone = zoneinfo.ZoneInfo(tz_name)
                                 self._name = tz_name
                             else:
-                                raise ValueError(f"Invalid timezone: {tz}") from e
+                                raise ValueError(
+                                    f"Invalid timezone: {tz}"
+                                ) from e_canonical
                     else:
                         raise ValueError(f"Invalid timezone: {tz}") from e
             elif isinstance(tz, (int, float)):
-                if isinstance(tz, float):
-                    tz: int = floor(tz)
+                offset = floor(tz)
                 # POSIX convention for Etc/GMT±X: the sign is inverted from intuitive meaning
                 # Positive offset (east of GMT) uses GMT- prefix
                 # Negative offset (west of GMT) uses GMT+ prefix
-                hours = tz // 3600
+                hours = offset // 3600
                 if hours == 0:
                     name = "Etc/GMT"
                 elif hours > 0:
@@ -304,7 +298,10 @@ else:
 
         @property
         def offset(self) -> int:
-            td = self.timezone.utcoffset(datetime.datetime.now())
+            # a ZoneInfo always has a UTC offset
+            td = cast(
+                datetime.timedelta, self.timezone.utcoffset(datetime.datetime.now())
+            )
             return int(td.total_seconds())
 
         @property
@@ -317,7 +314,9 @@ else:
 
         def offset_for_date(self, dt: datetime.datetime) -> int:
             dtz = dt.replace(tzinfo=self.timezone)
-            return int(dtz.utcoffset().total_seconds())
+            # dtz is aware (tzinfo is a ZoneInfo) so utcoffset() is never None
+            td = cast(datetime.timedelta, dtz.utcoffset())
+            return int(td.total_seconds())
 
         def offset_str_for_date(self, dt: datetime.datetime) -> str:
             return format_offset_time(self.offset_for_date(dt))
@@ -328,15 +327,16 @@ else:
                 aware_dt = dt.replace(tzinfo=self.timezone)
             else:
                 aware_dt = dt.astimezone(self.timezone)
-            return aware_dt.tzinfo
+            # both branches set tzinfo to self.timezone
+            return cast(zoneinfo.ZoneInfo, aware_dt.tzinfo)
 
-        def __str__(self):
+        def __str__(self) -> str:
             return self.name
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return self.name
 
-        def __eq__(self, other):
+        def __eq__(self, other: object) -> bool:
             if isinstance(other, Timezone):
-                return self.timezone == other.timezone
+                return bool(self.timezone == other.timezone)
             return False

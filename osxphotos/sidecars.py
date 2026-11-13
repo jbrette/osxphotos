@@ -121,8 +121,11 @@ class SidecarWriter(_ExifMixin):
         export_db = options.export_db or ExportDBTemp()
 
         # likewise, if FileUtil isn't provided, use default
-        fileutil = options.fileutil or FileUtilMacOS() if is_macos else FileUtilShUtil()
-        verbose = options.verbose or self._verbose
+        fileutil = options.fileutil or (
+            FileUtilMacOS() if is_macos else FileUtilShUtil()
+        )
+        # verbose functions accept a level keyword (see cli/verbose.py)
+        verbose: Callable[..., None] = options.verbose or self._verbose
 
         # define functions for adding markup
         _filepath = add_rich_markup_tag("filepath", rich=options.rich)
@@ -134,13 +137,16 @@ class SidecarWriter(_ExifMixin):
             return path.exists()
 
         # export metadata
-        sidecars = []
-        sidecar_json_files_skipped = []
-        sidecar_json_files_written = []
-        sidecar_exiftool_files_skipped = []
-        sidecar_exiftool_files_written = []
-        sidecar_xmp_files_skipped = []
-        sidecar_xmp_files_written = []
+        # (sidecar filename, render function, files written, files skipped, type)
+        sidecars: list[
+            tuple[pathlib.Path, Callable[[], str], list[str], list[str], str]
+        ] = []
+        sidecar_json_files_skipped: list[str] = []
+        sidecar_json_files_written: list[str] = []
+        sidecar_exiftool_files_skipped: list[str] = []
+        sidecar_exiftool_files_written: list[str] = []
+        sidecar_xmp_files_skipped: list[str] = []
+        sidecar_xmp_files_written: list[str] = []
 
         dest_suffix = "" if options.sidecar_drop_ext else dest.suffix
         exif_options = exif_options_from_options(options)
@@ -240,7 +246,7 @@ class SidecarWriter(_ExifMixin):
                 and photo_digest_matches
             ):
                 verbose(
-                    f"Skipped up to date {sidecar_type} sidecar {_filepath(sidecar_filename)}",
+                    f"Skipped up to date {sidecar_type} sidecar {_filepath(str(sidecar_filename))}",
                     level=2,
                 )
                 files_skipped.append(str(sidecar_filename))
@@ -270,13 +276,17 @@ class SidecarWriter(_ExifMixin):
                 not (options.update or options.force_update)
                 or ((options.update or options.force_update) and not sidecar_exists)
                 or (
-                    (options.update or options.force_update)
-                    and (sidecar_digest != sidecar_record.digest)
+                    (
+                        (options.update or options.force_update)
+                        and (sidecar_digest != sidecar_record.digest)
+                    )
                     or (not sidecar_sig_matches and not sidecar_content_matches)
                 )
             )
             if write_sidecar:
-                verbose(f"Writing {sidecar_type} sidecar {_filepath(sidecar_filename)}")
+                verbose(
+                    f"Writing {sidecar_type} sidecar {_filepath(str(sidecar_filename))}"
+                )
                 files_written.append(str(sidecar_filename))
                 if not options.dry_run:
                     self._write_sidecar(sidecar_filename, sidecar_str)
@@ -292,13 +302,14 @@ class SidecarWriter(_ExifMixin):
                         sidecar_record.export_options = sidecar_options
             else:
                 verbose(
-                    f"Skipped up to date {sidecar_type} sidecar {_filepath(sidecar_filename)}",
+                    f"Skipped up to date {sidecar_type} sidecar {_filepath(str(sidecar_filename))}",
                     level=2,
                 )
                 files_skipped.append(str(sidecar_filename))
                 with sidecar_record:
                     sidecar_record.export_options = sidecar_options
-                    if sidecar_content_matches:
+                    # verified_sig is always set when the content matches
+                    if sidecar_content_matches and verified_sig is not None:
                         sidecar_record.dest_sig = verified_sig
                 if sidecar_content_matches and options.stat_cache is not None:
                     options.stat_cache.update_file(sidecar_filename)
@@ -342,16 +353,16 @@ class SidecarWriter(_ExifMixin):
             results += touch_files(self.photo, all_sidecars, options)
 
             # update destination signatures in database
-            for sidecar_filename in all_sidecars:
+            for sidecar_file in all_sidecars:
                 # Update stat cache after touch modified the file
                 if options.stat_cache is not None:
-                    options.stat_cache.update_file(sidecar_filename)
+                    options.stat_cache.update_file(sidecar_file)
                 # Use context manager to batch the update with a single commit
                 with export_db.create_or_get_file_record(
-                    sidecar_filename, self.photo.uuid
+                    sidecar_file, self.photo.uuid
                 ) as sidecar_record:
                     sidecar_record.dest_sig = fileutil.file_sig(
-                        sidecar_filename, stat_cache=options.stat_cache
+                        sidecar_file, stat_cache=options.stat_cache
                     )
 
         return results
@@ -427,14 +438,14 @@ class SidecarWriter(_ExifMixin):
 
         Returns: An ExportResults object containing information about the exported sidecar files
         """
-        verbose = options.verbose or self._verbose
+        verbose: Callable[..., None] = options.verbose or self._verbose
 
         # define functions for adding markup
         _filepath = add_rich_markup_tag("filepath", rich=options.rich)
 
-        sidecar_user_written = []
-        sidecar_user_skipped = []
-        sidecar_user_error = []
+        sidecar_user_written: list[str] = []
+        sidecar_user_skipped: list[str] = []
+        sidecar_user_error: list[tuple[str, str]] = []
 
         exif_options = exif_options_from_options(options)
 
@@ -442,7 +453,7 @@ class SidecarWriter(_ExifMixin):
             template_file,
             filename_template,
             template_options,
-        ) in options.sidecar_template:
+        ) in options.sidecar_template or ():
             strip_whitespace = "strip_whitespace" in template_options
             strip_lines = "strip_lines" in template_options
             write_skipped = "write_skipped" in template_options
@@ -491,14 +502,14 @@ class SidecarWriter(_ExifMixin):
                 continue
 
             sidecar_str = result
-            verbose(f"Writing sidecar file {_filepath(sidecar_path)}")
+            verbose(f"Writing sidecar file {_filepath(str(sidecar_path))}")
             sidecar_user_written.append(str(sidecar_path))
             if not options.dry_run:
                 try:
                     with open(sidecar_path, "w") as f:
                         f.write(sidecar_str)
                 except Exception as e:
-                    sidecar_user_error.append(str(e))
+                    sidecar_user_error.append((str(sidecar_path), str(e)))
 
         results = ExportResults(
             sidecar_user_written=sidecar_user_written,
@@ -506,8 +517,12 @@ class SidecarWriter(_ExifMixin):
             sidecar_user_error=sidecar_user_error,
         )
 
-        for f in sidecar_user_written + sidecar_user_skipped + sidecar_user_error:
-            results.uuids[f] = self.photo.uuid
+        for filename in (
+            sidecar_user_written
+            + sidecar_user_skipped
+            + [error[0] for error in sidecar_user_error]
+        ):
+            results.uuids[filename] = self.photo.uuid
 
         return results
 
@@ -521,11 +536,10 @@ class SidecarWriter(_ExifMixin):
         """Render sidecar filename template"""
         render_options = RenderOptions(export_dir=export_dir, filepath=filepath)
         photo_template = PhotoTemplate(self.photo, exiftool_path=exiftool_path)
-        template_filename, _ = photo_template.render(
+        template_filenames, _ = photo_template.render(
             filename_template, options=render_options
         )
-        template_filename = template_filename[0] if template_filename else None
-        return template_filename
+        return template_filenames[0] if template_filenames else None
 
     def _render_user_sidecar(
         self,
@@ -555,7 +569,7 @@ class SidecarWriter(_ExifMixin):
         # Render the template
         try:
             sidecar_template = _get_template(template_file)
-            sidecar_data = sidecar_template.render(
+            sidecar_data: str = sidecar_template.render(
                 photo=self.photo,
                 sidecar_path=sidecar_path,
                 photo_path=photo_path,
@@ -583,9 +597,9 @@ class SidecarWriter(_ExifMixin):
             )
 
         if skip_zero and not sidecar_data:
-            verbose = options.verbose or self._verbose
+            verbose: Callable[..., None] = options.verbose or self._verbose
             _filepath = add_rich_markup_tag("filepath", rich=options.rich)
-            verbose(f"Skipping empty sidecar file {_filepath(sidecar_path)}")
+            verbose(f"Skipping empty sidecar file {_filepath(str(sidecar_path))}")
             return None
 
         return sidecar_data
@@ -594,7 +608,7 @@ class SidecarWriter(_ExifMixin):
         self,
         options: ExportOptions | None = None,
         extension: str | None = None,
-    ):
+    ) -> str:
         """returns string for XMP sidecar
 
         Args:
@@ -605,7 +619,7 @@ class SidecarWriter(_ExifMixin):
         options = options or ExportOptions()
         xmp_template = self._xmp_template()
         vars = self._sidecar_variables(options, extension)
-        xmp_str = xmp_template.render(
+        xmp_str: str = xmp_template.render(
             photo=self.photo,
             description=vars.description,
             keywords=vars.keywords,
@@ -621,7 +635,7 @@ class SidecarWriter(_ExifMixin):
         xmp_str = "\n".join(line for line in xmp_str.split("\n") if line.strip() != "")
         return xmp_str
 
-    def _xmp_template(self):
+    def _xmp_template(self) -> Template:
         """Return the mako template for XMP sidecar, creating it if necessary"""
         global _global_xmp_template
         if _global_xmp_template is not None:
@@ -642,6 +656,7 @@ class SidecarWriter(_ExifMixin):
     ) -> SidecarVars:
         """Render sidecar variables"""
 
+        options = options or ExportOptions()
         render_options = options.render_options or RenderOptions()
 
         if extension is None:
@@ -663,14 +678,14 @@ class SidecarWriter(_ExifMixin):
                 self.photo.description if self.photo.description is not None else ""
             )
 
-        keyword_list = []
+        keyword_list: list[str] = []
         if options.merge_exif_keywords:
             keyword_list.extend(self._get_exif_keywords())
 
         if self.photo.keywords and not options.replace_keywords:
             keyword_list.extend(self.photo.keywords)
 
-        person_list = []
+        person_list: list[str] = []
         if options.persons:
             if options.merge_exif_persons:
                 person_list.extend(self._get_exif_persons())
@@ -688,7 +703,7 @@ class SidecarWriter(_ExifMixin):
             keyword_list.extend(self.photo.albums)
 
         if options.keyword_template:
-            rendered_keywords = []
+            rendered_keywords: list[str] = []
             render_options_keywords = dataclasses.replace(
                 render_options, none_str=_OSXPHOTOS_NONE_SENTINEL, path_sep="/"
             )
@@ -743,8 +758,8 @@ class SidecarWriter(_ExifMixin):
         )
 
     def _verify_sidecar_file(
-        self, filename, fileutil
-    ) -> tuple[str | None, tuple | None]:
+        self, filename: pathlib.Path, fileutil: FileUtilMacOS
+    ) -> tuple[str | None, tuple[int, int, int] | None]:
         """Return (digest, signature) of an existing sidecar file, or (None, None) if it
         can't be read or changed while being read.
 
@@ -764,7 +779,9 @@ class SidecarWriter(_ExifMixin):
             return None, None
         return hexdigest(content), sig_after
 
-    def _write_sidecar(self, filename, sidecar_str):
+    def _write_sidecar(
+        self, filename: str | os.PathLike[str], sidecar_str: str
+    ) -> None:
         """write sidecar_str to filename
         used for exporting sidecar info"""
         if not (filename or sidecar_str):
@@ -800,7 +817,7 @@ def xmp_sidecar(
 
 def exiftool_json_sidecar(
     photo: PhotoInfo,
-    options: ExportOptions | ExifOptions = None,
+    options: ExportOptions | ExifOptions | None = None,
     tag_groups: bool = True,
     filename: str | None = None,
 ) -> str:

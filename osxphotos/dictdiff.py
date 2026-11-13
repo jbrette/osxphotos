@@ -8,21 +8,21 @@ from typing import Any
 EPSILON = sys.float_info.epsilon
 
 
-def _compare(a: Any, b: Any, tolerance: float):
+def _compare(a: Any, b: Any, tolerance: float | None) -> bool:
     """Compare two values, return True if equal, False if not"""
     if tolerance is None:
-        return a == b
+        return bool(a == b)
     elif isinstance(a, (int, float)) and isinstance(b, (int, float)):
         return abs(a - b) <= tolerance
     else:
-        return a == b
+        return bool(a == b)
 
 
 def dictdiff(
     d1: dict[Any, Any],
     d2: dict[Any, Any],
     tolerance: float = EPSILON,
-) -> list[list[Any, str, tuple[Any, ...]]]:
+) -> list[list[Any]]:
     """Perform recursive diff of two dictionaries
 
     Args:
@@ -47,7 +47,7 @@ def _dictdiff(
     d2: dict[Any, Any],
     tolerance: float = EPSILON,
     path: str = "",
-) -> list[list[Any, str, tuple[Any, ...]]]:
+) -> list[list[Any]]:
     """Perform recursive diff of two dictionaries
 
     Args:
@@ -65,31 +65,31 @@ def _dictdiff(
             old_value: old value of the key
             new_value: new value of the key
     """
-    diffs = []
-    for k in d1:
+    diffs: list[list[Any]] = []
+    for k, value in d1.items():
         new_path = f"{path}[{k}]" if path else k
         if k not in d2:
-            diffs.append([new_path, "removed", (d1[k],)])
-        elif isinstance(d1[k], dict) and isinstance(d2[k], dict):
-            diffs.extend(_dictdiff(d1[k], d2[k], tolerance, new_path))
-        elif isinstance(d1[k], (list, set, tuple)) and isinstance(
+            diffs.append([new_path, "removed", (value,)])
+        elif isinstance(value, dict) and isinstance(d2[k], dict):
+            diffs.extend(_dictdiff(value, d2[k], tolerance, new_path))
+        elif isinstance(value, (list, set, tuple)) and isinstance(
             d2[k], (list, set, tuple)
         ):
-            added = []
-            removed = []
+            added: set[Any] = set()
+            removed: set[Any] = set()
             try:
-                added = set(d2[k]) - set(d1[k])
-                removed = set(d1[k]) - set(d2[k])
+                added = set(d2[k]) - set(value)
+                removed = set(value) - set(d2[k])
             except TypeError:
                 # can't compare sets of unhashable types
-                if d1[k] != d2[k]:
-                    diffs.append([new_path, "changed", (d1[k], d2[k])])
+                if value != d2[k]:
+                    diffs.append([new_path, "changed", (value, d2[k])])
             if added:
                 diffs.append([new_path, "added", list(added)])
             if removed:
                 diffs.append([new_path, "removed", list(removed)])
-        elif not _compare(d1[k], d2[k], tolerance):
-            diffs.append([new_path, "changed", (d1[k], d2[k])])
+        elif not _compare(value, d2[k], tolerance):
+            diffs.append([new_path, "changed", (value, d2[k])])
     for k in set(d2.keys()) - set(d1.keys()):
         new_path = f"{path}[{k}]" if path else k
         diffs.append([new_path, "added", (d2[k],)])

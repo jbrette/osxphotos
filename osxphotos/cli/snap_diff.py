@@ -5,6 +5,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+from typing import IO, Any, cast
 
 import click
 from rich.console import Console
@@ -21,7 +22,7 @@ from .verbose import verbose_print
 @click.pass_obj
 @click.pass_context
 @DB_OPTION
-def snap(ctx, cli_obj, db):
+def snap(ctx: click.Context, cli_obj: Any, db: str | None) -> None:
     """Create snapshot of Photos database to use with diff command
 
     Snapshots only the database files, not the entire library. If OSXPHOTOS_SNAPSHOT
@@ -32,6 +33,8 @@ def snap(ctx, cli_obj, db):
     """
 
     db = get_photos_db(db, cli_obj.db if cli_obj else None)
+    if db is None:
+        raise click.ClickException("Could not find Photos library; use --db")
     db_path = pathlib.Path(db)
     if db_path.is_file():
         # assume it's the sqlite file
@@ -83,7 +86,16 @@ def snap(ctx, cli_obj, db):
 @click.argument("db2", nargs=-1, type=click.Path(exists=True))
 @VERBOSE_OPTION
 @TIMESTAMP_OPTION
-def diff(ctx, cli_obj, db, raw_output, style, db2, verbose_flag, timestamp):
+def diff(
+    ctx: click.Context,
+    cli_obj: Any,
+    db: str | None,
+    raw_output: bool,
+    style: str,
+    db2: tuple[str, ...],
+    verbose_flag: bool,
+    timestamp: bool,
+) -> None:
     """Compare two Photos databases; see also 'osxphotos snap'
 
     To use the diff command, you'll need to install sqldiff via homebrew:
@@ -123,6 +135,8 @@ def diff(ctx, cli_obj, db, raw_output, style, db2, verbose_flag, timestamp):
     verbose(f"sqldiff found at '{sqldiff}'")
 
     db = get_photos_db(db, cli_obj.db if cli_obj else None)
+    if db is None:
+        raise click.ClickException("Could not find Photos library; use --db")
     db_path = pathlib.Path(db)
     if db_path.is_file():
         # assume it's the sqlite file
@@ -149,8 +163,10 @@ def diff(ctx, cli_obj, db, raw_output, style, db2, verbose_flag, timestamp):
 
     diff_proc = subprocess.Popen([sqldiff, db_2, db_1], stdout=subprocess.PIPE)
     console = Console()
-    for line in iter(diff_proc.stdout.readline, b""):
-        line = line.decode("UTF-8").rstrip()
+    # stdout=subprocess.PIPE guarantees stdout is not None
+    diff_stdout = cast(IO[bytes], diff_proc.stdout)
+    for raw_line in iter(diff_stdout.readline, b""):
+        line = raw_line.decode("UTF-8").rstrip()
         if raw_output:
             print(line)
         else:

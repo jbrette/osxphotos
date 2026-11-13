@@ -3,7 +3,8 @@
 import inspect
 import re
 import sys
-import typing as t
+from collections.abc import Sequence
+from typing import Any
 
 import click
 from rich.console import Console
@@ -11,7 +12,6 @@ from rich.markdown import Markdown
 
 from osxphotos._constants import (
     EXTENDED_ATTRIBUTE_NAMES,
-    EXTENDED_ATTRIBUTE_NAMES_QUOTED,
     OSXPHOTOS_EXPORT_DB,
     POST_COMMAND_CATEGORIES,
 )
@@ -47,7 +47,7 @@ __all__ = [
 ]
 
 
-def get_help_msg(command):
+def get_help_msg(command: click.Command) -> str:
     """get help message for a Click command"""
     with click.Context(command) as ctx:
         return command.get_help(ctx)
@@ -63,10 +63,20 @@ def get_help_msg(command):
 @click.argument("topic", default=None, required=False, nargs=1)
 @click.argument("subtopic", default=None, required=False, nargs=1)
 @click.pass_context
-def help(ctx, topic, subtopic, width, **kw):
+def help(
+    ctx: click.Context,
+    /,
+    topic: str | None,
+    subtopic: str | None,
+    width: int,
+    **kw: Any,
+) -> None:
     """Print help; for help on commands: help <command>."""
+    # help always runs as a subcommand of the osxphotos group, so it has a parent
+    parent = ctx.parent
+    assert parent is not None
     if topic is None:
-        click.echo(ctx.parent.get_help())
+        click.echo(parent.get_help())
         return
 
     global HELP_WIDTH
@@ -108,10 +118,10 @@ def help(ctx, topic, subtopic, width, **kw):
 
     # didn't find any valid help topics
     click.echo(f"Invalid command: {topic}", err=True)
-    click.echo(ctx.parent.get_help())
+    click.echo(parent.get_help())
 
 
-def get_subtopic_help(cmd: click.Command, ctx: click.Context, subtopic: str):
+def get_subtopic_help(cmd: click.Command, ctx: click.Context, subtopic: str) -> str:
     """Get help for a command including only options that match a subtopic"""
 
     # set ctx.info_name or click prints the wrong usage str (usage for help instead of cmd)
@@ -141,7 +151,7 @@ def get_subtopic_help(cmd: click.Command, ctx: click.Context, subtopic: str):
 
 def get_matching_options(
     command: click.Command, ctx: click.Context, topic: str
-) -> list:
+) -> list[click.Parameter]:
     """Get matching options for a command that contain a topic
 
     Args:
@@ -153,7 +163,7 @@ def get_matching_options(
         list of matching click.Option objects
 
     """
-    options = []
+    options: list[click.Parameter] = []
     topic = topic.lower()
     for option in command.params:
         help_record = option.get_help_record(ctx)
@@ -163,7 +173,9 @@ def get_matching_options(
 
 
 def format_options_help(
-    options: list[click.Option], ctx: click.Context, highlight: str | None = None
+    options: Sequence[click.Parameter],
+    ctx: click.Context,
+    highlight: str | None = None,
 ) -> str:
     """Format options help for display
 
@@ -177,13 +189,18 @@ def format_options_help(
 
     """
     formatter = click.HelpFormatter(width=HELP_WIDTH)
-    opt_help = [opt.get_help_record(ctx) for opt in options]
+    # options come from get_matching_options, which only returns options with a help record
+    opt_help = [
+        help_record
+        for opt in options
+        if (help_record := opt.get_help_record(ctx)) is not None
+    ]
     formatter.write_dl(opt_help)
 
     help_text = formatter.getvalue()
     if highlight:
 
-        def _highlight(match):
+        def _highlight(match: re.Match[str]) -> str:
             return f"[highlight]{match.group(0)}[/]"
 
         # add highlight tags
@@ -197,7 +214,7 @@ def format_options_help(
     return help_text
 
 
-def format_help_text(text: str, formatter: click.HelpFormatter):
+def format_help_text(text: str, formatter: click.HelpFormatter) -> None:
     text = inspect.cleandoc(text).partition("\f")[0]
     formatter.write_paragraph()
 
@@ -209,7 +226,7 @@ def format_help_text(text: str, formatter: click.HelpFormatter):
 class ExportCommand(click.Command):
     """Custom click.Command that overrides get_help() to show additional help info for export"""
 
-    def get_help(self, ctx):
+    def get_help(self, ctx: click.Context) -> str:
         help_text = super().get_help(ctx)
         formatter = click.HelpFormatter(width=HELP_WIDTH)
         formatter.write("\n")
@@ -260,15 +277,15 @@ class ExportCommand(click.Command):
             formatter.write_text(
                 """
     Some options (currently '--finder-tag-template', '--finder-tag-keywords', '-xattr-template') write
-    additional metadata accessible by Spotlight to facilitate searching. 
+    additional metadata accessible by Spotlight to facilitate searching.
     For example, --finder-tag-keyword writes all keywords (including any specified by '--keyword-template'
     or other options) to Finder tags that are searchable in Spotlight using the syntax: 'tag:tagname'.
     For example, if you have images with keyword "Travel" then using '--finder-tag-keywords' you could quickly
     find those images in the Finder by typing 'tag:Travel' in the Spotlight search bar.
     Finder tags are written to the 'com.apple.metadata:_kMDItemUserTags' extended attribute.
     Unlike EXIF metadata, extended attributes do not modify the actual file;
-    the metadata is written to extended attributes associated with the file and the Spotlight metadata database. 
-    Most cloud storage services do not synch extended attributes. 
+    the metadata is written to extended attributes associated with the file and the Spotlight metadata database.
+    Most cloud storage services do not synch extended attributes.
     Dropbox does sync them and any changes to a file's extended attributes
     will cause Dropbox to re-sync the files.
 
@@ -279,7 +296,7 @@ class ExportCommand(click.Command):
 
             # build help text from all the attribute names
             # passed to click.HelpFormatter.write_dl for formatting
-            attr_tuples = [
+            attr_tuples: list[tuple[str, str]] = [
                 (
                     rich_text("[bold]Attribute[/bold]", width=formatter.width),
                     rich_text("[bold]Description[/bold]", width=formatter.width),
@@ -345,7 +362,7 @@ class ExportCommand(click.Command):
             rich_text("## Template Substitutions", width=formatter.width, markdown=True)
         )
         formatter.write("\n")
-        templ_tuples = [
+        templ_tuples: list[tuple[str, str]] = [
             (
                 rich_text("[bold]Substitution[/bold]", width=formatter.width),
                 rich_text("[bold]Description[/bold]", width=formatter.width),
@@ -480,7 +497,7 @@ class ExportCommand(click.Command):
         return help_text
 
 
-def template_help(width=78):
+def template_help(width: int = 78) -> str:
     """Return formatted string for template system"""
     template_help_md = strip_md_header_and_links(get_template_help())
     console = Console(force_terminal=True, width=width)
@@ -489,7 +506,7 @@ def template_help(width=78):
     return capture.get()
 
 
-def rich_text(text, width=78, markdown=False):
+def rich_text(text: str, width: int = 78, markdown: bool = False) -> str:
     """Return rich formatted text"""
     console = Console(force_terminal=True, width=width)
     with console.capture() as capture:
@@ -497,7 +514,7 @@ def rich_text(text, width=78, markdown=False):
     return capture.get()
 
 
-def strip_md_header_and_links(md):
+def strip_md_header_and_links(md: str) -> str:
     """strip markdown headers and links from markdown text md
 
     Args:
@@ -511,13 +528,13 @@ def strip_md_header_and_links(md):
     """
     links = r"(?:[*#])|\[(.*?)\]\(.+?\)"
 
-    def subfn(match):
+    def subfn(match: re.Match[str]) -> str:
         return match.group(1)
 
     return re.sub(links, subfn, md)
 
 
-def strip_md_links(md):
+def strip_md_links(md: str) -> str:
     """strip markdown links from markdown text md
 
     Args:
@@ -531,18 +548,18 @@ def strip_md_links(md):
     """
     links = r"\[(.*?)\]\(.+?\)"
 
-    def subfn(match):
+    def subfn(match: re.Match[str]) -> str:
         return match.group(1)
 
     return re.sub(links, subfn, md)
 
 
-def strip_html_comments(text):
+def strip_html_comments(text: str) -> str:
     """Strip html comments from text (which doesn't need to be valid HTML)"""
     return re.sub(r"<!--(.|\s|\n)*?-->", "", text)
 
 
-def is_sphinx_running():
+def is_sphinx_running() -> bool:
     """Check if Sphinx is currently running by detecting if sphinx modules are loaded"""
     # Look for main sphinx modules, not just any module starting with 'sphinx'
     sphinx_modules = [
@@ -554,7 +571,7 @@ def is_sphinx_running():
     return any(module in sys.modules for module in sphinx_modules)
 
 
-def filter_help_text_for_sphinx(text):
+def filter_help_text_for_sphinx(text: str) -> str:
     """Filter help text to be compatible with Sphinx RST parser
 
     This function removes or escapes problematic markup that confuses Sphinx:

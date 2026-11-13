@@ -5,7 +5,7 @@ import subprocess
 from .cli_commands import echo_error
 
 
-def kill_photos():
+def kill_photos() -> bool:
     """Run 'killall Photos' when Photos generates too many errors in response
     to operations like Import.
     """
@@ -24,7 +24,7 @@ def kill_photos():
             return True
         # Exit code 1 usually means "no matching process"
         if "No matching processes" in result.stderr:
-            echo_error("ℹ️  Photos app was not running.")
+            echo_error("ℹ️  Photos app was not running.")  # noqa: RUF001  (info emoji)
             return False
 
         # Unknown issue/error

@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import logging
-import os
 import pathlib
 import plistlib
-import sys
+from typing import cast
 
 from .._constants import (
     _DB_TABLE_NAMES,
@@ -14,7 +13,6 @@ from .._constants import (
     _PHOTOS_3_VERSION,
     _PHOTOS_4_VERSION,
     _PHOTOS_5_MODEL_VERSION,
-    _PHOTOS_5_VERSION,
     _PHOTOS_6_MODEL_VERSION,
     _PHOTOS_7_MODEL_VERSION,
     _PHOTOS_8_MODEL_VERSION,
@@ -41,7 +39,7 @@ __all__ = [
 LATEST_PHOTOS_VERSION = max(_DB_TABLE_NAMES.keys())
 
 
-def get_db_version(db_file: os.PathLike) -> str:
+def get_db_version(db_file: str | pathlib.Path) -> str:
     """Gets the Photos DB version from LiGlobals table
 
     Args:
@@ -66,7 +64,7 @@ def get_db_version(db_file: os.PathLike) -> str:
         c.execute(
             "SELECT value FROM LiGlobals WHERE LiGlobals.keyPath IS 'libraryVersion'"
         )
-        version = c.fetchone()[0]
+        version = cast(str, c.fetchone()[0])  # libraryVersion is stored as text
     elif "Z_METADATA" in result:
         # assume it's a Photos 5+ Photos.sqlite file
         # get_model_version will find the exact version
@@ -79,19 +77,18 @@ def get_db_version(db_file: os.PathLike) -> str:
         logger.warning(
             f"WARNING: OSXPhotos has only been tested on Photos database versions [{', '.join(_TESTED_DB_VERSIONS)}]"
             + f" You have database version={version} which has not been tested",
-            file=sys.stderr,
         )
 
     return version
 
 
-def get_model_version(db_file: str) -> str | None:
+def get_model_version(db_file: str) -> int | None:
     """Returns the database model version from Z_METADATA
 
     Args:
         db_file: path to Photos.sqlite database file containing Z_METADATA table
 
-    Returns: model version as str or None if model version not found
+    Returns: model version (PLModelVersion, an int) or None if not found
     """
 
     (conn, c) = sqlite_open_ro(db_file)
@@ -107,24 +104,24 @@ def get_model_version(db_file: str) -> str | None:
     conn.close()
 
     if not results or results[0] is None:
-        logger.warning(f"Error getting model version; no results from query")
+        logger.warning("Error getting model version; no results from query")
         return None
 
     try:
         plist = plistlib.loads(results[1])
-        return plist["PLModelVersion"]
+        return cast(int | None, plist["PLModelVersion"])
     except KeyError:
         logger.warning(f"Error getting model version: {results}")
         return None
 
 
-def get_photos_version_from_model(db_file: str) -> int:
+def get_photos_version_from_model(db_file: str) -> float:
     """Returns Photos version based on model version found in db_file
 
     Args:
         db_file: path to Photos.sqlite file
 
-    Returns: int of major Photos version number (e.g. 5 or 6).
+    Returns: major Photos version number (e.g. 5 or 6); some versions are fractional (e.g. 9.6, 11.1).
     If unknown model version found, logs warning and returns most current Photos version.
     """
 
@@ -134,42 +131,46 @@ def get_photos_version_from_model(db_file: str) -> int:
             f"Could not determine model version for {db_file}; assuming latest version"
         )
         return LATEST_PHOTOS_VERSION
-    model_ver = int(model_ver)
-    if _PHOTOS_5_MODEL_VERSION[0] <= model_ver <= _PHOTOS_5_MODEL_VERSION[1]:
+    model_ver_int = int(model_ver)
+    if _PHOTOS_5_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_5_MODEL_VERSION[1]:
         return 5
-    if _PHOTOS_6_MODEL_VERSION[0] <= model_ver <= _PHOTOS_6_MODEL_VERSION[1]:
+    if _PHOTOS_6_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_6_MODEL_VERSION[1]:
         return 6
-    if _PHOTOS_7_MODEL_VERSION[0] <= model_ver <= _PHOTOS_7_MODEL_VERSION[1]:
+    if _PHOTOS_7_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_7_MODEL_VERSION[1]:
         return 7
-    if _PHOTOS_8_MODEL_VERSION[0] <= model_ver <= _PHOTOS_8_MODEL_VERSION[1]:
+    if _PHOTOS_8_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_8_MODEL_VERSION[1]:
         return 8
-    if _PHOTOS_9_MODEL_VERSION[0] <= model_ver <= _PHOTOS_9_MODEL_VERSION[1]:
+    if _PHOTOS_9_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_9_MODEL_VERSION[1]:
         return 9
-    if _PHOTOS_9_14_6_MODEL_VERSION[0] <= model_ver <= _PHOTOS_9_14_6_MODEL_VERSION[1]:
+    if (
+        _PHOTOS_9_14_6_MODEL_VERSION[0]
+        <= model_ver_int
+        <= _PHOTOS_9_14_6_MODEL_VERSION[1]
+    ):
         return 9.6
-    if _PHOTOS_10B1_MODEL_VERSION[0] <= model_ver <= _PHOTOS_10B1_MODEL_VERSION[1]:
+    if _PHOTOS_10B1_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_10B1_MODEL_VERSION[1]:
         return 9.9
-    if _PHOTOS_10_MODEL_VERSION[0] <= model_ver <= _PHOTOS_10_MODEL_VERSION[1]:
+    if _PHOTOS_10_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_10_MODEL_VERSION[1]:
         return 10
-    if _PHOTOS_11_MODEL_VERSION[0] <= model_ver <= _PHOTOS_11_MODEL_VERSION[1]:
+    if _PHOTOS_11_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_11_MODEL_VERSION[1]:
         return 11
-    if _PHOTOS_11_1_MODEL_VERSION[0] <= model_ver <= _PHOTOS_11_1_MODEL_VERSION[1]:
+    if _PHOTOS_11_1_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_11_1_MODEL_VERSION[1]:
         return 11.1
-    if _PHOTOS_12_MODEL_VERSION[0] <= model_ver <= _PHOTOS_12_MODEL_VERSION[1]:
+    if _PHOTOS_12_MODEL_VERSION[0] <= model_ver_int <= _PHOTOS_12_MODEL_VERSION[1]:
         return 12
     logger.warning(
-        f"Unknown db / model version for {db_file}: model_ver={model_ver}; assuming latest version"
+        f"Unknown db / model version for {db_file}: model_ver={model_ver_int}; assuming latest version"
     )
     return LATEST_PHOTOS_VERSION
 
 
-def get_photos_library_version(library_path: str | pathlib.Path) -> int:
-    """Return int indicating which Photos version a library was created with
+def get_photos_library_version(library_path: str | pathlib.Path) -> float:
+    """Return number indicating which Photos version a library was created with
 
     Args:
         library_path: path to Photos library; may be path to the root of the library or the photos.db file
 
-    Returns: int of major Photos version number (e.g. 5, 6, ...)
+    Returns: major Photos version number (e.g. 5, 6, ...); may be fractional (e.g. 9.6)
     """
     library_path = pathlib.Path(library_path)
     if not library_path.is_dir():

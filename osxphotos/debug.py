@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime
+from typing import Any
 
 import wrapt
 from rich import print
@@ -27,7 +29,7 @@ __all__ = [
 __osxphotos_debug = False
 
 
-def set_debug(debug: bool):
+def set_debug(debug: bool) -> None:
     """set debug flag"""
     global __osxphotos_debug
     __osxphotos_debug = debug
@@ -38,14 +40,22 @@ def set_debug(debug: bool):
         logger.setLevel(logging.WARNING)
 
 
-def is_debug():
+def is_debug() -> bool:
     """return debug flag"""
     return __osxphotos_debug
 
 
-def debug_watch(wrapped, instance, args, kwargs):
+def debug_watch(
+    wrapped: Callable[..., Any],
+    instance: Any,
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> Any:
     """For use with wrapt.wrap_function_wrapper to watch calls to a function"""
-    caller = sys._getframe().f_back.f_code.co_name
+    caller_frame = sys._getframe().f_back
+    # debug_watch is always called by wrapt, so a caller frame exists
+    assert caller_frame is not None
+    caller = caller_frame.f_code.co_name
     name = wrapped.__name__
     timestamp = datetime.now().isoformat()
     print(
@@ -58,13 +68,18 @@ def debug_watch(wrapped, instance, args, kwargs):
     return rv
 
 
-def debug_breakpoint(wrapped, instance, args, kwargs):
+def debug_breakpoint(
+    wrapped: Callable[..., Any],
+    instance: Any,
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> Any:
     """For use with wrapt.wrap_function_wrapper to set breakpoint on a function"""
     breakpoint()  # noqa: T100 intentional: implements --breakpoint
     return wrapped(*args, **kwargs)
 
 
-def wrap_function(function_path, wrapper):
+def wrap_function(function_path: str, wrapper: Callable[..., Any]) -> Any:
     """Wrap a function with wrapper function"""
     module, name = function_path.split("::", 1)
     try:
@@ -73,7 +88,7 @@ def wrap_function(function_path, wrapper):
         raise AttributeError(f"{module}.{name} does not exist") from e
 
 
-def get_debug_options(arg_names: list, argv: list) -> dict:
+def get_debug_options(arg_names: list[str], argv: list[str]) -> dict[str, list[str]]:
     """Get the options for the debug options;
     Some of the debug options like --watch and --breakpoint need to be processed before any other packages are loaded
     so they can't be handled in the normal click argument processing, thus this function is called
@@ -84,7 +99,7 @@ def get_debug_options(arg_names: list, argv: list) -> dict:
     # argv[0] is the program name
     # argv[1] is the command
     # argv[2:] are the arguments
-    args = {}
+    args: dict[str, list[str]] = {}
     for arg_name in arg_names:
         for idx, arg in enumerate(argv[1:]):
             if arg.startswith(f"{arg_name}="):
@@ -106,14 +121,14 @@ def get_debug_options(arg_names: list, argv: list) -> dict:
     return args
 
 
-def get_debug_flags(arg_names: list, argv: list) -> dict:
+def get_debug_flags(arg_names: list[str], argv: list[str]) -> dict[str, bool]:
     """Get the flags for the debug options;
     Processes flags like --debug that resolve to True or False
     """
     # argv[0] is the program name
     # argv[1] is the command
     # argv[2:] are the arguments
-    args = {arg_name: False for arg_name in arg_names}
+    args = dict.fromkeys(arg_names, False)
     for arg_name in arg_names:
         if arg_name in argv[1:]:
             args[arg_name] = True
@@ -121,10 +136,10 @@ def get_debug_flags(arg_names: list, argv: list) -> dict:
 
 
 def relocate_debug_options(
-    argv: list,
+    argv: list[str],
     flags: list[str] | None = None,
     options: list[str] | None = None,
-) -> list:
+) -> list[str]:
     """Relocate debug options from anywhere in argv to after the program name.
 
     This allows debug options to be specified anywhere in the command line

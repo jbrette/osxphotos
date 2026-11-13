@@ -1,6 +1,5 @@
 """Test ExifWriter class"""
 
-import json
 import os
 import pathlib
 import subprocess
@@ -244,7 +243,7 @@ def test_exifwriter_keyword_template(photosdb: PhotosDB, tmp_path: pathlib.Path)
 
     exif_data = ExifTool(exported).asdict()
     assert "IPTC:Keywords" in exif_data
-    assert sorted(exif_data["IPTC:Keywords"]) == sorted(photo.keywords + ["Hello"])
+    assert sorted(exif_data["IPTC:Keywords"]) == sorted([*photo.keywords, "Hello"])
 
     # test with replace_keywords
     exif_writer.write_exif_data(

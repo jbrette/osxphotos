@@ -6,25 +6,25 @@ if is_macos:
     import Foundation
     import objc
 
-    def theme():
+    def theme() -> str:
         with objc.autorelease_pool():
             user_defaults = Foundation.NSUserDefaults.standardUserDefaults()
             system_theme = user_defaults.stringForKey_("AppleInterfaceStyle")
             return "dark" if system_theme == "Dark" else "light"
 
-    def is_dark_mode():
+    def is_dark_mode() -> bool:
         return theme() == "dark"
 
-    def is_light_mode():
+    def is_light_mode() -> bool:
         return theme() == "light"
 
 else:
 
-    def theme():
+    def theme() -> str:
         return "light"
 
-    def is_dark_mode():
+    def is_dark_mode() -> bool:
         return theme() == "dark"
 
-    def is_light_mode():
+    def is_light_mode() -> bool:
         return theme() == "light"

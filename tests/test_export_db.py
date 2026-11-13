@@ -14,7 +14,6 @@ from osxphotos.export_db import (
     ExportDB,
     ExportDBInMemory,
     ExportDBTemp,
-    ExportRecord,
 )
 from osxphotos.export_db_utils import export_db_get_version
 
@@ -42,7 +41,6 @@ def test_export_db():
     assert db.version == OSXPHOTOS_EXPORTDB_VERSION
 
     filepath = os.path.join(tempdir.name, "test.JPG")
-    filepath_lower = os.path.join(tempdir.name, "test.jpg")
 
     uuid = "FOOBAR"
     assert db.get_photoinfo_for_uuid(uuid) is None
@@ -95,7 +93,6 @@ def test_export_db_constraints():
     assert db.version == OSXPHOTOS_EXPORTDB_VERSION
 
     filepath = os.path.join(tempdir.name, "test.JPG")
-    filepath_lower = os.path.join(tempdir.name, "test.jpg")
 
     uuid = "FOOBAR"
     db.set_photoinfo_for_uuid(uuid, INFO_DATA)
@@ -110,7 +107,7 @@ def test_export_db_constraints():
         record.uuid = "BARFOO"
 
     with pytest.raises(sqlite3.IntegrityError):
-        record2 = db.create_file_record(filepath, "NEW_UUID")
+        db.create_file_record(filepath, "NEW_UUID")
 
     with pytest.raises(AttributeError):
         # verify we can't add new attributes
@@ -125,7 +122,6 @@ def test_export_db_in_memory():
     assert os.path.isfile(dbname)
 
     filepath = os.path.join(tempdir.name, "test.JPG")
-    filepath_lower = os.path.join(tempdir.name, "test.jpg")
 
     uuid = "FOOBAR"
     record = db.create_file_record(filepath, uuid)
@@ -248,7 +244,6 @@ def test_export_db_in_memory_nofile():
     """test ExportDBInMemory with no dbfile"""
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     filepath = os.path.join(tempdir.name, "test.JPG")
-    filepath_lower = os.path.join(tempdir.name, "test.jpg")
 
     dbram = ExportDBInMemory(
         os.path.join(tempdir.name, "NOT_A_DATABASE_FILE.db"), tempdir.name
@@ -285,7 +280,6 @@ def test_export_db_temp():
     """test ExportDBTemp"""
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     filepath = os.path.join(tempdir.name, "test.JPG")
-    filepath_lower = os.path.join(tempdir.name, "test.jpg")
 
     dbram = ExportDBTemp()
     assert dbram.was_created
@@ -417,7 +411,7 @@ def test_export_record_context_manager_error():
             record.digest = DIGEST_DATA
             record.exifdata = EXIF_DATA
             record.photoinfo = INFO_DATA
-            raise Exception("Boom")
+            raise RuntimeError("Boom")
     except Exception:
         pass
 
@@ -436,7 +430,7 @@ def test_get_export_db_version():
     """Test export_db_get_version"""
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     dbname = os.path.join(tempdir.name, ".osxphotos_export.db")
-    db = ExportDB(dbname, tempdir.name)
+    ExportDB(dbname, tempdir.name)
 
     osxphotos_ver, export_db_ver = export_db_get_version(dbname)
     assert osxphotos_ver == __version__

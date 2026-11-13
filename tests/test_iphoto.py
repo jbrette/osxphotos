@@ -32,7 +32,7 @@ TEST_DATA = "tests/iphoto_test_data.json"
 # determine if exiftool installed so exiftool tests can be skipped
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 
@@ -56,7 +56,7 @@ def compare_dicts(
     dict1: dict[Any, Any],
     dict2: dict[Any, Any],
     tolerance: float = 0.0001,
-    ignore_keys: None | list[Any] = None,
+    ignore_keys: list[Any] | None = None,
 ):
     """Compare two dictionaries recursively with tolerance for floats"""
     for key in dict1.keys() | dict2.keys():
@@ -73,7 +73,7 @@ def compare_dicts(
                     f"List/tuple lengths do not match for key: {key}, val1: {val1}, val2: {val2}"
                 )
                 return False
-            for v1, v2 in zip(val1, val2):
+            for v1, v2 in zip(val1, val2, strict=True):
                 if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
                     if abs(v1 - v2) >= tolerance:
                         logger.warning(

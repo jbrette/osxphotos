@@ -51,15 +51,13 @@ def photos_datetime(
     try:
         dt = datetime.datetime.fromtimestamp(timestamp + TIME_DELTA)
         # Try to use tzname if provided
-        if tzname:
-            # get canonical timezone name, for example if tzname is "IDT", convert to"Asia/Jerusalem"
-            if tz_canonical := canonical_timezone(dt, tzoffset, tzname):
-                try:
-                    tz = ZoneInfo(tz_canonical)
-                    return dt.astimezone(tz)
-                except ZoneInfoNotFoundError:
-                    # default to tzoffset
-                    pass
+        # get canonical timezone name, for example if tzname is "IDT", convert to"Asia/Jerusalem"
+        if tzname and (tz_canonical := canonical_timezone(dt, tzoffset, tzname)):
+            try:
+                return dt.astimezone(ZoneInfo(tz_canonical))
+            except ZoneInfoNotFoundError:
+                # default to tzoffset
+                pass
         # Use tzoffset if tzname wasn't provided or failed
         tz = datetime.timezone(datetime.timedelta(seconds=tzoffset))
         return dt.astimezone(tz)
@@ -105,6 +103,8 @@ def iphoto_date_to_datetime(
         If date is None or invalid, will return 1970-01-01 00:00:00
     """
     try:
+        if date is None:
+            raise TypeError("date is None")
         dt = datetime.datetime.fromtimestamp(date + TIME_DELTA)
     except ValueError, TypeError:
         dt = datetime.datetime(1970, 1, 1)

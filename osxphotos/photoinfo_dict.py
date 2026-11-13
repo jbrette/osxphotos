@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
-from .exiftool import ExifToolCaching, get_exiftool_path
+from .exiftool import get_exiftool_path
 from .photoinfo_protocol import PhotoInfoMixin
 from .phototemplate import PhotoTemplate, RenderOptions
 from .rehydrate import rehydrate_class
 
+EXIFTOOL_PATH: str | None
 try:
     EXIFTOOL_PATH = get_exiftool_path()
 except FileNotFoundError:
@@ -21,7 +22,7 @@ __all__ = ["PhotoInfoFromDict", "photoinfo_from_dict"]
 class AlbumInfoFromDict:
     """A minimal AlbumInfo object reconstructed from PhotoInfo.asdict()["folders"]"""
 
-    def __init__(self, title: str, folders: list[str]):
+    def __init__(self, title: str, folders: list[str]) -> None:
         self._title = title
         self._folder_names = folders
 
@@ -33,7 +34,7 @@ class AlbumInfoFromDict:
     def folder_names(self) -> list[str]:
         return self._folder_names
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         if name in {
             "uuid",
             "creation_date",
@@ -53,8 +54,13 @@ class AlbumInfoFromDict:
 class PhotoInfoFromDict(PhotoInfoMixin):
     """Create a PhotoInfo compatible object from a PhotoInfo dictionary created with PhotoInfo.asdict() or deserialized from JSON"""
 
+    # set by rehydrate_class / photoinfo_from_dict; unset attributes go to PhotoInfoMixin.__getattr__
+    _album_info: list[AlbumInfoFromDict]
+    _exiftool_path: str | None
+    _data: dict[str, Any]
+
     @property
-    def album_info(self) -> AlbumInfoFromDict:
+    def album_info(self) -> list[AlbumInfoFromDict]:
         """Return AlbumInfo objects for photo"""
         if self._album_info:
             return self._album_info
@@ -70,7 +76,7 @@ class PhotoInfoFromDict(PhotoInfoMixin):
         return self._album_info
 
     @album_info.setter
-    def album_info(self, value):
+    def album_info(self, value: list[AlbumInfoFromDict]) -> None:
         """If rehydrating class has album_info, then set it"""
         self._album_info = value
 
@@ -82,7 +88,9 @@ class PhotoInfoFromDict(PhotoInfoMixin):
         """Return the PhotoInfo dictionary as a JSON string"""
         return json.dumps(self._data)
 
-    def render_template(self, template_str: str, options: RenderOptions | None = None):
+    def render_template(
+        self, template_str: str, options: RenderOptions | None = None
+    ) -> tuple[list[str], list[str]]:
         """Renders a template string for PhotoInfo instance using PhotoTemplate
 
         Args:
@@ -101,7 +109,8 @@ def photoinfo_from_dict(
     data: dict[str, Any], exiftool: str | None = None
 ) -> PhotoInfoFromDict:
     """Create a PhotoInfoFromDict object from a dictionary"""
-    photoinfo = rehydrate_class(data, PhotoInfoFromDict)
+    # rehydrate_class returns an instance of cls when data is a dict
+    photoinfo = cast(PhotoInfoFromDict, rehydrate_class(data, PhotoInfoFromDict))
     photoinfo._exiftool_path = exiftool or EXIFTOOL_PATH
     photoinfo._data = data
     return photoinfo

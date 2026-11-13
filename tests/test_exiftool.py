@@ -116,7 +116,7 @@ QUOTED_JSON_LOADED = [
 
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 if exiftool is None:
@@ -505,11 +505,11 @@ def test_photoinfo_exiftool():
     import osxphotos
 
     photosdb = osxphotos.PhotosDB(dbfile=PHOTOS_DB)
-    for uuid in EXIF_UUID:
+    for uuid, value in EXIF_UUID.items():
         photo = photosdb.photos(uuid=[uuid])[0]
         exiftool = photo.exiftool
         exif_dict = exiftool.asdict()
-        for key, val in EXIF_UUID[uuid].items():
+        for key, val in value.items():
             assert exif_dict[key] == val
 
 
@@ -518,11 +518,11 @@ def test_photoinfo_exiftool_no_groups():
     import osxphotos
 
     photosdb = osxphotos.PhotosDB(dbfile=PHOTOS_DB)
-    for uuid in EXIF_UUID_NO_GROUPS:
+    for uuid, value in EXIF_UUID_NO_GROUPS.items():
         photo = photosdb.photos(uuid=[uuid])[0]
         exiftool = photo.exiftool
         exif_dict = exiftool.asdict(tag_groups=False)
-        for key, val in EXIF_UUID_NO_GROUPS[uuid].items():
+        for key, val in value.items():
             assert exif_dict[key] == val
 
 
@@ -543,7 +543,7 @@ def test_exiftool_terminate():
 
     import osxphotos.exiftool
 
-    exif1 = osxphotos.exiftool.ExifTool(TEST_FILE_ONE_KEYWORD)
+    osxphotos.exiftool.ExifTool(TEST_FILE_ONE_KEYWORD)
 
     # Use pgrep to find actual exiftool processes (more reliable than ps)
     try:

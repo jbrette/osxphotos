@@ -104,7 +104,7 @@ def test_sidecarwriter_json(photosdb: PhotosDB, tmp_path: pathlib.Path):
     )
     assert len(results.sidecar_json_written) == 1
     assert pathlib.Path(results.sidecar_json_written[0]).name == "test.jpg.json"
-    with open(results.sidecar_json_written[0], "r") as fp:
+    with open(results.sidecar_json_written[0]) as fp:
         sidecar_dict = json.load(fp)[0]
     assert sidecar_dict["IPTC:Keywords"] == photo.keywords
 
@@ -119,7 +119,7 @@ def test_sidecarwriter_exiftool(photosdb: PhotosDB, tmp_path: pathlib.Path):
     )
     assert len(results.sidecar_exiftool_written) == 1
     assert pathlib.Path(results.sidecar_exiftool_written[0]).name == "test.jpg.json"
-    with open(results.sidecar_exiftool_written[0], "r") as fp:
+    with open(results.sidecar_exiftool_written[0]) as fp:
         sidecar_dict = json.load(fp)[0]
     assert sidecar_dict["Keywords"] == photo.keywords
 

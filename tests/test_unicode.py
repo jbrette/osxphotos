@@ -6,7 +6,15 @@ from unicodedata import normalize
 import pytest
 
 from osxphotos.platform import is_macos
-from osxphotos.unicode import *
+from osxphotos.unicode import (
+    DEFAULT_UNICODE_FORM,
+    get_unicode_form,
+    get_unicode_fs_form,
+    normalize_fs_path,
+    normalize_unicode,
+    set_unicode_form,
+    set_unicode_fs_form,
+)
 
 UNICODE_PATH_NFC = normalize("NFC", "/path/to/ünicøde")
 UNICODE_PATH_NFD = normalize("NFD", UNICODE_PATH_NFC)

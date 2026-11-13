@@ -20,7 +20,7 @@ import photoscript
     default=False,
     help="Include filename of selected photos in output",
 )
-def uuid(ctx, cli_obj, filename):
+def uuid(ctx: click.Context, cli_obj: object, filename: bool) -> None:
     """Print out unique IDs (UUID) of photos selected in Photos
 
     Prints outs UUIDs in form suitable for --uuid-from-file and --skip-uuid-from-file

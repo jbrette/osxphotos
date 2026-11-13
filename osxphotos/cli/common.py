@@ -6,7 +6,9 @@ import os
 import pathlib
 import platform
 import sys
+from collections.abc import Callable
 from datetime import datetime
+from typing import Any, ParamSpec, TypeVar
 
 import click
 import xdg_base_dirs
@@ -18,6 +20,9 @@ from osxphotos._version import __version__
 from osxphotos.crash_reporter import crash_reporter
 from osxphotos.platform import get_macos_version, is_macos
 from osxphotos.utils import get_latest_version
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 # used to show/hide hidden commands
 OSXPHOTOS_HIDDEN = not bool(os.getenv("OSXPHOTOS_SHOW_HIDDEN"))
@@ -41,7 +46,7 @@ __all__ = [
 ]
 
 
-def noop(*args, **kwargs):
+def noop(*args: Any, **kwargs: Any) -> None:
     """no-op function"""
 
 
@@ -50,7 +55,7 @@ def time_stamp() -> str:
     return f"[time]{datetime.now()!s}[/time] -- "
 
 
-def osxphotos_crash_reporter():
+def osxphotos_crash_reporter() -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Return crash reporter decorator configured for osxphotos CLI commands."""
     return crash_reporter(
         OSXPHOTOS_CRASH_LOG,
@@ -71,7 +76,7 @@ def install_crash_reporter(command: click.Command) -> click.Command:
     return command
 
 
-def get_photos_db(*db_options):
+def get_photos_db(*db_options: str | None) -> str | None:
     """Return path to photos db, select first non-None db_options
     If no db_options are non-None, try to find library to use in
     the following order:
@@ -122,7 +127,7 @@ def get_data_dir() -> pathlib.Path:
     return data_dir
 
 
-def check_version():
+def check_version() -> None:
     """Check for updates"""
     latest_version, _ = get_latest_version()
     if latest_version and version.parse(latest_version) > version.parse(__version__):
@@ -134,7 +139,7 @@ def check_version():
         )
 
 
-def print_version(ctx, param, value):
+def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> None:
     """Print version, this is a callback for the --version option"""
     if not value:
         return
@@ -148,7 +153,7 @@ def print_version(ctx, param, value):
     ctx.exit()
 
 
-def require_macos(ctx, param, value):
+def require_macos[T](ctx: click.Context, param: click.Parameter, value: T) -> T:
     """Callback for options that are only valid on macOS."""
     if value and not is_macos:
         raise click.UsageError(message=f"{param.opts[0]} only works on macOS", ctx=ctx)

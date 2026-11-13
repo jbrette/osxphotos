@@ -12,8 +12,6 @@ import sys
 import time
 
 # click needed since this uses a couple of functions from CLI (__main__.py)
-import click
-
 import osxphotos
 from osxphotos.cli import _list_libraries, get_photos_db
 

@@ -1,5 +1,3 @@
-import pytest
-
 # test ability to search for edited files
 
 PHOTOS_DB = "./tests/Test-10.14.6-path_edited.photoslibrary/database/photos.db"

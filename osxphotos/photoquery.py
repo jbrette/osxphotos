@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
-import io
 import pathlib
 import re
 import sys
 from collections import OrderedDict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import bitmath
 
@@ -40,7 +39,7 @@ __all__ = [
 ]
 
 
-class IncompatibleQueryOptions(Exception):
+class IncompatibleQueryOptions(Exception):  # noqa: N818  (public name)
     """Incompatible query options"""
 
 
@@ -130,7 +129,7 @@ class QueryOptions:
         title: list of titles to search for
         to_date: search for photos taken before this date
         to_time: search for photos taken before this time of day
-        uti: list of UTIs to search for
+        uti: UTI to search for (matched as a substring of the original UTI)
         uuid: list of uuids to search for
         year: search for photos taken in a given year
         syndicated: search for photos that have been shared via syndication ("Shared with You" album via Messages, etc.)
@@ -162,7 +161,9 @@ class QueryOptions:
     folder: Iterable[str] | None = None
     from_date: datetime.datetime | None = None
     from_time: datetime.time | None = None
-    function: list[tuple[callable, str]] | None = None
+    function: list[tuple[Callable[[list[PhotoInfo]], list[PhotoInfo]], str]] | None = (
+        None
+    )
     has_comment: bool | None = None
     has_likes: bool | None = None
     has_raw: bool | None = None
@@ -227,7 +228,7 @@ class QueryOptions:
     title: Iterable[str] | None = None
     to_date: datetime.datetime | None = None
     to_time: datetime.time | None = None
-    uti: Iterable[str] | None = None
+    uti: str | None = None
     uuid: Iterable[str] | None = None
     year: Iterable[int] | None = None
     syndicated: bool | None = None
@@ -240,11 +241,11 @@ class QueryOptions:
     not_shared_library: bool | None = None
     newest_first: bool | None = None
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
-def query_options_from_kwargs(**kwargs) -> QueryOptions:
+def query_options_from_kwargs(**kwargs: Any) -> QueryOptions:
     """Validate query options and create a QueryOptions instance.
     Note: this will block on stdin if uuid_from_file is set to "-"
     so it is best to call function before creating the PhotosDB instance
@@ -252,36 +253,6 @@ def query_options_from_kwargs(**kwargs) -> QueryOptions:
     is loaded.
     """
     # sanity check input args
-    nonexclusive = [
-        "added_after",
-        "added_before",
-        "added_in_last",
-        "album",
-        "duplicate",
-        "exif",
-        "external_edit",
-        "folder",
-        "from_date",
-        "from_time",
-        "has_raw",
-        "keyword",
-        "label",
-        "max_size",
-        "min_size",
-        "name",
-        "person",
-        "query_eval",
-        "query_function",
-        "regex",
-        "selected",
-        "to_date",
-        "to_time",
-        "uti",
-        "uuid",
-        "uuid_from_file",
-        "year",
-        "newest_first",
-    ]
     exclusive = [
         ("burst", "not_burst"),
         ("cloudasset", "not_cloudasset"),
@@ -343,10 +314,11 @@ def query_options_from_kwargs(**kwargs) -> QueryOptions:
         include_movies = False
 
     # load UUIDs if necessary and append to any uuids passed with --uuid
-    uuids = list(kwargs.get("uuid", []))  # Click option is a tuple
+    uuid_list: list[str] = list(kwargs.get("uuid", []))  # Click option is a tuple
+    uuids: list[str] | tuple[str, ...] = uuid_list
     if uuid_from_file := kwargs.get("uuid_from_file"):
-        uuids.extend(load_uuid_from_file(uuid_from_file))
-        uuids = tuple(uuids)
+        uuid_list.extend(load_uuid_from_file(uuid_from_file))
+        uuids = tuple(uuid_list)
 
     query_fields = [field.name for field in dataclasses.fields(QueryOptions)]
     query_dict = {field: kwargs.get(field) for field in query_fields}
@@ -382,11 +354,11 @@ def load_uuid_from_file(filename: str) -> list[str]:
     if not pathlib.Path(filename).is_file():
         raise FileNotFoundError(f"Could not find file {filename}")
 
-    with open(filename, "r") as f:
+    with open(filename) as f:
         return _load_uuid_from_stream(f)
 
 
-def _load_uuid_from_stream(stream: io.IOBase) -> list[str]:
+def _load_uuid_from_stream(stream: Iterable[str]) -> list[str]:
     """
     Load UUIDs from stream.
     Does not validate UUIDs but does validate that the UUIDs are in the correct format.
@@ -403,7 +375,7 @@ def _load_uuid_from_stream(stream: io.IOBase) -> list[str]:
         ValueError if UUID is not in correct format
     """
 
-    uuid = []
+    uuid: list[str] = []
     for line in stream:
         line = line.strip()
         if len(line) and line[0] != "#":
@@ -423,36 +395,51 @@ def photo_query(
         options: a QueryOptions instance
     """
 
+    # photos() takes lists and bools; converting here does not change what it
+    # matches: it only iterates uuid and tests images/movies for truthiness
+    uuid = list(options.uuid) if options.uuid is not None else None
+    images = bool(options.photos)
+    movies = bool(options.movies)
+
+    # iPhotoPhotoInfo duck-types PhotoInfo, so the filters below treat the
+    # iPhoto results as PhotoInfo
+    photos: list[PhotoInfo]
     if options.deleted or options.deleted_only:
-        photos = photosdb.photos(
-            uuid=options.uuid,
-            images=options.photos,
-            movies=options.movies,
-            from_date=options.from_date,
-            to_date=options.to_date,
-            intrash=True,
+        photos = cast(
+            "list[PhotoInfo]",
+            photosdb.photos(
+                uuid=uuid,
+                images=images,
+                movies=movies,
+                from_date=options.from_date,
+                to_date=options.to_date,
+                intrash=True,
+            ),
         )
     else:
         photos = []
 
     if not options.deleted_only:
-        photos += photosdb.photos(
-            uuid=options.uuid,
-            images=options.photos,
-            movies=options.movies,
-            from_date=options.from_date,
-            to_date=options.to_date,
+        photos += cast(
+            "list[PhotoInfo]",
+            photosdb.photos(
+                uuid=uuid,
+                images=images,
+                movies=movies,
+                from_date=options.from_date,
+                to_date=options.to_date,
+            ),
         )
 
-    person = normalize_unicode(options.person)
-    keyword = normalize_unicode(options.keyword)
-    album = normalize_unicode(options.album)
-    folder = normalize_unicode(options.folder)
-    title = normalize_unicode(options.title)
-    description = normalize_unicode(options.description)
-    place = normalize_unicode(options.place)
-    label = normalize_unicode(options.label)
-    name = normalize_unicode(options.name)
+    person = _normalize_values(options.person)
+    keyword = _normalize_values(options.keyword)
+    album = _normalize_values(options.album)
+    folder = _normalize_values(options.folder)
+    title = _normalize_values(options.title)
+    description = _normalize_values(options.description)
+    place = _normalize_values(options.place)
+    label = _normalize_values(options.label)
+    name = _normalize_values(options.name)
 
     if album:
         photos = filter_photos_by_folder_album_path(photos, album, options.ignore_case)
@@ -480,7 +467,7 @@ def photo_query(
     if title:
         # search title field for text
         # if more than one, find photos with all title values in title
-        photo_list = []
+        photo_list: list[PhotoInfo] = []
         if options.ignore_case:
             # case-insensitive
             for t in title:
@@ -734,11 +721,11 @@ def photo_query(
         render_options = RenderOptions(none_str="")
         photo_list = []
         for regex, template in options.regex:
-            regex = re.compile(regex, flags)
+            pattern = re.compile(regex, flags)
             for p in photos:
                 rendered, _ = p.render_template(template, render_options)
                 for value in rendered:
-                    if regex.search(value):
+                    if pattern.search(value):
                         photo_list.append(p)
                         break
         photos = photo_list
@@ -749,19 +736,19 @@ def photo_query(
             try:
                 photos = eval(query_string)
             except Exception as e:
-                raise ValueError(f"Invalid query_eval CRITERIA: {e}")
+                raise ValueError(f"Invalid query_eval CRITERIA: {e}") from e
 
     if options.duplicate:
         sort_options = QueryOptions()
         photos = sort_photos([p for p in photos if p.duplicates], sort_options)
         # gather all duplicates but ensure each uuid is only represented once
-        photodict = OrderedDict()
+        photodict: OrderedDict[str, PhotoInfo] = OrderedDict()
         for p in photos:
             if p.uuid not in photodict:
                 photodict[p.uuid] = p
-                for d in sort_photos(p.duplicates, sort_options):
-                    if d.uuid not in photodict:
-                        photodict[d.uuid] = d
+                for dup in sort_photos(p.duplicates, sort_options):
+                    if dup.uuid not in photodict:
+                        photodict[dup.uuid] = dup
         photos = list(photodict.values())
 
         # filter for deleted as photo.duplicates will include photos in the trash
@@ -792,7 +779,7 @@ def photo_query(
             photos = []
 
     if options.exif:
-        matching_photos = []
+        matching_photos: list[PhotoInfo] = []
         for p in photos:
             if not p.exiftool:
                 continue
@@ -875,7 +862,7 @@ def photo_query(
         # remove duplicates as each burst photo in the set that's selected would
         # result in the entire set being added above
         # can't use set() because PhotoInfo not hashable
-        seen_uuids = {}
+        seen_uuids: dict[str, PhotoInfo] = {}
         for p in photos:
             if p.uuid in seen_uuids:
                 continue
@@ -900,8 +887,8 @@ def sort_photos(photos: list[PhotoInfo], options: QueryOptions) -> list[PhotoInf
 
 def filter_photos_by_folder_album_path(
     photos: list[PhotoInfo],
-    paths: list[str],
-    ignore_case: bool = False,
+    paths: Iterable[str],
+    ignore_case: bool | None = False,
     folders_only: bool = False,
 ) -> list[PhotoInfo]:
     """Filter photos based on full album/folder paths
@@ -925,7 +912,7 @@ def filter_photos_by_folder_album_path(
         return photos
 
     # Normalize paths for comparison
-    normalized_paths = []
+    normalized_paths: list[list[str]] = []
     for path in paths:
         # Handle escaped forward slashes: replace "//" with a placeholder
         # then split on "/" and restore the escaped slashes
@@ -940,7 +927,7 @@ def filter_photos_by_folder_album_path(
 
         normalized_paths.append(path_parts)
 
-    matching_photos = []
+    matching_photos: list[PhotoInfo] = []
 
     for photo in photos:
         photo_matched = False
@@ -973,7 +960,7 @@ def filter_photos_by_folder_album_path(
             else:
                 # Original exact path matching logic
                 # Construct full path: folder_names + album_title
-                full_path_parts = folder_names + [album_title]
+                full_path_parts = [*folder_names, album_title]
 
                 if ignore_case:
                     full_path_parts_compare = [part.lower() for part in full_path_parts]
@@ -993,7 +980,20 @@ def filter_photos_by_folder_album_path(
     return list(set(matching_photos))  # Remove duplicates
 
 
-def _get_photos_by_attribute(photos, attribute, values, ignore_case):
+def _normalize_values(values: Iterable[str] | None) -> Iterable[str] | None:
+    """normalize_unicode for a query option; like normalize_unicode, any value
+    that is not a str, list or tuple is returned unchanged"""
+    if isinstance(values, (str, list, tuple)):
+        return normalize_unicode(values)
+    return values
+
+
+def _get_photos_by_attribute(
+    photos: list[PhotoInfo],
+    attribute: str,
+    values: Iterable[str],
+    ignore_case: bool | None,
+) -> list[PhotoInfo]:
     """Search for photos based on values being in PhotoInfo.attribute
 
     Args:
@@ -1005,7 +1005,7 @@ def _get_photos_by_attribute(photos, attribute, values, ignore_case):
     Returns:
         list of PhotoInfo objects matching search criteria
     """
-    photos_search = []
+    photos_search: list[PhotoInfo] = []
     if ignore_case:
         # case-insensitive
         for x in values:

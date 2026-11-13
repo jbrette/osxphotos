@@ -1,6 +1,6 @@
 """query command for osxphotos CLI"""
 
-import sys
+from typing import Any, cast
 
 import click
 
@@ -13,6 +13,7 @@ from osxphotos.cli.click_rich_echo import (
 )
 from osxphotos.cli.template_utils import suggest_template_fields
 from osxphotos.iphoto import is_iphoto_library
+from osxphotos.photoinfo import PhotoInfo
 from osxphotos.photoquery import query_options_from_kwargs
 from osxphotos.phototemplate import RenderOptions
 from osxphotos.platform import assert_macos, is_macos
@@ -21,19 +22,15 @@ if is_macos:
     from osxphotos.photosalbum import PhotosAlbum
 
 from .cli_params import (
-    DB_ARGUMENT,
     DB_OPTION,
     DELETED_OPTIONS,
     FIELD_OPTION,
     JSON_OPTION,
     QUERY_OPTIONS,
-    make_click_option_decorator,
 )
 from .color_themes import get_default_theme
 from .common import (
     CLI_COLOR_ERROR,
-    CLI_COLOR_WARNING,
-    OSXPHOTOS_HIDDEN,
     get_photos_db,
     require_macos,
 )
@@ -73,21 +70,23 @@ from .verbose import get_verbose_console
 @click.option(
     "--mute", is_flag=True, help="Mute status output while loading Photos library."
 )
-@click.pass_obj
-@click.pass_context
+# click passes ctx and obj positionally; the named parameters do not match its
+# positional-only Callable signature
+@click.pass_obj  # type: ignore[arg-type]
+@click.pass_context  # type: ignore[arg-type]
 def query(
-    ctx,
-    cli_obj,
-    db,
-    field,
-    json_,
-    count,
-    print_template,
-    quiet,
-    mute,
-    add_to_album=False,
-    **kwargs,
-):
+    ctx: click.Context,
+    cli_obj: Any,
+    db: str | None,
+    field: tuple[tuple[str, str], ...],
+    json_: bool,
+    count: bool,
+    print_template: tuple[str, ...],
+    quiet: bool,
+    mute: bool,
+    add_to_album: str | bool = False,
+    **kwargs: Any,
+) -> None:
     """Query the Photos database using 1 or more search options;
     if more than one different option is provided, they are treated as "AND"
     (e.g. search for photos matching all options).
@@ -129,7 +128,8 @@ def query(
     )
 
     try:
-        photos = photosdb.query(query_options)
+        # iPhotoPhotoInfo implements the PhotoInfo interface (see photoinfo_protocol)
+        photos = cast(list[PhotoInfo], photosdb.query(query_options))
     except ValueError as e:
         if "Invalid query_eval CRITERIA:" not in str(e):
             raise ValueError(e) from e
@@ -146,7 +146,8 @@ def query(
         click.echo(len(photos))
         return
 
-    if add_to_album and photos:
+    # add_to_album is the --add-to-album value (str or None); False is only the default
+    if isinstance(add_to_album, str) and add_to_album and photos:
         assert_macos()
 
         album_query = PhotosAlbum(add_to_album, verbose=None)

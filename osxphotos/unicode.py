@@ -4,18 +4,20 @@ from __future__ import annotations
 
 import pathlib
 import unicodedata
-from typing import Literal
+from typing import Literal, cast
 
 from osxphotos.platform import is_macos
 
+type _UnicodeForm = Literal["NFC", "NFKC", "NFD", "NFKD"]
+
 # Unicode format to use for comparing strings
-DEFAULT_UNICODE_FORM = "NFC"
+DEFAULT_UNICODE_FORM: _UnicodeForm = "NFC"
 
 # global unicode format
-_GLOBAL_UNICODE_FORM = DEFAULT_UNICODE_FORM
+_GLOBAL_UNICODE_FORM: _UnicodeForm = DEFAULT_UNICODE_FORM
 
 # global unicode format to use for filesystem paths
-_GLOBAL_UNICODE_FS_FORM = "NFD" if is_macos else "NFC"
+_GLOBAL_UNICODE_FS_FORM: _UnicodeForm = "NFD" if is_macos else "NFC"
 
 __all__ = [
     "DEFAULT_UNICODE_FORM",
@@ -48,7 +50,7 @@ def get_unicode_fs_form() -> Literal["NFC", "NFKC", "NFD", "NFKD"]:
     return _GLOBAL_UNICODE_FS_FORM
 
 
-def set_unicode_fs_form(fmt: Literal["NFC", "NFKC", "NFD", "NFKD"]):
+def set_unicode_fs_form(fmt: Literal["NFC", "NFKC", "NFD", "NFKD"]) -> None:
     """Set the global unicode filesystem format"""
 
     if fmt not in ["NFC", "NFKC", "NFD", "NFKD"]:
@@ -60,29 +62,41 @@ def set_unicode_fs_form(fmt: Literal["NFC", "NFKC", "NFD", "NFKD"]):
 
 def normalize_fs_path[PathType: str | pathlib.Path](path: PathType) -> PathType:
     """Normalize filesystem paths with unicode in them"""
+    # mypy cannot narrow a bound type variable through isinstance, so each
+    # branch casts back to the caller's type
     form = get_unicode_fs_form()
     if isinstance(path, pathlib.Path):
-        return pathlib.Path(unicodedata.normalize(form, str(path)))
+        return cast(PathType, pathlib.Path(unicodedata.normalize(form, str(path))))
     else:
-        return unicodedata.normalize(form, path)
+        return cast(PathType, unicodedata.normalize(form, path))
 
 
 def normalize_unicode[UnicodeDataType: str | list[str] | tuple[str, ...] | None](
     value: UnicodeDataType,
 ) -> UnicodeDataType:
     """normalize unicode data"""
+    # mypy cannot narrow a bound type variable through isinstance, so each
+    # branch casts back to the caller's type
     form = get_unicode_form()
     if value is None:
-        return None
+        return value
     if isinstance(value, tuple):
-        return tuple(
-            unicodedata.normalize(form, str(v if v is not None else "")) for v in value
+        return cast(
+            UnicodeDataType,
+            tuple(
+                unicodedata.normalize(form, str(v if v is not None else ""))
+                for v in value
+            ),
         )
     elif isinstance(value, list):
-        return [
-            unicodedata.normalize(form, str(v if v is not None else "")) for v in value
-        ]
+        return cast(
+            UnicodeDataType,
+            [
+                unicodedata.normalize(form, str(v if v is not None else ""))
+                for v in value
+            ],
+        )
     elif isinstance(value, str):
-        return unicodedata.normalize(form, value)
+        return cast(UnicodeDataType, unicodedata.normalize(form, value))
     else:
         return value

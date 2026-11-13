@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import datetime
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .photos_datetime import photos_datetime_local
 
@@ -60,7 +60,7 @@ class ShareInfo:
     count_of_assets_added_by_camera_smart_sharing: int | None
     exit_type: int | None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Convert dates from str to datetime"""
         for field in [
             "creation_date",
@@ -74,7 +74,7 @@ class ShareInfo:
             if val := getattr(self, field):
                 setattr(self, field, photos_datetime_local(val))
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Return info as dict"""
         return dataclasses.asdict(self)
 

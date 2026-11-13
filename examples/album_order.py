@@ -21,7 +21,6 @@ You may pass optional arguments to adjust the formatting in format:
     The default spacer is " - " and the default format is "d" (no leading zero or padding)
 """
 
-import pathlib
 from functools import cache
 
 from osxphotos import AlbumInfo, FolderInfo, PhotoInfo, PhotosDB
@@ -131,7 +130,7 @@ def folder_album(
     spacer, format = _get_spacer_format(args)
 
     # Get all albums the photo is in
-    photo_albums = [album for album in photo.album_info]
+    photo_albums = list(photo.album_info)
 
     # Get top-level items once (cached)
     all_folders, all_albums = get_top_level_items(photo._db)

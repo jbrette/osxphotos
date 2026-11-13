@@ -92,7 +92,7 @@ EXIF_UUID_NONE = ["A1DD1F98-2ECD-431F-9AC9-5AFEFE2D3A5C"]
 
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 if exiftool is None:
@@ -185,9 +185,11 @@ def test_setvalue_context_manager():
     tempfile = os.path.join(tempdir.name, os.path.basename(TEST_FILE_ONE_KEYWORD))
     FileUtil.copy(TEST_FILE_ONE_KEYWORD, tempfile)
 
-    with pytest.raises(NotImplementedError):
-        with osxphotos.exiftool.ExifToolCaching(tempfile) as exif:
-            exif.setvalue("IPTC:Keywords", "test1")
+    with (
+        pytest.raises(NotImplementedError),
+        osxphotos.exiftool.ExifToolCaching(tempfile) as exif,
+    ):
+        exif.setvalue("IPTC:Keywords", "test1")
 
 
 def test_flags():
@@ -202,10 +204,12 @@ def test_flags():
     tempfile = os.path.join(tempdir.name, os.path.basename(TEST_FILE_WARNING))
     FileUtil.copy(TEST_FILE_WARNING, tempfile)
 
-    with pytest.raises(TypeError):
-        # ExifToolCaching doesn't take flags arg
-        with osxphotos.exiftool.ExifToolCaching(tempfile, flags=["-m"]) as exif:
-            exif.setvalue("XMP:Subject", "foo/ba    r")
+    # ExifToolCaching doesn't take flags arg
+    with (
+        pytest.raises(TypeError),
+        osxphotos.exiftool.ExifToolCaching(tempfile, flags=["-m"]) as exif,
+    ):
+        exif.setvalue("XMP:Subject", "foo/ba    r")
 
 
 def test_clear_value():
@@ -305,11 +309,11 @@ def test_photoinfo_exiftool():
     import osxphotos
 
     photosdb = osxphotos.PhotosDB(dbfile=PHOTOS_DB)
-    for uuid in EXIF_UUID:
+    for uuid, value in EXIF_UUID.items():
         photo = photosdb.photos(uuid=[uuid])[0]
         exiftool = photo.exiftool
         exif_dict = exiftool.asdict()
-        for key, val in EXIF_UUID[uuid].items():
+        for key, val in value.items():
             assert exif_dict[key] == val
 
 
@@ -318,11 +322,11 @@ def test_photoinfo_exiftool_no_groups():
     import osxphotos
 
     photosdb = osxphotos.PhotosDB(dbfile=PHOTOS_DB)
-    for uuid in EXIF_UUID_NO_GROUPS:
+    for uuid, value in EXIF_UUID_NO_GROUPS.items():
         photo = photosdb.photos(uuid=[uuid])[0]
         exiftool = photo.exiftool
         exif_dict = exiftool.asdict(tag_groups=False)
-        for key, val in EXIF_UUID_NO_GROUPS[uuid].items():
+        for key, val in value.items():
             assert exif_dict[key] == val
 
 

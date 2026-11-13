@@ -8,7 +8,7 @@ import pytest
 from osxphotos.platform import is_macos
 
 if is_macos:
-    from osxphotos.fingerprintquery import FingerprintQuery, fingerprint
+    from osxphotos.fingerprintquery import FingerprintQuery
 else:
     pytest.skip(allow_module_level=True)
 
@@ -204,5 +204,7 @@ def test_possible_duplicates(
 
 
 def test_possible_duplicates_no_match(fingerprint_query):
-    non_existent_image = "tests/test-images/NonExistentImage.jpg"
-    results = fingerprint_query.possible_duplicates
+    """An image that is not in the library has no possible duplicates"""
+    assert (
+        fingerprint_query.possible_duplicates("tests/test-images/not_live.jpeg") == []
+    )

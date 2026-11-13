@@ -37,9 +37,9 @@ def _network_via_nsurl(path: pathlib.Path) -> bool | None:
     if not is_macos:
         return None
 
-    import Foundation  # type: ignore
-    import objc  # type: ignore
-    from Foundation import NSURL  # type: ignore
+    import Foundation
+    import objc
+    from Foundation import NSURL
 
     try:
         with objc.autorelease_pool():
@@ -77,7 +77,7 @@ def _network_via_mount(path: pathlib.Path) -> bool | None:
     for line in out.splitlines():
         # Example: "//server/share on /Volumes/Share (smbfs, nodev, nosuid, ... )"
         try:
-            before_on, after_on = line.split(" on ", 1)
+            _before_on, after_on = line.split(" on ", 1)
             mnt_point, rest = after_on.split(" (", 1)
             fstype = rest.split(",", 1)[0].strip()
         except ValueError:
@@ -90,7 +90,7 @@ def _network_via_mount(path: pathlib.Path) -> bool | None:
                 str(mnt_point_path)
             ) > len(best_match[0]):
                 best_match = (str(mnt_point_path), fstype)
-        except Exception:
+        except Exception:  # noqa: S112  (best effort: skip unreadable mount points)
             continue
 
     if not best_match[0]:
@@ -123,7 +123,7 @@ def _is_path_on_network_volume_cached(path_str: str) -> bool:
     return False
 
 
-def is_path_on_network_volume(path: str | os.PathLike | pathlib.Path) -> bool:
+def is_path_on_network_volume(path: str | os.PathLike[str] | pathlib.Path) -> bool:
     """Return True if path is on a network/NAS volume, else False.
 
     Uses macOS NSURL volume resource keys via pyobjc when available. Falls back to

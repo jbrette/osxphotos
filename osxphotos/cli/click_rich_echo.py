@@ -32,21 +32,21 @@ ERROR_EMOJI = True
 class _Console:
     """Store console object for rich output"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._console: Console | None = None
 
     @property
-    def console(self):
+    def console(self) -> Console | None:
         return self._console
 
     @console.setter
-    def console(self, console: Console):
+    def console(self, console: Console) -> None:
         self._console = console
 
 
 _console = _Console()
 
-_theme = None
+_theme: Theme | None = None
 
 _timestamp = False
 
@@ -59,7 +59,7 @@ def set_rich_console(console: Console) -> None:
     _console.console = console
 
 
-def get_rich_console() -> Console:
+def get_rich_console() -> Console | None:
     """Get console object
 
     Returns:
@@ -86,10 +86,10 @@ def set_rich_timestamp(timestamp: bool) -> None:
 
 
 def rich_echo(
-    message: t.Any | None = None,
-    theme=None,
-    markdown=False,
-    highlight=False,
+    message: t.Any = None,
+    theme: Theme | None = None,
+    markdown: bool = False,
+    highlight: bool = False,
     **kwargs: t.Any,
 ) -> None:
     """Echo text to the console with rich formatting.
@@ -105,7 +105,7 @@ def rich_echo(
     """
 
     # args for click.echo that may have been passed in kwargs
-    echo_args = {}
+    echo_args: dict[str, t.Any] = {}
     for arg in ("file", "nl", "err", "color"):
         val = kwargs.pop(arg, None)
         if val is not None:
@@ -128,10 +128,10 @@ def rich_echo(
 
 
 def rich_echo_error(
-    message: t.Any | None = None,
-    theme=None,
-    markdown=False,
-    highlight=False,
+    message: t.Any = None,
+    theme: Theme | None = None,
+    markdown: bool = False,
+    highlight: bool = False,
     **kwargs: t.Any,
 ) -> None:
     """Echo text to stderr with rich formatting
@@ -163,10 +163,10 @@ def rich_echo_error(
 
 
 def rich_click_echo(
-    message: t.Any | None = None,
-    theme=None,
-    markdown=False,
-    highlight=False,
+    message: t.Any = None,
+    theme: Theme | None = None,
+    markdown: bool = False,
+    highlight: bool = False,
     **kwargs: t.Any,
 ) -> None:
     """Echo text to the console with rich formatting using click.echo
@@ -184,7 +184,7 @@ def rich_click_echo(
     """
 
     # args for click.echo that may have been passed in kwargs
-    echo_args = {}
+    echo_args: dict[str, t.Any] = {}
     for arg in ("file", "nl", "err", "color"):
         val = kwargs.pop(arg, None)
         if val is not None:
@@ -193,7 +193,7 @@ def rich_click_echo(
     # click.echo will include "\n" so don't add it here unless specified
     end = kwargs.pop("end", "")
 
-    if width := kwargs.pop("width", None) is None:
+    if (width := kwargs.pop("width", None)) is None:
         # if not outputting to terminal, use a huge width to avoid wrapping
         # otherwise tests fail
         temp_console = Console()
@@ -217,9 +217,9 @@ def rich_click_echo(
 def rich_echo_via_pager(
     text_or_generator: t.Iterable[str] | t.Callable[[], t.Iterable[str]] | str,
     theme: Theme | None = None,
-    highlight=False,
+    highlight: bool = False,
     markdown: bool = False,
-    **kwargs,
+    **kwargs: t.Any,
 ) -> None:
     """This function takes a text and shows it via an environment specific
     pager on stdout.
@@ -232,22 +232,24 @@ def rich_echo_via_pager(
         **kwargs: if "color" in kwargs, works the same as click.echo_via_pager(color=color)
         otherwise any kwargs are passed to rich.Console.print()
     """
+    lines: t.Iterable[t.Any]
     if inspect.isgeneratorfunction(text_or_generator):
-        text_or_generator = t.cast(t.Callable[[], t.Iterable[str]], text_or_generator)()
+        lines = t.cast(t.Callable[[], t.Iterable[str]], text_or_generator)()
     elif isinstance(text_or_generator, str):
-        text_or_generator = [text_or_generator]
+        lines = [text_or_generator]
     else:
         try:
-            text_or_generator = iter(text_or_generator)
+            # a non-generator callable is not iterable and falls to the except
+            lines = iter(t.cast(t.Iterable[str], text_or_generator))
         except TypeError:
-            text_or_generator = [text_or_generator]
+            lines = [text_or_generator]
 
     console = _console.console or Console(theme=theme)
 
     color = kwargs.pop("color", True)
 
     with console.pager(styles=color):
-        for x in text_or_generator:
+        for x in lines:
             if isinstance(x, str) and markdown:
                 x = Markdown(x)
             console.print(x, highlight=highlight, **kwargs)

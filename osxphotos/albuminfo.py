@@ -10,8 +10,9 @@ Represents a single Folder in the Photos library and provides access to the fold
 PhotosDB.folders() returns a list of FolderInfo objects
 """
 
-from datetime import datetime, timedelta, timezone
-from functools import cached_property
+from collections.abc import Sequence
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, cast
 
 from ._constants import (
     _PHOTOS_4_ALBUM_KIND,
@@ -24,6 +25,10 @@ from ._constants import (
 )
 from .photos_datetime import photos_datetime_local
 
+if TYPE_CHECKING:
+    from .photoinfo import PhotoInfo
+    from .photosdb import PhotosDB
+
 __all__ = [
     "AlbumInfo",
     "AlbumInfoBaseClass",
@@ -34,7 +39,7 @@ __all__ = [
 ]
 
 
-def sort_list_by_keys(values, sort_keys):
+def sort_list_by_keys[T](values: Sequence[T], sort_keys: Sequence[Any]) -> list[T]:
     """Sorts list values by a second list sort_keys
         e.g. given ["a","c","b"], [1, 3, 2], returns ["a", "b", "c"]
 
@@ -50,7 +55,7 @@ def sort_list_by_keys(values, sort_keys):
     """
     if len(values) != len(sort_keys):
         raise ValueError("values and sort_keys must be same length")
-    return [x for _, x in sorted(zip(sort_keys, values))]
+    return [x for _, x in sorted(zip(sort_keys, values, strict=True))]
 
 
 class AlbumInfoBaseClass:
@@ -60,7 +65,13 @@ class AlbumInfoBaseClass:
     including folders, photos, etc.
     """
 
-    def __init__(self, db, uuid):
+    # lazily computed caches; unset until first access (properties catch AttributeError)
+    _creation_date: datetime | None
+    _start_date: datetime | None
+    _end_date: datetime | None
+    _owner: str | None
+
+    def __init__(self, db: PhotosDB, uuid: str) -> None:
         self._uuid = uuid
         self._db = db
         self._title = self._db._dbalbum_details[uuid]["title"]
@@ -69,12 +80,12 @@ class AlbumInfoBaseClass:
         self._end_date_timestamp = self._db._dbalbum_details[uuid]["end_date"]
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         """return uuid of album"""
         return self._uuid
 
     @property
-    def creation_date(self):
+    def creation_date(self) -> datetime | None:
         """return creation date of album"""
         try:
             return self._creation_date
@@ -85,7 +96,7 @@ class AlbumInfoBaseClass:
             return self._creation_date
 
     @property
-    def start_date(self):
+    def start_date(self) -> datetime | None:
         """For Albums, return start date (earliest image) of album or None for albums with no images
         For Import Sessions, return start date of import session (when import began) or None if not set
         """
@@ -96,7 +107,7 @@ class AlbumInfoBaseClass:
             return self._start_date
 
     @property
-    def end_date(self):
+    def end_date(self) -> datetime | None:
         """For Albums, return end date (most recent image) of album or None for albums with no images
         For Import Sessions, return end date of import sessions (when import was completed) or None if not set
         """
@@ -107,11 +118,11 @@ class AlbumInfoBaseClass:
             return self._end_date
 
     @property
-    def photos(self):
+    def photos(self) -> list[PhotoInfo]:
         return []
 
     @property
-    def owner(self):
+    def owner(self) -> str | None:
         """Return name of photo owner for shared album (Photos 5+ only), or None if not shared"""
         if self._db._db_version <= _PHOTOS_4_VERSION:
             return None
@@ -132,7 +143,7 @@ class AlbumInfoBaseClass:
                 self._owner = None
             return self._owner
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Return album info as a dict; does not include photos"""
         return {
             "uuid": self.uuid,
@@ -142,7 +153,7 @@ class AlbumInfoBaseClass:
             "owner": self.owner,
         }
 
-    def __len__(self):
+    def __len__(self) -> int:
         """return number of photos contained in album"""
         return len(self.photos)
 
@@ -153,31 +164,40 @@ class AlbumInfo(AlbumInfoBaseClass):
     including folders, photos, etc.
     """
 
-    def __init__(self, db, uuid):
+    _title: str
+    # lazily computed caches; unset until first access (properties catch AttributeError)
+    _photos: list[PhotoInfo]
+    _folder_names: list[str]
+    _folders: list[FolderInfo]
+    _parent: FolderInfo | None
+
+    def __init__(self, db: PhotosDB, uuid: str) -> None:
         super().__init__(db=db, uuid=uuid)
         self._title = self._db._dbalbum_details[uuid]["title"]
 
     @property
-    def title(self):
+    def title(self) -> str:
         """return title / name of album"""
         return self._title
 
     @property
-    def photos(self):
+    def photos(self) -> list[PhotoInfo]:
         """return list of photos contained in album sorted in same sort order as Photos"""
         try:
             return self._photos
         except AttributeError:
             if self.uuid in self._db._dbalbums_album:
-                uuid, sort_order = zip(*self._db._dbalbums_album[self.uuid])
+                uuid, sort_order = zip(
+                    *self._db._dbalbums_album[self.uuid], strict=True
+                )
                 sorted_uuid = sort_list_by_keys(uuid, sort_order)
                 photos = self._db.photos_by_uuid(sorted_uuid)
-                sort_order = self.sort_order
-                if sort_order == AlbumSortOrder.NEWEST_FIRST:
+                album_sort_order = self.sort_order
+                if album_sort_order == AlbumSortOrder.NEWEST_FIRST:
                     self._photos = sorted(photos, key=lambda p: p.date, reverse=True)
-                elif sort_order == AlbumSortOrder.OLDEST_FIRST:
+                elif album_sort_order == AlbumSortOrder.OLDEST_FIRST:
                     self._photos = sorted(photos, key=lambda p: p.date)
-                elif sort_order == AlbumSortOrder.TITLE:
+                elif album_sort_order == AlbumSortOrder.TITLE:
                     self._photos = sorted(photos, key=lambda p: p.title or "")
                 else:
                     # assume AlbumSortOrder.MANUAL
@@ -187,7 +207,7 @@ class AlbumInfo(AlbumInfoBaseClass):
             return self._photos
 
     @property
-    def folder_names(self):
+    def folder_names(self) -> list[str]:
         """Return hierarchical list of folders the album is contained in
         the folder list is in form:
         ["Top level folder", "sub folder 1", "sub folder 2", ...]
@@ -201,7 +221,7 @@ class AlbumInfo(AlbumInfoBaseClass):
             return self._folder_names
 
     @property
-    def folder_list(self):
+    def folder_list(self) -> list[FolderInfo]:
         """Returns list of FolderInfo objects for each folder the album is contained in
         or empty list if album is not in any folders
         """
@@ -213,7 +233,7 @@ class AlbumInfo(AlbumInfoBaseClass):
             return self._folders
 
     @property
-    def parent(self):
+    def parent(self) -> FolderInfo | None:
         """returns FolderInfo object for parent folder or None if no parent (e.g. top-level album)"""
         try:
             return self._parent
@@ -235,7 +255,7 @@ class AlbumInfo(AlbumInfoBaseClass):
             return self._parent
 
     @property
-    def sort_order(self):
+    def sort_order(self) -> AlbumSortOrder:
         """return sort order of album"""
         if self._db._db_version <= _PHOTOS_4_VERSION:
             return AlbumSortOrder.MANUAL
@@ -277,7 +297,7 @@ class AlbumInfo(AlbumInfoBaseClass):
         except Exception:
             return (9_999_999,)
 
-    def photo_index(self, photo):
+    def photo_index(self, photo: PhotoInfo) -> int:
         """return index of photo in album (based on album sort order)"""
         for index, p in enumerate(self.photos):
             if p.uuid == photo.uuid:
@@ -286,7 +306,7 @@ class AlbumInfo(AlbumInfoBaseClass):
             f"Photo with uuid {photo.uuid} does not appear to be in this album"
         )
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Return album info as a dict; does not include photos"""
         dict_data = super().asdict()
         dict_data["title"] = self.title
@@ -300,7 +320,11 @@ class AlbumInfo(AlbumInfoBaseClass):
 class ImportInfo(AlbumInfoBaseClass):
     """Information about import sessions"""
 
-    def __init__(self, db, uuid):
+    _title: str | None
+    # lazily computed cache; unset until first access (property catches AttributeError)
+    _photos: list[PhotoInfo]
+
+    def __init__(self, db: PhotosDB, uuid: str) -> None:
         self._uuid = uuid
         self._db = db
 
@@ -318,12 +342,12 @@ class ImportInfo(AlbumInfoBaseClass):
         self._title = import_session[2]
 
     @property
-    def title(self):
+    def title(self) -> str | None:
         """return title / name of import session"""
         return self._title
 
     @property
-    def photos(self):
+    def photos(self) -> list[PhotoInfo]:
         """return list of photos contained in import session"""
         try:
             return self._photos
@@ -334,7 +358,8 @@ class ImportInfo(AlbumInfoBaseClass):
                         (uuid, self._db._dbphotos[uuid]["fok_import_session"])
                         for uuid in self._db._dbphotos
                         if self._db._dbphotos[uuid]["import_uuid"] == self.uuid
-                    ]
+                    ],
+                    strict=True,
                 )
                 sorted_uuid = sort_list_by_keys(uuid_list, sort_order)
                 self._photos = self._db.photos_by_uuid(sorted_uuid)
@@ -347,7 +372,7 @@ class ImportInfo(AlbumInfoBaseClass):
                 self._photos = self._db.photos_by_uuid(import_photo_uuids)
             return self._photos
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Return import info as a dict; does not include photos"""
         return {
             "uuid": self.uuid,
@@ -357,7 +382,7 @@ class ImportInfo(AlbumInfoBaseClass):
             "title": self.title,
         }
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         """Always returns True
         A photo without an import session will return None for import_info,
         thus if import_info is not None, it must be a valid import_info object (#820)
@@ -372,7 +397,7 @@ class ProjectInfo(AlbumInfo):
     """
 
     @property
-    def folder_names(self):
+    def folder_names(self) -> list[str]:
         """Return hierarchical list of folders the album is contained in
         the folder list is in form:
         ["Top level folder", "sub folder 1", "sub folder 2", ...]
@@ -383,7 +408,7 @@ class ProjectInfo(AlbumInfo):
         return []
 
     @property
-    def folder_list(self):
+    def folder_list(self) -> list[FolderInfo]:
         """Returns list of FolderInfo objects for each folder the album is contained in
         or empty list if album is not in any folders
         """
@@ -398,28 +423,36 @@ class FolderInfo:
     including folders, albums, etc
     """
 
-    def __init__(self, db=None, uuid=None):
-        self._uuid = uuid
-        self._db = db
+    _title: str
+    # lazily computed caches; unset until first access (properties catch AttributeError)
+    _albums: list[AlbumInfo]
+    _parent: FolderInfo | None
+    _folders: list[FolderInfo]
+
+    def __init__(self, db: PhotosDB | None = None, uuid: str | None = None) -> None:
+        # db and uuid are required in practice; the None defaults are kept only
+        # for call compatibility
+        self._uuid: str = cast(str, uuid)
+        self._db: PhotosDB = cast("PhotosDB", db)
         if self._db._db_version <= _PHOTOS_4_VERSION:
             self._pk = None
-            self._title = self._db._dbfolder_details[uuid]["name"]
+            self._title = self._db._dbfolder_details[self._uuid]["name"]
         else:
-            self._pk = self._db._dbalbum_details[uuid]["pk"]
-            self._title = self._db._dbalbum_details[uuid]["title"]
+            self._pk = self._db._dbalbum_details[self._uuid]["pk"]
+            self._title = self._db._dbalbum_details[self._uuid]["title"]
 
     @property
-    def title(self):
+    def title(self) -> str:
         """return title / name of folder"""
         return self._title
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         """return uuid of folder"""
         return self._uuid
 
     @property
-    def album_info(self):
+    def album_info(self) -> list[AlbumInfo]:
         """return list of albums (as AlbumInfo objects) contained in the folder"""
         try:
             return self._albums
@@ -444,7 +477,7 @@ class FolderInfo:
             return self._albums
 
     @property
-    def parent(self):
+    def parent(self) -> FolderInfo | None:
         """returns FolderInfo object for parent or None if no parent (e.g. top-level folder)"""
         try:
             return self._parent
@@ -466,7 +499,7 @@ class FolderInfo:
             return self._parent
 
     @property
-    def subfolders(self):
+    def subfolders(self) -> list[FolderInfo]:
         """return list of folders (as FolderInfo objects) contained in the folder"""
         try:
             return self._folders
@@ -512,7 +545,7 @@ class FolderInfo:
         except Exception:
             return (9_999_999,)
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Return folder info as a dict"""
         return {
             "title": self.title,
@@ -522,6 +555,6 @@ class FolderInfo:
             "albums": [a.uuid for a in self.album_info],
         }
 
-    def __len__(self):
+    def __len__(self) -> int:
         """returns count of folders + albums contained in the folder"""
         return len(self.subfolders) + len(self.album_info)

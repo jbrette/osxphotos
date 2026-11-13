@@ -1,6 +1,5 @@
 """Test PlaceInfo"""
 
-import pytest
 from bpylist2 import archiver
 
 from osxphotos.placeinfo import (
@@ -48,7 +47,7 @@ PLACE_4_NAMES_2 = [
 PLACE_4_COUNTRY_2 = "US"
 
 
-def test_placeInfo4():
+def test_placeinfo4():
     # test valid place data info returns a PlaceInfo object
 
     place = PlaceInfo4(PLACE_4_INFO_1, PLACE_4_COUNTRY_1)
@@ -72,7 +71,7 @@ def test_placeInfo4():
     assert place.address.sub_locality is None
 
 
-def test_placeInfo4_eq():
+def test_placeinfo4_eq():
     # test __eq__
 
     place1 = PlaceInfo4(PLACE_4_INFO_1, PLACE_4_COUNTRY_1)
@@ -80,7 +79,7 @@ def test_placeInfo4_eq():
     assert place1 == place2
 
 
-def test_placeInfo4_ne():
+def test_placeinfo4_ne():
     # test __ne__
 
     place1 = PlaceInfo4(PLACE_4_INFO_1, PLACE_4_COUNTRY_1)
@@ -88,7 +87,7 @@ def test_placeInfo4_ne():
     assert place1 != place2
 
 
-def test_placeInfo4_ne2():
+def test_placeinfo4_ne2():
     # test __ne__ unlike objects
 
     place1 = PlaceInfo4(PLACE_4_INFO_1, PLACE_4_COUNTRY_1)
@@ -96,7 +95,7 @@ def test_placeInfo4_ne2():
     assert place1 != place2
 
 
-def test_placeInfo4_ne3():
+def test_placeinfo4_ne3():
     # test __ne__ unlike objects
 
     place1 = PlaceInfo4(PLACE_4_INFO_2, PLACE_4_COUNTRY_2)
@@ -104,7 +103,7 @@ def test_placeInfo4_ne3():
     assert place1 != place2
 
 
-def test_PlaceInfo5():
+def test_placeinfo5():
     # test valid place data info returns a PlaceInfo object
 
     place = PlaceInfo5(REVERSE_GEO_LOC_DATA_1)
@@ -128,7 +127,7 @@ def test_PlaceInfo5():
     assert place.address.sub_locality == "Adams Morgan"
 
 
-def test_PlaceInfo5_eq():
+def test_placeinfo5_eq():
     # test __eq__
 
     place1 = PlaceInfo5(REVERSE_GEO_LOC_DATA_1)
@@ -136,7 +135,7 @@ def test_PlaceInfo5_eq():
     assert place1 == place2
 
 
-def test_PlaceInfo5_ne():
+def test_placeinfo5_ne():
     # test __ne__
 
     place1 = PlaceInfo5(REVERSE_GEO_LOC_DATA_1)
@@ -144,7 +143,7 @@ def test_PlaceInfo5_ne():
     assert place1 != place2
 
 
-def test_PlaceInfo5_ne2():
+def test_placeinfo5_ne2():
     # test __ne__ unlike objects
 
     place1 = PlaceInfo5(REVERSE_GEO_LOC_DATA_1)
@@ -152,17 +151,17 @@ def test_PlaceInfo5_ne2():
     assert place1 != place2
 
 
-def test_PLRevGeoLocationInfo_1():
+def test_plrevgeolocationinfo_1():
     # test PLRevGeoLocationInfo class
 
     place_1 = PlaceInfo5(REVERSE_GEO_LOC_DATA_1)
     plrevgeoloc_1 = place_1._plrevgeoloc
-    assert type(plrevgeoloc_1) == PLRevGeoLocationInfo
-    assert type(plrevgeoloc_1.postalAddress) == CNPostalAddress
-    assert type(plrevgeoloc_1.mapItem) == PLRevGeoMapItem
+    assert type(plrevgeoloc_1) is PLRevGeoLocationInfo
+    assert type(plrevgeoloc_1.postalAddress) is CNPostalAddress
+    assert type(plrevgeoloc_1.mapItem) is PLRevGeoMapItem
     assert (
         type(plrevgeoloc_1.mapItem.sortedPlaceInfos[0])
-        == PLRevGeoMapItemAdditionalPlaceInfo
+        is PLRevGeoMapItemAdditionalPlaceInfo
     )
 
     assert (
@@ -188,7 +187,7 @@ def test_PLRevGeoLocationInfo_1():
     assert plrevgeoloc_1.mapItem.sortedPlaceInfos[-1].name == "United States"
 
 
-def test_PLRevGeoLocationInfo_2():
+def test_plrevgeolocationinfo_2():
     # test PLRevGeoLocationInfo class archive/unarchive
     place_1 = PlaceInfo5(REVERSE_GEO_LOC_DATA_1)
     plrevgeoloc_1 = place_1._plrevgeoloc

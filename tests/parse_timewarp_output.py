@@ -99,7 +99,7 @@ def compare_inspect_output(
         return False
 
     fields = value1[0]._fields
-    for v1, v2 in zip(value1, value2):
+    for v1, v2 in zip(value1, value2, strict=True):
         for field in fields:
             if field.startswith("date"):
                 # the date values need to be converted from ISO8601 to datetime objects for comparison

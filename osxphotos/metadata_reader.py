@@ -6,15 +6,17 @@ import datetime
 import json
 import pathlib
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, field, fields
 from enum import Enum
+from typing import TYPE_CHECKING, Any, Self
 
 from osxphotos.photoinfo_protocol import PhotoInfoProtocol
 
+if TYPE_CHECKING:
+    from osxphotos.photoinfo_dict import PhotoInfoFromDict
+
 from .datetime_utils import (
     datetime_has_tz,
-    datetime_naive_to_utc,
     datetime_remove_tz,
     datetime_tz_to_utc,
     datetime_utc_to_local,
@@ -46,7 +48,7 @@ class MetaData:
         tzname: str or None if not set, timezone name for timezone
     """
 
-    title: str = ""
+    title: str | None = ""
     description: str = ""
     keywords: list[str] = field(default_factory=list)
     location: tuple[float | None, float | None] = (None, None)
@@ -60,7 +62,7 @@ class MetaData:
     width: int | None = None
     tzname: str | None = None
 
-    def __ior__(self, other):
+    def __ior__(self, other: object) -> Self:
         if not isinstance(other, MetaData):
             raise TypeError("Unsupported operand type")
         for f in fields(self):
@@ -88,7 +90,7 @@ def get_sidecar_filetype(filepath: str | pathlib.Path) -> SidecarFileType:
         return SidecarFileType.XMP
     elif filepath.suffix.lower() == ".json":
         # could be exiftool or osxphotos or Google Takeout
-        with open(filepath, "r") as fp:
+        with open(filepath) as fp:
             try:
                 metadata = json.load(fp)
             except json.JSONDecodeError:
@@ -185,7 +187,7 @@ def get_sidecar_for_file(filepath: str | pathlib.Path) -> pathlib.Path | None:
     return None
 
 
-def convert_exiftool_latitude(lat_string, lat_ref):
+def convert_exiftool_latitude(lat_string: str, lat_ref: str | None) -> float:
     """Convert latitude string from exiftool to decimal format"""
     # Regular expression to match and capture the degrees, minutes, and seconds
     match = re.match(EXIFTOOL_DEG_MIN_SEC_PATTERN, lat_string)
@@ -201,7 +203,7 @@ def convert_exiftool_latitude(lat_string, lat_ref):
     return latitude
 
 
-def convert_exiftool_longitude(lon_string, lon_ref):
+def convert_exiftool_longitude(lon_string: str, lon_ref: str | None) -> float:
     """Convert longitude string from exiftool to decimal format"""
     # Regular expression to match and capture the degrees, minutes, and seconds
     match = re.match(EXIFTOOL_DEG_MIN_SEC_PATTERN, lon_string)
@@ -264,11 +266,11 @@ def metadata_from_sidecar(
         return metadata_from_metadata_dict(metadata)
 
     if sidecar_type in (SidecarFileType.exiftool, SidecarFileType.osxphotos):
-        with open(filepath, "r") as fp:
+        with open(filepath) as fp:
             try:
                 metadata = json.load(fp)[0]
             except (json.JSONDecodeError, IndexError) as e:
-                raise ValueError(f"Error reading sidecar file {filepath}: {e}")
+                raise ValueError(f"Error reading sidecar file {filepath}: {e}") from e
         return metadata_from_metadata_dict(metadata)
 
     if sidecar_type == SidecarFileType.GoogleTakeout:
@@ -279,11 +281,11 @@ def metadata_from_sidecar(
 
 def metadata_from_google_takeout(filepath: str | pathlib.Path) -> MetaData:
     """Read metadata from Google Takeout JSON file"""
-    with open(filepath, "r") as fp:
+    with open(filepath) as fp:
         try:
             metadata = json.load(fp)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Error reading sidecar file {filepath}: {e}")
+            raise ValueError(f"Error reading sidecar file {filepath}: {e}") from e
 
     title = metadata.get("title")
     description = metadata.get("description")
@@ -304,7 +306,7 @@ def metadata_from_google_takeout(filepath: str | pathlib.Path) -> MetaData:
             date = datetime.datetime.fromtimestamp(int(timestamp))
             # From datetime.datetime.fromtimestamp docs:
             # Return the local date and time corresponding to the POSIX timestamp, such as is returned by time.time().
-            # If optional argument tz is None or not specified, the timestamp is converted to the platform’s local date and time,
+            # If optional argument tz is None or not specified, the timestamp is converted to the platform's local date and time,
             # and the returned datetime object is naive.
         except ValueError:
             date = None
@@ -320,12 +322,12 @@ def metadata_from_google_takeout(filepath: str | pathlib.Path) -> MetaData:
         persons=persons,
         date=date,
         # Google Takeout doesn't store timezone but times are in UTC so cannot determine true timezone
-        timezone=False,
+        timezone=None,
         tz_offset_sec=0,
     )
 
 
-def metadata_from_metadata_dict(metadata: dict) -> MetaData:
+def metadata_from_metadata_dict(metadata: dict[str, Any]) -> MetaData:
     """Return MetaData from metadata dict as loaded from ExifTool or sidecar"""
 
     title = (
@@ -393,7 +395,9 @@ def metadata_from_metadata_dict(metadata: dict) -> MetaData:
     title = title or ""
     description = description or ""
     keywords = keywords or []
-    if not isinstance(keywords, (tuple, list)):
+    if isinstance(keywords, tuple):
+        keywords = list(keywords)
+    elif not isinstance(keywords, list):
         keywords = [keywords]
 
     location = location_from_metadata_dict(metadata)
@@ -416,7 +420,7 @@ def metadata_from_metadata_dict(metadata: dict) -> MetaData:
 
 
 def location_from_metadata_dict(
-    metadata: dict,
+    metadata: dict[str, Any],
 ) -> tuple[float | None, float | None]:
     """Get location from metadata dict as loaded from ExifTool or sidecar
 
@@ -443,7 +447,8 @@ def location_from_metadata_dict(
     # for example:
     #   QuickTime:GPSCoordinates 34.0533 -118.2423
 
-    latitude, longitude = None, None
+    latitude: Any = None
+    longitude: Any = None
     try:
         if latitude := metadata.get("EXIF:GPSLatitude") or metadata.get("GPSLatitude"):
             # this could be a float (as str) or a str in format:
@@ -469,7 +474,8 @@ def location_from_metadata_dict(
 
         if latitude is None:
             try:
-                latitude = float(metadata.get("XMP:GPSLatitude"))
+                xmp_latitude: Any = metadata.get("XMP:GPSLatitude")
+                latitude = float(xmp_latitude)
             except TypeError:
                 latitude = None
 
@@ -494,23 +500,23 @@ def location_from_metadata_dict(
                     longitude = None
         if longitude is None:
             try:
-                longitude = float(metadata.get("XMP:GPSLongitude"))
+                xmp_longitude: Any = metadata.get("XMP:GPSLongitude")
+                longitude = float(xmp_longitude)
             except TypeError:
                 longitude = None
-        if latitude is None or longitude is None:
-            # maybe it's a video
-            if (
-                lat_lon := metadata.get("QuickTime:GPSCoordinates")
-                or metadata.get("UserData:GPSCoordinates")
-                or metadata.get("GPSCoordinates")
-            ):
-                lat_lon = lat_lon.split()
-                if len(lat_lon) != 2:
-                    latitude = None
-                    longitude = None
-                else:
-                    latitude = float(lat_lon[0])
-                    longitude = float(lat_lon[1])
+        # maybe it's a video
+        if (latitude is None or longitude is None) and (
+            lat_lon := metadata.get("QuickTime:GPSCoordinates")
+            or metadata.get("UserData:GPSCoordinates")
+            or metadata.get("GPSCoordinates")
+        ):
+            lat_lon = lat_lon.split()
+            if len(lat_lon) != 2:
+                latitude = None
+                longitude = None
+            else:
+                latitude = float(lat_lon[0])
+                longitude = float(lat_lon[1])
     except ValueError:
         # couldn't convert one of the numbers to float
         return None, None
@@ -531,12 +537,18 @@ def width_height_for_orientation(
         return width, height
 
 
-def metadata_from_photoinfo(photoinfo: PhotoInfoProtocol) -> MetaData:
+def metadata_from_photoinfo(
+    photoinfo: PhotoInfoProtocol | PhotoInfoFromDict,
+) -> MetaData:
     """Create a MetaData object from a PhotoInfo instance"""
     tz_offset = utc_offset_seconds(photoinfo.date)
     timezone = photoinfo.date.tzinfo
     date = datetime_remove_tz(datetime_utc_to_local(datetime_tz_to_utc(photoinfo.date)))
-    location = tuple(photoinfo.location) if photoinfo.location else (None, None)
+    location: tuple[float | None, float | None] = (
+        (photoinfo.location[0], photoinfo.location[1])
+        if photoinfo.location
+        else (None, None)
+    )
     return MetaData(
         title=photoinfo.title,
         description=photoinfo.description,

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from osxphotos.tzcanonical import abbrev_to_canonical_timezone
 
 

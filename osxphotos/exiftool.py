@@ -19,9 +19,9 @@ import re
 import shutil
 import subprocess
 import threading
-import time
 from functools import lru_cache  # pylint: disable=syntax-error
-from typing import Any, ClassVar
+from types import TracebackType
+from typing import Any, ClassVar, Self, cast, overload
 
 logger = logging.getLogger("osxphotos")
 
@@ -43,12 +43,12 @@ EXIFTOOL_STAYOPEN_EOF_LEN = len(EXIFTOOL_STAYOPEN_EOF)
 EXIFTOOL_STARTUP_TIMEOUT = 30
 
 # list of exiftool processes to cleanup when exiting or when terminate is called
-EXIFTOOL_PROCESSES = []
+EXIFTOOL_PROCESSES: list[_ExifToolProc] = []
 
 # exiftool supported file types, created by utils/exiftool_supported_types.py
 EXIFTOOL_FILETYPES_JSON = "exiftool_filetypes.json"
 with (pathlib.Path(__file__).parent / EXIFTOOL_FILETYPES_JSON).open("r") as f:
-    EXIFTOOL_SUPPORTED_FILETYPES = json.load(f)
+    EXIFTOOL_SUPPORTED_FILETYPES: dict[str, dict[str, bool]] = json.load(f)
 
 
 def exiftool_can_write(suffix: str) -> bool:
@@ -64,7 +64,15 @@ def exiftool_can_write(suffix: str) -> bool:
     )
 
 
-def escape_str(s):
+@overload
+def escape_str(s: str) -> str: ...
+
+
+@overload
+def escape_str[T](s: T) -> T: ...
+
+
+def escape_str(s: Any) -> Any:
     """escape string for use with exiftool -E"""
     if not isinstance(s, str):
         return s
@@ -75,7 +83,15 @@ def escape_str(s):
     return s
 
 
-def unescape_str(s):
+@overload
+def unescape_str(s: str) -> str: ...
+
+
+@overload
+def unescape_str[T](s: T) -> T: ...
+
+
+def unescape_str(s: Any) -> Any:
     """unescape an HTML string returned by exiftool -E"""
     if not isinstance(s, str):
         return s
@@ -85,14 +101,14 @@ def unescape_str(s):
 
 
 @atexit.register
-def terminate_exiftool():
+def terminate_exiftool() -> None:
     """Terminate any running ExifTool subprocesses; call this to cleanup when done using ExifTool"""
     for proc in EXIFTOOL_PROCESSES:
         proc._stop_proc()
 
 
 @lru_cache(maxsize=1)
-def get_exiftool_path():
+def get_exiftool_path() -> str:
     """return path of exiftool, cache result"""
     if exiftool_path := shutil.which("exiftool"):
         return exiftool_path.rstrip()
@@ -103,7 +119,9 @@ def get_exiftool_path():
         )
 
 
-def _start_process_with_timeout(args, timeout, **kwargs):
+def _start_process_with_timeout(
+    args: list[str], timeout: float, **kwargs: Any
+) -> subprocess.Popen[bytes]:
     """Start a subprocess with a timeout on the Popen call itself.
 
     Args:
@@ -118,10 +136,10 @@ def _start_process_with_timeout(args, timeout, **kwargs):
         TimeoutError: If process startup times out
         Other exceptions from subprocess.Popen as normal
     """
-    process = None
-    exception = None
+    process: subprocess.Popen[bytes] | None = None
+    exception: Exception | None = None
 
-    def target():
+    def target() -> None:
         nonlocal process, exception
         try:
             process = subprocess.Popen(args, **kwargs)
@@ -152,14 +170,23 @@ class _ExifToolProc:
     """Runs exiftool in a subprocess via Popen
     Creates a singleton object"""
 
-    def __new__(cls, *args, **kwargs):
+    instance: ClassVar[_ExifToolProc]
+    _process_running: bool
+    _large_file_support: bool
+    _exiftool: str
+    _process: subprocess.Popen[bytes]
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
         """create new object or return instance of already created singleton"""
         if not hasattr(cls, "instance") or not cls.instance:
             cls.instance = super().__new__(cls)
 
-        return cls.instance
+        # the singleton was created above by this class (_ExifToolProc has no subclasses)
+        return cast(Self, cls.instance)
 
-    def __init__(self, exiftool=None, large_file_support=True):
+    def __init__(
+        self, exiftool: str | None = None, large_file_support: bool = True
+    ) -> None:
         """construct _ExifToolProc singleton object or return instance of already created object
 
         Args:
@@ -180,23 +207,23 @@ class _ExifToolProc:
         self._start_proc(large_file_support=large_file_support)
 
     @property
-    def process(self):
+    def process(self) -> subprocess.Popen[bytes]:
         """return the exiftool subprocess"""
         if not self._process_running:
             self._start_proc(large_file_support=self._large_file_support)
         return self._process
 
     @property
-    def pid(self):
+    def pid(self) -> int:
         """return process id (PID) of the exiftool process"""
         return self._process.pid
 
     @property
-    def exiftool(self):
+    def exiftool(self) -> str:
         """return path to exiftool process"""
         return self._exiftool
 
-    def _start_proc(self, large_file_support):
+    def _start_proc(self, large_file_support: bool) -> None:
         """start exiftool in batch mode"""
 
         if self._process_running:
@@ -236,16 +263,19 @@ class _ExifToolProc:
         self._process_running = True
         EXIFTOOL_PROCESSES.append(self)
 
-    def _stop_proc(self):
+    def _stop_proc(self) -> None:
         """stop the exiftool process if it's running, otherwise, do nothing"""
 
         if not self._process_running:
             return
 
         with contextlib.suppress(Exception):
-            self._process.stdin.write(b"-stay_open\n")
-            self._process.stdin.write(b"False\n")
-            self._process.stdin.flush()
+            # stdin is never None: the process is started with stdin=PIPE
+            stdin = self._process.stdin
+            assert stdin is not None
+            stdin.write(b"-stay_open\n")
+            stdin.write(b"False\n")
+            stdin.flush()
         try:
             self._process.communicate(timeout=5)
         except subprocess.TimeoutExpired:
@@ -261,12 +291,12 @@ class ExifTool:
 
     def __init__(
         self,
-        filepath,
-        exiftool=None,
-        overwrite=True,
-        flags=None,
-        large_file_support=True,
-    ):
+        filepath: str | os.PathLike[str],
+        exiftool: str | None = None,
+        overwrite: bool = True,
+        flags: list[str] | None = None,
+        large_file_support: bool = True,
+    ) -> None:
         """Create ExifTool object
 
         Args:
@@ -282,8 +312,8 @@ class ExifTool:
         self.file = filepath if isinstance(filepath, str) else str(filepath)
         self.overwrite = overwrite
         self.flags = flags or []
-        self.warning = None
-        self.error = None
+        self.warning: str | None = None
+        self.error: str | None = None
         # if running as a context manager, self._context_mgr will be True
         self._context_mgr = False
         self._exiftoolproc = _ExifToolProc(
@@ -293,10 +323,10 @@ class ExifTool:
         self.is_png = self.data.get("File:FileType") == "PNG"  # 1031
 
     @property
-    def _process(self):
+    def _process(self) -> subprocess.Popen[bytes]:
         return self._exiftoolproc.process
 
-    def setvalue(self, tag: str, value: Any):
+    def setvalue(self, tag: str, value: Any) -> bool:
         """Set tag to value(s); if value is None, will delete tag
 
         Args:
@@ -333,7 +363,7 @@ class ExifTool:
             _, _, error = self.run_commands(*command)
             return error == ""
 
-    def addvalues(self, tag, *values):
+    def addvalues(self, tag: str, *values: Any) -> bool:
         """Add one or more value(s) to tag
             If more than one value is passed, each value will be added to the tag
 
@@ -359,7 +389,7 @@ class ExifTool:
         if not values:
             raise ValueError("Must pass at least one value")
 
-        command = []
+        command: list[str] = []
         for value in values:
             if value is None:
                 raise ValueError("Can't add None value to tag")
@@ -376,7 +406,9 @@ class ExifTool:
             _, _, error = self.run_commands(*command)
             return error == ""
 
-    def run_commands(self, *commands, no_file=False):
+    def run_commands(
+        self, *commands: str, no_file: bool = False
+    ) -> tuple[bytes, str, str]:
         """Run commands in the exiftool process and return result.
 
         Args:
@@ -398,9 +430,9 @@ class ExifTool:
         if not commands:
             raise TypeError("must provide one or more command to run")
 
+        command_list = list(commands)
         if self._context_mgr and self.overwrite:
-            commands = list(commands)
-            commands.append("-overwrite_original")
+            command_list.append("-overwrite_original")
 
         filename = b"" if no_file else os.fsencode(self.file)
 
@@ -415,48 +447,56 @@ class ExifTool:
             command_str = b""
 
         command_str += (
-            b"\n".join([c.encode("utf-8") for c in commands])
+            b"\n".join([c.encode("utf-8") for c in command_list])
             + b"\n"
             + filename
             + b"\n"
             + b"-execute\n"
         )
 
+        # stdin and stdout are never None: the process is started with PIPEs
+        process = self._process
+        stdin, stdout = process.stdin, process.stdout
+        assert stdin is not None
+        assert stdout is not None
+
         # send the command
-        self._process.stdin.write(command_str)
-        self._process.stdin.flush()
+        stdin.write(command_str)
+        stdin.flush()
 
         # read the output
         output = b""
-        warning = b""
-        error = b""
+        warning_bytes = b""
+        error_bytes = b""
         while EXIFTOOL_STAYOPEN_EOF not in str(output):
-            line = self._process.stdout.readline()
+            line = stdout.readline()
             if line.startswith(b"Warning"):
-                warning += line.strip()
+                warning_bytes += line.strip()
             elif line.startswith(b"Error"):
-                error += line.strip()
+                error_bytes += line.strip()
             else:
                 output += line.strip()
-        warning = "" if warning == b"" else warning.decode("utf-8")
-        error = "" if error == b"" else error.decode("utf-8")
+        warning = "" if warning_bytes == b"" else warning_bytes.decode("utf-8")
+        error = "" if error_bytes == b"" else error_bytes.decode("utf-8")
         self.warning = warning
         self.error = error
 
         return output[:-EXIFTOOL_STAYOPEN_EOF_LEN], warning, error
 
     @property
-    def pid(self):
+    def pid(self) -> int:
         """return process id (PID) of the exiftool process"""
         return self._process.pid
 
     @property
-    def version(self):
+    def version(self) -> str:
         """returns exiftool version"""
         ver, _, _ = self.run_commands("-ver", no_file=True)
         return ver.decode("utf-8")
 
-    def asdict(self, tag_groups=True, normalized=False):
+    def asdict(
+        self, tag_groups: bool = True, normalized: bool = False
+    ) -> dict[str, Any]:
         """return dictionary of all EXIF tags and values from exiftool
         returns empty dict if no tags
 
@@ -464,22 +504,22 @@ class ExifTool:
             tag_groups: if True (default), dict keys have tag groups, e.g. "IPTC:Keywords"; if False, drops groups from keys, e.g. "Keywords"
             normalized: if True, dict keys are all normalized to lower case (default is False)
         """
-        json_str, _, _ = self.run_commands("-json")
-        if not json_str:
+        json_bytes, _, _ = self.run_commands("-json")
+        if not json_bytes:
             return {}
-        json_str = unescape_str(json_str.decode("utf-8"))
+        json_str = unescape_str(json_bytes.decode("utf-8"))
 
         try:
-            exifdict = json.loads(json_str)
+            exif_list = json.loads(json_str)
         except Exception as e:
             # will fail with some commands, e.g --ext AVI which produces
             # 'No file with specified extension' instead of json
             logger.warning(f"error loading json returned by exiftool: {e} {json_str}")
             return {}
-        exifdict = exifdict[0]
+        exifdict: dict[str, Any] = exif_list[0]
         if not tag_groups:
             # strip tag groups
-            exif_new = {}
+            exif_new: dict[str, Any] = {}
             for k, v in exifdict.items():
                 k = re.sub(r".*:", "", k)
                 exif_new[k] = v
@@ -490,31 +530,36 @@ class ExifTool:
 
         return exifdict
 
-    def json(self):
+    def json(self) -> str:
         """returns JSON string containing all EXIF tags and values from exiftool"""
-        json, _, _ = self.run_commands("-json")
-        json = unescape_str(json.decode("utf-8"))
-        return json
+        json_bytes, _, _ = self.run_commands("-json")
+        return unescape_str(json_bytes.decode("utf-8"))
 
-    def _read_exif(self):
+    def _read_exif(self) -> dict[str, Any]:
         """read exif data from file"""
         self.data = self.asdict().copy()
         return self.data
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"file: {self.file}\nexiftool: {self._exiftoolproc._exiftool}"
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self._context_mgr = True
-        self._commands = []
+        self._commands: list[str] = []
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
         if exc_type:
             return False
         elif self._commands:
             # run_commands sets self.warning and self.error as needed
             self.run_commands(*self._commands)
+        return None
 
 
 class ExifToolCaching(ExifTool):
@@ -523,9 +568,13 @@ class ExifToolCaching(ExifTool):
 
     Creates a singleton cached ExifTool instance"""
 
-    _singletons: ClassVar[dict[str, ExifToolCaching]] = {}
+    _singletons: ClassVar[dict[str | os.PathLike[str], _ExifToolCaching]] = {}
 
-    def __new__(cls, filepath, exiftool=None):
+    # __new__ deliberately returns a cached _ExifToolCaching, which is an ExifTool
+    # but not an ExifToolCaching (so ExifToolCaching.__init__ is never run)
+    def __new__(  # type: ignore[misc]  # returns a sibling class, see above
+        cls, filepath: str | os.PathLike[str], exiftool: str | None = None
+    ) -> _ExifToolCaching:
         """create new object or return instance of already created singleton"""
         if filepath not in cls._singletons:
             cls._singletons[filepath] = _ExifToolCaching(filepath, exiftool=exiftool)
@@ -533,7 +582,9 @@ class ExifToolCaching(ExifTool):
 
 
 class _ExifToolCaching(ExifTool):
-    def __init__(self, filepath, exiftool=None):
+    def __init__(
+        self, filepath: str | os.PathLike[str], exiftool: str | None = None
+    ) -> None:
         """Create read-only ExifTool object that caches values
 
         Args:
@@ -543,27 +594,31 @@ class _ExifToolCaching(ExifTool):
         Returns:
             ExifTool instance
         """
-        self._json_cache = None
-        self._asdict_cache = {}
+        self._json_cache: str | None = None
+        self._asdict_cache: dict[bool, dict[bool, dict[str, Any]]] = {}
         super().__init__(filepath, exiftool=exiftool, overwrite=False, flags=None)
 
-    def run_commands(self, *commands, no_file=False):
+    def run_commands(
+        self, *commands: str, no_file: bool = False
+    ) -> tuple[bytes, str, str]:
         if commands[0] not in ["-json", "-ver"]:
             raise NotImplementedError(f"{self.__class__} is read-only")
         return super().run_commands(*commands, no_file=no_file)
 
-    def setvalue(self, tag, value):
+    def setvalue(self, tag: str, value: Any) -> bool:
         raise NotImplementedError(f"{self.__class__} is read-only")
 
-    def addvalues(self, tag, *values):
+    def addvalues(self, tag: str, *values: Any) -> bool:
         raise NotImplementedError(f"{self.__class__} is read-only")
 
-    def json(self):
+    def json(self) -> str:
         if not self._json_cache:
             self._json_cache = super().json()
         return self._json_cache
 
-    def asdict(self, tag_groups=True, normalized=False):
+    def asdict(
+        self, tag_groups: bool = True, normalized: bool = False
+    ) -> dict[str, Any]:
         """return dictionary of all EXIF tags and values from exiftool
         returns empty dict if no tags
 
@@ -581,19 +636,19 @@ class _ExifToolCaching(ExifTool):
             )
             return self._asdict_cache[tag_groups][normalized]
 
-    def flush_cache(self):
+    def flush_cache(self) -> None:
         """Clear cached data so that calls to json or asdict return fresh data"""
         self._json_cache = None
         self._asdict_cache = {}
 
 
-def convert_dict_to_unquoted_json(data: dict | list) -> str:
+def convert_dict_to_unquoted_json(data: dict[Any, Any] | list[Any]) -> str:
     """Convert a dict to a JSON-like format where keys are unquoted. This is needed to feed structs to exiftool.
 
     Reference: https://exiftool.org/forum/index.php?topic=15629.msg83986#msg83986
     """
 
-    def process_value(v):
+    def process_value(v: Any) -> str:
         if isinstance(v, (dict, list)):
             return convert_dict_to_unquoted_json(v)
         elif isinstance(v, str):

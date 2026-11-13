@@ -58,7 +58,7 @@ def validate_python_file(python_file: str) -> str | None:
 class RunCommand(click.Command):
     """Custom command that ignores unknown options so options can be passed to the run script"""
 
-    def get_usage(self, ctx):
+    def get_usage(self, ctx: click.Context) -> str:
         """Returns the help for this command;
         normally it would just return the usage string
         but in order to pass --help on to the run script,
@@ -78,7 +78,9 @@ class RunCommand(click.Command):
     help="Install from requirements file FILE.",
 )
 @click.argument("packages", nargs=-1, required=False)
-def install(packages, upgrade, requirements_file):
+def install(
+    packages: tuple[str, ...], upgrade: bool, requirements_file: str | None
+) -> None:
     """Install Python packages into the same environment as osxphotos"""
     if not requirements_file and not packages:
         raise click.UsageError(
@@ -96,7 +98,7 @@ def install(packages, upgrade, requirements_file):
 @click.command()
 @click.argument("packages", nargs=-1, required=True)
 @click.option("-y", "--yes", is_flag=True, help="Don't ask for confirmation.")
-def uninstall(packages, yes):
+def uninstall(packages: tuple[str, ...], yes: bool) -> None:
     """Uninstall Python packages from the osxphotos environment"""
     if not yes:
         click.confirm(f"Uninstall {', '.join(packages)}?", abort=True)
@@ -111,7 +113,7 @@ def uninstall(packages, yes):
 @click.option("--help", "-h", is_flag=True, help="Show this message and exit.")
 @click.argument("python_file", nargs=1, type=PathOrURL(exists=True))
 @click.argument("args", metavar="ARGS", nargs=-1)
-def run(python_file, help, args):
+def run(python_file: str, help: bool, args: tuple[str, ...]) -> None:
     """Run a python file using same environment as osxphotos.
     Any args are made available to the python file.
 

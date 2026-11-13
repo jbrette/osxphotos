@@ -18,7 +18,7 @@ def main():
     missing = [photo for photo in photos if photo.ismissing and not photo.shared]
 
     if not missing:
-        print(f"Did not find any missing photos to download")
+        print("Did not find any missing photos to download")
         sys.exit(0)
 
     print(f"Downloading {len(missing)} photos")

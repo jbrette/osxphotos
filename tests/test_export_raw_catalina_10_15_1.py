@@ -1,8 +1,3 @@
-import pytest
-
-from osxphotos._constants import _UNKNOWN_PERSON
-from osxphotos.utils import dd_to_dms_str
-
 PHOTOS_DB = "./tests/Test-RAW-10.15.1.photoslibrary/database/photos.db"
 
 UUID_DICT = {"has_adjustments": "441DFE2A-A69B-4C79-A69B-3F51D1B9B29C"}
@@ -88,8 +83,6 @@ def test_export_edited_name():
 
 def test_export_edited_default():
     # export edited file with default name
-    import os
-    import os.path
     import pathlib
     import tempfile
 
@@ -110,7 +103,6 @@ def test_export_edited_wrong_suffix():
     import os
     import os.path
     import pathlib
-    import sys
     import tempfile
     import time
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
 
 import click
 
@@ -97,11 +98,20 @@ def get_location(
 @TIMESTAMP_OPTION
 @QUERY_OPTIONS
 @THEME_OPTION
-@click.pass_obj
-@click.pass_context
+# click passes ctx and obj positionally; the named parameters do not match its
+# positional-only Callable signature
+@click.pass_obj  # type: ignore[arg-type]
+@click.pass_context  # type: ignore[arg-type]
 def add_locations(
-    ctx, cli_ob, window, dry_run, verbose_flag, timestamp, theme, **kwargs
-):
+    ctx: click.Context,
+    cli_ob: Any,
+    window: datetime.timedelta,
+    dry_run: bool,
+    verbose_flag: int,
+    timestamp: bool,
+    theme: str | None,
+    **kwargs: Any,
+) -> None:
     """Add missing location data to photos in Photos.app using nearest neighbor.
 
     This command will search for photos that are missing location data and look
@@ -141,7 +151,7 @@ def add_locations(
 
     try:
         query_options = query_options_from_kwargs(**kwargs)
-    except IncompatibleQueryOptions as e:
+    except IncompatibleQueryOptions:
         echo_error("Incompatible query options")
         echo_error(ctx.obj.group.commands["repl"].get_help(ctx))
         ctx.exit(1)
@@ -156,7 +166,9 @@ def add_locations(
     missing_location = 0
     found_location = 0
     verbose(f"Processing {len(photos)} photos, window = ±{window}...")
-    with rich_progress(console=get_verbose_console(), mock=verbose_flag) as progress:
+    with rich_progress(
+        console=get_verbose_console(), mock=bool(verbose_flag)
+    ) as progress:
         task = progress.add_task(
             f"Processing [num]{num_photos}[/] {pluralize(len(photos), 'photo', 'photos')}, window = ±{window}",
             total=num_photos,

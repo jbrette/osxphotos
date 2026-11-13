@@ -5,7 +5,6 @@ See also: https://github.com/RhetTbull/strpdatetime
 
 from __future__ import annotations
 
-import datetime
 import re
 
 from strpdatetime import strpdatetime

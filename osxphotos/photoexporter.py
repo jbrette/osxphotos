@@ -11,15 +11,16 @@ import os
 import pathlib
 import re
 import subprocess
+import tempfile
 import typing as t
+from collections.abc import Iterable
 from enum import Enum
 
-from ._version import __version__
 from .dictdiff import dictdiff
 from .exif_orientation import fix_exif_orientation
-from .exiftool import ExifTool, exiftool_can_write
+from .exiftool import exiftool_can_write
 from .exifwriter import ExifWriter, exif_options_from_options
-from .export_db import ExportDBTemp
+from .export_db import ExportDB, ExportDBTemp
 from .exportoptions import ExportOptions, ExportResults
 from .fileutil import FileUtil
 from .photoinfo_common import photoinfo_minify_dict
@@ -70,6 +71,24 @@ _consecutive_export_errors = 0
 
 logger = logging.getLogger("osxphotos")
 
+# ExportOptions.fileutil is annotated as a FileUtil instance but holds a FileUtil
+# class (every FileUtil method is a classmethod); cast the class to that type
+_DEFAULT_FILEUTIL = t.cast(FileUtil, FileUtil)
+
+
+def _get_export_db(options: ExportOptions) -> ExportDB:
+    """Return options.export_db, which PhotoExporter.export() always sets"""
+    if options.export_db is None:
+        raise ValueError("options.export_db must be set")
+    return options.export_db
+
+
+def _get_fileutil(options: ExportOptions) -> FileUtil:
+    """Return options.fileutil, which PhotoExporter.export() always sets"""
+    if options.fileutil is None:
+        raise ValueError("options.fileutil must be set")
+    return options.fileutil
+
 
 # return values for _should_update_photo
 class ShouldUpdate(Enum):
@@ -99,11 +118,11 @@ class StagedFiles:
         edited_live: str | None = None,
         preview: str | None = None,
         raw: str | None = None,
-        aae: str | None = None,
-        original_aae: str | None = None,
-        error: list[str] | None = None,
+        aae: str | pathlib.Path | None = None,
+        original_aae: str | pathlib.Path | None = None,
+        error: list[tuple[str, str]] | None = None,
         update_skipped: bool = False,
-    ):
+    ) -> None:
         self.original = original
         self.original_live = original_live
         self.edited = edited
@@ -118,7 +137,7 @@ class StagedFiles:
 
         # TODO: bursts?
 
-    def __ior__(self, other):
+    def __ior__(self, other: StagedFiles) -> t.Self:
         self.original = self.original or other.original
         self.original_live = self.original_live or other.original_live
         self.edited = self.edited or other.edited
@@ -131,13 +150,13 @@ class StagedFiles:
         self.update_skipped = self.update_skipped or other.update_skipped
         return self
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.asdict())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"StagedFiles({self.asdict()})"
 
-    def asdict(self):
+    def asdict(self) -> dict[str, t.Any]:
         return {
             "original": self.original,
             "original_live": self.original_live,
@@ -156,7 +175,7 @@ class PhotoExporter:
     """Export a photo"""
 
     @staticmethod
-    def _kill_photos_process():
+    def _kill_photos_process() -> None:
         """Kill the Photos app process to restart it"""
         try:
             # Use pkill to kill the main Photos application process
@@ -173,7 +192,7 @@ class PhotoExporter:
         except Exception as e:
             logger.warning(f"Failed to kill Photos process: {e}")
 
-    def __init__(self, photo: PhotoInfo, tmpdir: str | None = None):
+    def __init__(self, photo: PhotoInfo, tmpdir: str | None = None) -> None:
         self.photo = photo
         self._render_options = RenderOptions()
         self._verbose = photo._verbose
@@ -187,9 +206,9 @@ class PhotoExporter:
         self._num = add_rich_markup_tag("num", rich=False)
 
         # temp directory for staging downloaded missing files
-        self._temp_dir = None
-        self._temp_dir_path = None
-        self.fileutil = FileUtil
+        self._temp_dir: tempfile.TemporaryDirectory[str] | None = None
+        self._temp_dir_path: pathlib.Path | None = None
+        self.fileutil: FileUtil = _DEFAULT_FILEUTIL
 
     def _get_photo_json_full(self) -> str:
         """Return the full photoinfo JSON for this export, cached per photo."""
@@ -207,8 +226,8 @@ class PhotoExporter:
 
     def export(
         self,
-        dest,
-        filename=None,
+        dest: str | os.PathLike[str],
+        filename: str | None = None,
         options: ExportOptions | None = None,
     ) -> ExportResults:
         """Export photo
@@ -250,8 +269,8 @@ class PhotoExporter:
 
     def _export(
         self,
-        dest,
-        filename,
+        dest: str | os.PathLike[str],
+        filename: str | None,
         options: ExportOptions,
     ) -> ExportResults:
         """Internal export implementation; see export() for docs."""
@@ -273,9 +292,10 @@ class PhotoExporter:
 
         # when called from export(), won't get an export_db, so use temp version
         options.export_db = options.export_db or ExportDBTemp()
+        export_db = options.export_db
 
         # ensure there's a FileUtil class to use
-        options.fileutil = options.fileutil or FileUtil
+        options.fileutil = options.fileutil or _DEFAULT_FILEUTIL
         self.fileutil = options.fileutil
 
         self._render_options = options.render_options or RenderOptions()
@@ -291,7 +311,8 @@ class PhotoExporter:
         # verify destination is a valid path
         if dest is None:
             raise ValueError("dest must not be None")
-        elif not options.dry_run and not isdir_cache(dest):
+        # str and pathlib.Path are hashable but typeshed's PathLike is not declared so
+        elif not options.dry_run and not isdir_cache(t.cast(t.Hashable, dest)):
             raise FileNotFoundError("Invalid path passed to export")
 
         if export_edited:
@@ -358,12 +379,12 @@ class PhotoExporter:
         elif staged_files.update_skipped and _dest_exists(dest):
             all_results.skipped.append(str(dest))
             all_results.uuids[str(dest)] = self.photo.uuid
-            options.export_db.set_history(str(dest), self.photo.uuid, "skip", None)
+            export_db.set_history(str(dest), self.photo.uuid, "skip", None)
         else:
             verbose(
                 f"Skipping missing {'edited' if options.edited else 'original'} photo {self._filename(self.photo.original_filename)} ({self._uuid(self.photo.uuid)})"
             )
-            all_results.missing.append(dest)
+            all_results.missing.append(str(dest))
             all_results.uuids[str(dest)] = self.photo.uuid
 
         # copy live photo associated .mov if requested
@@ -379,14 +400,12 @@ class PhotoExporter:
                 )
             elif staged_files.update_skipped and _dest_exists(live_name):
                 all_results.skipped.append(str(live_name))
-                options.export_db.set_history(
-                    str(live_name), self.photo.uuid, "skip", None
-                )
+                export_db.set_history(str(live_name), self.photo.uuid, "skip", None)
             else:
                 verbose(
                     f"Skipping missing live photo for {self._filename(self.photo.original_filename)} ({self._uuid(self.photo.uuid)})"
                 )
-                all_results.missing.append(live_name)
+                all_results.missing.append(str(live_name))
 
         if export_edited and options.live_photo and self.photo.live_photo:
             live_name = dest.parent / f"{dest.stem}.mov"
@@ -400,14 +419,12 @@ class PhotoExporter:
                 )
             elif staged_files.update_skipped and _dest_exists(live_name):
                 all_results.skipped.append(str(live_name))
-                options.export_db.set_history(
-                    str(live_name), self.photo.uuid, "skip", None
-                )
+                export_db.set_history(str(live_name), self.photo.uuid, "skip", None)
             else:
                 verbose(
                     f"Skipping missing edited live photo for {self._filename(self.photo.original_filename)} ({self._uuid(self.photo.uuid)})"
                 )
-                all_results.missing.append(live_name)
+                all_results.missing.append(str(live_name))
 
         # copy associated RAW image if requested
         if options.raw_photo and self.photo.has_raw:
@@ -431,11 +448,9 @@ class PhotoExporter:
                 raw_name = dest.parent / f"{dest.stem}.{raw_ext}"
                 if staged_files.update_skipped and _dest_exists(raw_name):
                     all_results.skipped.append(str(raw_name))
-                    options.export_db.set_history(
-                        str(raw_name), self.photo.uuid, "skip", None
-                    )
+                    export_db.set_history(str(raw_name), self.photo.uuid, "skip", None)
                 else:
-                    all_results.missing.append(raw_name)
+                    all_results.missing.append(str(raw_name))
                     verbose(
                         f"Skipping missing raw photo for {self._filename(self.photo.original_filename)} ({self._uuid(self.photo.uuid)})"
                     )
@@ -467,8 +482,8 @@ class PhotoExporter:
             else:
                 # don't know what actual preview suffix would be but most likely jpeg
                 preview_name = dest.parent / f"{dest.stem}{options.preview_suffix}.jpeg"
-                all_results.missing.append(preview_name)
-                all_results.uuids[preview_name] = self.photo.uuid
+                all_results.missing.append(str(preview_name))
+                all_results.uuids[str(preview_name)] = self.photo.uuid
                 verbose(
                     f"Skipping missing preview photo for {self._filename(self.photo.original_filename)} ({self._uuid(self.photo.uuid)})"
                 )
@@ -488,7 +503,7 @@ class PhotoExporter:
                 verbose(
                     f"Skipping adjustments for {self._filename(self.photo.original_filename)}: no AAE adjustments file"
                 )
-                all_results += ExportResults(missing=[aae_name])
+                all_results += ExportResults(missing=[str(aae_name)])
 
         if (
             export_original
@@ -509,7 +524,7 @@ class PhotoExporter:
                 verbose(
                     f"Skipping original adjustments for {self._filename(self.photo.original_filename)}: no AAE adjustments file"
                 )
-                all_results += ExportResults(missing=[aae_name])
+                all_results += ExportResults(missing=[str(aae_name)])
 
         sidecar_writer = SidecarWriter(self.photo)
         all_results += sidecar_writer.write_sidecar_files(
@@ -522,11 +537,11 @@ class PhotoExporter:
         # but this isn't called for missing photos
         for filename in all_results.missing:
             action = "AAE: missing" if str(filename).endswith(".AAE") else "missing"
-            options.export_db.set_history(filename, self.photo.uuid, action, None)
+            export_db.set_history(filename, self.photo.uuid, action, None)
 
         return all_results
 
-    def _init_temp_dir(self, options: ExportOptions):
+    def _init_temp_dir(self, options: ExportOptions) -> None:
         """Initialize (if necessary) the object's temporary directory.
 
         Args:
@@ -535,14 +550,20 @@ class PhotoExporter:
         if self._temp_dir is not None:
             return
 
-        fileutil = options.fileutil or FileUtil
+        fileutil = options.fileutil or _DEFAULT_FILEUTIL
         self._temp_dir = fileutil.tmpdir(
             prefix="osxphotos_export_", dirpath=options.tmpdir
         )
         self._temp_dir_path = pathlib.Path(self._temp_dir.name)
         return
 
-    def _cleanup_temp_dir(self):
+    def _get_temp_dir_path(self) -> pathlib.Path:
+        """Return the temp dir path; _init_temp_dir() must have been called"""
+        if self._temp_dir_path is None:
+            raise RuntimeError("temporary directory not initialized")
+        return self._temp_dir_path
+
+    def _cleanup_temp_dir(self) -> None:
         """Remove the temp dir immediately instead of waiting for GC."""
         if self._temp_dir is None:
             return
@@ -551,18 +572,18 @@ class PhotoExporter:
         self._temp_dir = None
         self._temp_dir_path = None
 
-    def _get_edited_filename(self, original_filename):
+    def _get_edited_filename(self, original_filename: str) -> str:
         """Return the filename for the exported edited photo
         (used when filename isn't provided in call to export)"""
         # need to get the right extension for edited file
-        original_filename = pathlib.Path(original_filename)
+        original_path = pathlib.Path(original_filename)
         if self.photo.path_edited:
             ext = pathlib.Path(self.photo.path_edited).suffix
         else:
             uti = self.photo.uti_edited or self.photo.uti
             ext = get_preferred_uti_extension(uti)
             ext = f".{ext}"
-        return f"{original_filename.stem}_edited{ext}"
+        return f"{original_path.stem}_edited{ext}"
 
     def _get_dest_path(
         self, dest: pathlib.Path, options: ExportOptions
@@ -632,15 +653,15 @@ class PhotoExporter:
                     if claimed_uuid is None or claimed_uuid == self.photo.uuid:
                         break
                     count += 1
-                    dest, count = increment_filename_with_count(
+                    incremented, count = increment_filename_with_count(
                         original_dest, count, stat_cache=stat_cache
                     )
-                    dest = pathlib.Path(dest)
+                    dest = pathlib.Path(incremented)
             return dest
 
         # if update and file exists, need to check to see if it's the right file by checking export db
         if options.update or options.force_update:
-            export_db = options.export_db
+            export_db = _get_export_db(options)
             dest_uuid = export_db.get_uuid_for_file(dest)
 
             if dest_uuid == self.photo.uuid:
@@ -672,22 +693,25 @@ class PhotoExporter:
             else:
                 original_dest = dest
                 count = 0
-                dest, count = increment_filename_with_count(
+                new_dest, count = increment_filename_with_count(
                     original_dest, count, stat_cache=stat_cache
                 )
-                while export_db.get_uuid_for_file(dest) is not None:
+                while export_db.get_uuid_for_file(new_dest) is not None:
                     count += 1
-                    dest, count = increment_filename_with_count(
+                    new_dest, count = increment_filename_with_count(
                         original_dest, count, stat_cache=stat_cache
                     )
-                return pathlib.Path(dest)
+                return pathlib.Path(new_dest)
 
         # fail safe...I can't think of a case that gets here
         return dest
 
     def _should_update_photo(
-        self, src: pathlib.Path | None, dest: pathlib.Path, options: ExportOptions
-    ) -> bool | ShouldUpdate:
+        self,
+        src: str | os.PathLike[str] | None,
+        dest: pathlib.Path,
+        options: ExportOptions,
+    ) -> t.Literal[False] | ShouldUpdate:
         """Return True if photo should be updated, else False
 
         Args:
@@ -704,8 +728,8 @@ class PhotoExporter:
         # If any database check indicates we need to update, we can skip expensive
         # filesystem operations like stat() and samefile().
 
-        export_db = options.export_db
-        fileutil = options.fileutil
+        export_db = _get_export_db(options)
+        fileutil = _get_fileutil(options)
 
         file_record = export_db.get_file_record(dest)
 
@@ -767,17 +791,16 @@ class PhotoExporter:
                 return ShouldUpdate.EXIFTOOL_DIFFERENT
             return False
 
-        if options.force_update:
-            if self.photo.hexdigest != file_record.digest:
-                # metadata in Photos changed, force update
-                return ShouldUpdate.DIGEST_DIFFERENT
+        if options.force_update and self.photo.hexdigest != file_record.digest:
+            # metadata in Photos changed, force update
+            return ShouldUpdate.DIGEST_DIFFERENT
 
         # photo should not be updated
         return False
 
     def _should_update_photo_for_missing(
         self, dest: pathlib.Path, options: ExportOptions
-    ) -> bool | ShouldUpdate:
+    ) -> t.Literal[False] | ShouldUpdate:
         """Check if a missing photo needs to be updated (before downloading).
 
         This performs checks that don't require the source file, allowing us to
@@ -792,8 +815,8 @@ class PhotoExporter:
             False if no update needed, otherwise a ShouldUpdate value indicating
             why update is needed.
         """
-        export_db = options.export_db
-        fileutil = options.fileutil
+        export_db = _get_export_db(options)
+        fileutil = _get_fileutil(options)
 
         file_record = export_db.get_file_record(dest)
 
@@ -825,9 +848,8 @@ class PhotoExporter:
                 return ShouldUpdate.EXIFTOOL_DIFFERENT
             return False
 
-        if options.force_update:
-            if self.photo.hexdigest != file_record.digest:
-                return ShouldUpdate.DIGEST_DIFFERENT
+        if options.force_update and self.photo.hexdigest != file_record.digest:
+            return ShouldUpdate.DIGEST_DIFFERENT
 
         return False
 
@@ -972,11 +994,12 @@ class PhotoExporter:
         # In update mode, check if any missing files actually need updating
         # before downloading from iCloud (#1086)
         # Skip this check in dry_run mode since we want to return predicted filenames
-        if not options.dry_run and dest and (options.update or options.force_update):
-            if not self._needs_download_for_update(staged, dest, options):
-                # No update needed, skip the download
-                staged.update_skipped = True
-                return staged
+        if (
+            not options.dry_run and dest and (options.update or options.force_update)
+        ) and not self._needs_download_for_update(staged, dest, options):
+            # No update needed, skip the download
+            staged.update_skipped = True
+            return staged
 
         missing_options = ExportOptions(
             edited=options.edited,
@@ -1030,10 +1053,7 @@ class PhotoExporter:
         ext = get_preferred_uti_extension(uti) or "jpeg"
 
         # Determine the base filename
-        if filestem:
-            stem = filestem
-        else:
-            stem = pathlib.Path(self.photo.original_filename).stem
+        stem = filestem or pathlib.Path(self.photo.original_filename).stem
 
         predicted_files = []
 
@@ -1065,7 +1085,7 @@ class PhotoExporter:
         if options.edited and not self.photo.hasadjustments:
             raise ValueError("Edited version requested but photo has no adjustments")
 
-        dest = self._temp_dir_path / self.photo.original_filename
+        dest = self._get_temp_dir_path() / self.photo.original_filename
 
         # export live_photo .mov file?
         live_photo = bool(options.live_photo and self.photo.live_photo)
@@ -1101,6 +1121,7 @@ class PhotoExporter:
                 live_photo=live_photo,
             )
             results = StagedFiles()
+            results_attr: str | None
             for filepath in predicted:
                 if filepath.lower().endswith(".mov"):
                     results_attr = "edited_live" if options.edited else "original_live"
@@ -1128,8 +1149,8 @@ class PhotoExporter:
                     self.photo._info["burstUUID"], all=True
                 )
                 # PhotoKit UUIDs may contain "/L0/001" so only look at beginning
-                photo = [p for p in bursts if p.uuid.startswith(self.photo.uuid)]
-                photo = photo[0] if photo else None
+                matches = [p for p in bursts if p.uuid.startswith(self.photo.uuid)]
+                photo = matches[0] if matches else None
             if not photo:
                 results.error.append(
                     (
@@ -1177,7 +1198,6 @@ class PhotoExporter:
                 )
                 if exported:
                     results.raw = exported[0]
-                    results.uuids[exported[0]] = self.photo.uuid
             except Exception as e:
                 results.error.append((str(dest), f"{e} ({lineno(__file__)})"))
 
@@ -1199,7 +1219,7 @@ class PhotoExporter:
         if options.edited and not self.photo.hasadjustments:
             raise ValueError("Edited version requested but photo has no adjustments")
 
-        dest = self._temp_dir_path / self.photo.original_filename
+        dest = self._get_temp_dir_path() / self.photo.original_filename
         dest = pathlib.Path(increment_filename(dest))
 
         # export live_photo .mov file?
@@ -1236,6 +1256,7 @@ class PhotoExporter:
             results.error.append((str(dest), f"{e} ({lineno(__file__)})"))
             return results
 
+        results_attr: str | None
         if len(exported) == 1:
             results_attr = "edited" if options.edited else "original"
             setattr(results, results_attr, exported[0])
@@ -1292,27 +1313,25 @@ class PhotoExporter:
             dest = dest.parent / f"{dest.stem}{ext}"
         return dest, dataclasses.replace(options, convert_to_jpeg=convert_to_jpeg)
 
-    def _is_temp_file(self, filepath: str) -> bool:
+    def _is_temp_file(self, filepath: str | os.PathLike[str]) -> bool:
         """Returns True if file is in the PhotosExporter temp directory otherwise False"""
-        filepath = pathlib.Path(filepath)
-        return filepath.parent == self._temp_dir_path
+        return pathlib.Path(filepath).parent == self._temp_dir_path
 
-    def _copy_to_temp_file(self, filepath: str) -> str:
+    def _copy_to_temp_file(self, filepath: str | os.PathLike[str]) -> str:
         """Copies filepath to a temp file preserving access and modification times"""
-        filepath = pathlib.Path(filepath)
-        dest = self._temp_dir_path / filepath.name
-        dest = increment_filename(dest)
-        self.fileutil.copy(filepath, dest)
-        stat = os.stat(filepath)
+        path = pathlib.Path(filepath)
+        dest = increment_filename(self._get_temp_dir_path() / path.name)
+        self.fileutil.copy(path, dest)
+        stat = os.stat(path)
         self.fileutil.utime(dest, (stat.st_atime, stat.st_mtime))
         return str(dest)
 
     def _export_photo(
         self,
-        src: str,
+        src: str | os.PathLike[str],
         dest: pathlib.Path,
         options: ExportOptions,
-    ):
+    ) -> ExportResults:
         """Helper function for export()
             Does the actual copy or hardlink taking the appropriate
             action depending on update, overwrite, export_as_hardlink
@@ -1342,11 +1361,11 @@ class PhotoExporter:
         if options.export_as_hardlink and self._is_temp_file(src):
             raise ValueError("export_as_hardlink cannot be used with temp files")
 
-        exported_files = []
-        update_updated_files = []
-        update_new_files = []
-        update_skipped_files = []  # skip files that are already up to date
-        converted_to_jpeg_files = []
+        exported_files: list[str] = []
+        update_updated_files: list[str] = []
+        update_new_files: list[str] = []
+        update_skipped_files: list[str] = []  # skip files that are already up to date
+        converted_to_jpeg_files: list[str] = []
         exif_results = ExportResults()
 
         dest_str = str(dest)
@@ -1356,8 +1375,8 @@ class PhotoExporter:
         else:
             dest_exists = dest.exists()
 
-        fileutil = options.fileutil
-        export_db = options.export_db
+        fileutil = _get_fileutil(options)
+        export_db = _get_export_db(options)
 
         if options.update or options.force_update:
             export_db.prefetch_directory_records(dest.parent)
@@ -1384,7 +1403,7 @@ class PhotoExporter:
         # Compute src_sig before any modifications by convert_to_jpeg or exiftool
         # but defer writing to database until the context manager block to batch commits
         src_sig = fileutil.file_sig(src)
-        for export_dest in export_files:
+        for _export_dest in export_files:
             if dest_exists and any(
                 [options.overwrite, options.update, options.force_update]
             ):
@@ -1413,7 +1432,7 @@ class PhotoExporter:
                     # use convert_to_jpeg to export the file
                     # convert to a temp file before copying
                     tmp_file = increment_filename(
-                        self._temp_dir_path
+                        self._get_temp_dir_path()
                         / f"{pathlib.Path(src).stem}_converted_to_jpeg.jpeg"
                     )
                     fileutil.convert_to_jpeg(
@@ -1427,7 +1446,7 @@ class PhotoExporter:
                     # need to copy the file to a temp file before writing metadata
                     src = pathlib.Path(src)
                     tmp_file = increment_filename(
-                        self._temp_dir_path / f"{src.stem}_exiftool{src.suffix}"
+                        self._get_temp_dir_path() / f"{src.stem}_exiftool{src.suffix}"
                     )
                     fileutil.copy(src, tmp_file)
                     # point src to the tmp_file so that the original source is not modified
@@ -1440,7 +1459,7 @@ class PhotoExporter:
                         )
 
                     if options.fix_orientation:
-                        fixed, msg = fix_exif_orientation(self.photo, src, options)
+                        _fixed, msg = fix_exif_orientation(self.photo, src, options)
                         verbose(msg)
 
                 try:
@@ -1488,6 +1507,7 @@ class PhotoExporter:
             )
 
         # set data in the database
+        diff: str | None
         with export_db.create_or_get_file_record(dest_str, self.photo.uuid) as rec:
             if rec.photoinfo:
                 last_data = photoinfo_minify_dict(json.loads(rec.photoinfo))
@@ -1495,21 +1515,24 @@ class PhotoExporter:
                 # need to deserialize from photo.json() instead of using photo.asdict()
                 current_data = self._get_photo_data_minified()
                 try:
-                    diff = dictdiff(last_data, current_data)
+                    diff_list = dictdiff(last_data, current_data)
                 except Exception as e:
                     # just in case there's an edge case not caught by dictdiff
                     logger.debug(
                         f"Error comparing last_data and current_data: {e} ({lineno(__file__)})"
                     )
-                    diff = []
+                    diff_list = []
 
-                def _json_default(o):
+                def _json_default(o: object) -> str | None:
                     if isinstance(o, (datetime.date, datetime.datetime)):
                         return o.isoformat()
                     if isinstance(o, pathlib.Path):
                         return str(o)
+                    return None
 
-                diff = json.dumps(diff, default=_json_default) if diff else None
+                diff = (
+                    json.dumps(diff_list, default=_json_default) if diff_list else None
+                )
             else:
                 diff = None
             rec.photoinfo = self._get_photo_json_full()
@@ -1544,16 +1567,16 @@ class PhotoExporter:
     def _export_photo_uuid_applescript(
         self,
         uuid: str,
-        dest: str,
-        filestem=None,
-        original=True,
-        edited=False,
-        live_photo=False,
-        timeout=120,
-        burst=False,
-        dry_run=False,
-        overwrite=False,
-    ):
+        dest: str | os.PathLike[str],
+        filestem: str | None = None,
+        original: bool = True,
+        edited: bool = False,
+        live_photo: bool = False,
+        timeout: int = 120,
+        burst: bool = False,
+        dry_run: bool = False,
+        overwrite: bool = False,
+    ) -> list[str]:
         """Export photo to dest path using applescript to control Photos
         If photo is a live photo, exports both the photo and associated .mov file
 
@@ -1613,10 +1636,10 @@ class PhotoExporter:
 
         # export to a subdirectory of tmpdir
         tmpdir = self.fileutil.tmpdir(
-            "osxphotos_applescript_export_", dirpath=self._temp_dir_path
+            "osxphotos_applescript_export_", dirpath=str(self._get_temp_dir_path())
         )
 
-        exported_files = []
+        exported_files: list[str] = []
         filename = None
         try:
             # I've seen intermittent failures with the PhotoScript export so retry if
@@ -1634,7 +1657,7 @@ class PhotoExporter:
             logger.debug(
                 f"AppleScript export error count: {_consecutive_export_errors}"
             )
-            raise ExportError(e)
+            raise ExportError(e) from e
 
         if not exported_files or not filename:
             # nothing got exported
@@ -1692,6 +1715,8 @@ class PhotoExporter:
             return ExportResults()
 
         verbose = options.verbose or self._verbose
+        export_db = _get_export_db(options)
+        fileutil = _get_fileutil(options)
 
         action = None
 
@@ -1709,7 +1734,7 @@ class PhotoExporter:
 
         if action == "skip":
             if dest.exists():
-                options.export_db.set_history(
+                export_db.set_history(
                     filename=str(dest),
                     uuid=self.photo.uuid,
                     action=f"AAE: {action}",
@@ -1719,35 +1744,32 @@ class PhotoExporter:
             else:
                 action = "export"
 
-        errors = []
+        errors: list[str] = []
         if dest.exists() and any(
             [options.overwrite, options.update, options.force_update]
         ):
             try:
-                options.fileutil.unlink(dest)
+                fileutil.unlink(dest)
             except Exception as e:
                 errors.append(f"Error removing file {dest}: {e} (({lineno(__file__)})")
 
         if options.export_as_hardlink:
             try:
-                options.fileutil.hardlink(src, dest)
+                fileutil.hardlink(src, dest)
             except Exception as e:
                 errors.append(
                     f"Error hardlinking {src} to {dest}: {e} ({lineno(__file__)})"
                 )
         else:
             try:
-                options.fileutil.copy(src, dest)
+                fileutil.copy(src, dest)
             except Exception as e:
                 errors.append(
                     f"Error copying file {src} to {dest}: {e} ({lineno(__file__)})"
                 )
 
         # set data in the database
-        fileutil = options.fileutil
-        with options.export_db.create_or_get_file_record(
-            str(dest), self.photo.uuid
-        ) as rec:
+        with export_db.create_or_get_file_record(str(dest), self.photo.uuid) as rec:
             # don't set src_sig as that is set above before any modifications by convert_to_jpeg or exiftool
             rec.src_sig = fileutil.file_sig(src)
             if not options.ignore_signature:
@@ -1760,12 +1782,12 @@ class PhotoExporter:
                     "exiftool_warning": None,
                 }
 
-        options.export_db.set_history(
+        export_db.set_history(
             filename=str(dest), uuid=self.photo.uuid, action=f"AAE: {action}", diff=None
         )
 
         verbose(
-            f"Exported adjustments for {self._filename(self.photo.original_filename)} to {self._filepath(dest)}"
+            f"Exported adjustments for {self._filename(self.photo.original_filename)} to {self._filepath(str(dest))}"
         )
 
         written = [str(dest)]
@@ -1777,14 +1799,14 @@ class PhotoExporter:
             exported=exported,
             new=new,
             updated=updated,
-            error=errors,
+            error=[(str(dest), error) for error in errors],
             uuids={str(dest): self.photo.uuid},
         )
 
     def write_exiftool_metadata_to_file(
         self,
-        src,
-        dest,
+        src: str | os.PathLike[str],
+        dest: str | os.PathLike[str],
         options: ExportOptions,
     ) -> ExportResults:
         """Write exif metadata to src file using exiftool
@@ -1803,7 +1825,7 @@ class PhotoExporter:
         if not exiftool_can_write(os.path.splitext(src)[-1]):
             exiftool_results.exiftool_warning.append(
                 (
-                    dest,
+                    str(dest),
                     f"Unsupported file type for exiftool, skipping exiftool for {dest}",
                 )
             )
@@ -1827,16 +1849,18 @@ class PhotoExporter:
                 exiftool_results.exiftool_error.append((str(dest), str(error_)))
                 exiftool_results.error.append((str(dest), str(error_)))
 
-        exiftool_results.exif_updated.append(dest)
-        exiftool_results.to_touch.append(dest)
+        exiftool_results.exif_updated.append(str(dest))
+        exiftool_results.to_touch.append(str(dest))
         return exiftool_results
 
-    def _should_run_exiftool(self, dest, options: ExportOptions) -> bool:
+    def _should_run_exiftool(
+        self, dest: str | os.PathLike[str], options: ExportOptions
+    ) -> bool:
         """Return True if exiftool should be run to update metadata"""
         run_exiftool = not options.update and not options.force_update
         if options.update or options.force_update:
             files_are_different = False
-            exif_record = options.export_db.get_file_record(dest)
+            exif_record = _get_export_db(options).get_file_record(dest)
             old_data = exif_record.exifdata if exif_record else None
             if old_data is not None:
                 old_data = json.loads(old_data)[0]
@@ -1854,7 +1878,9 @@ class PhotoExporter:
         return run_exiftool
 
 
-def _check_export_suffix(src, dest, edited):
+def _check_export_suffix(
+    src: str | os.PathLike[str] | None, dest: pathlib.Path, edited: bool
+) -> bool:
     """Helper function for exporting photos to check file extensions of destination path.
 
     Checks that dst file extension is appropriate for the src.
@@ -1893,7 +1919,9 @@ def _check_export_suffix(src, dest, edited):
     )
 
 
-def rename_jpeg_files(files, jpeg_ext, fileutil):
+def rename_jpeg_files(
+    files: Iterable[str | os.PathLike[str]], jpeg_ext: str, fileutil: FileUtil
+) -> list[str | os.PathLike[str]]:
     """rename any jpeg files in files so that extension matches jpeg_ext
 
     Args:
@@ -1908,7 +1936,7 @@ def rename_jpeg_files(files, jpeg_ext, fileutil):
     """
     jpeg_ext = "." + jpeg_ext
     jpegs = [".jpeg", ".jpg"]
-    new_files = []
+    new_files: list[str | os.PathLike[str]] = []
     for file in files:
         path = pathlib.Path(file)
         if path.suffix.lower() in jpegs and path.suffix != jpeg_ext:
@@ -1920,7 +1948,7 @@ def rename_jpeg_files(files, jpeg_ext, fileutil):
     return new_files
 
 
-def original_aae_name(dest: pathlib.Path):
+def original_aae_name(dest: pathlib.Path) -> pathlib.Path:
     """Return name for original AAE file (e.g. for Portrait images)"""
     # if name matches IMG_1234.ext, name the AAE file IMG_O1234.AAE, otherwise, use IMG_NAME_O.AAE (append _O and use aae extension)
     if re.match(r"^IMG_\d{4}\.", dest.name, re.IGNORECASE):

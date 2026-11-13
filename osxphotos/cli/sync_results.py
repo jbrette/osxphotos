@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import datetime
 import json
-
-from osxphotos.photoinfo import PhotoInfo
+from typing import Any, Self
 
 SYNC_PROPERTIES = [
     "albums",
@@ -20,21 +19,21 @@ SYNC_PROPERTIES = [
 class SyncResults:
     """Results of sync set/merge"""
 
-    def __init__(self):
-        self._results = {}
+    def __init__(self) -> None:
+        self._results: dict[str, dict[str, Any]] = {}
         self._datetime = datetime.datetime.now()
 
     def add_result(
         self,
         uuid: str,
         filename: str,
-        fingerprint: str,
-        property: str,
+        fingerprint: str | None,
+        property: str | None,
         updated: bool,
-        before: str | list[str] | bool | None,
-        after: str | list[str] | bool | None,
+        before: Any,
+        after: Any,
         error: str | None = None,
-    ):
+    ) -> None:
         """Add result for a single photo"""
         if uuid not in self._results:
             self._results[uuid] = {
@@ -65,16 +64,16 @@ class SyncResults:
                     self._results[uuid]["error"] = error
 
     @property
-    def results(self):
+    def results(self) -> dict[str, dict[str, Any]]:
         """Return results"""
         return self._results
 
     @property
-    def results_list(self):
+    def results_list(self) -> list[list[Any]]:
         """Return results as list lists where each sublist is values for a single photo"""
-        results = []
+        results: list[list[Any]] = []
         for uuid, record in self._results.items():
-            row = [
+            row: list[Any] = [
                 uuid,
                 record["filename"],
                 record["fingerprint"],
@@ -93,7 +92,7 @@ class SyncResults:
         return results
 
     @property
-    def results_header(self):
+    def results_header(self) -> list[str]:
         """Return headers for results_list"""
         header = ["uuid", "filename", "fingerprint", "updated"]
         for property in SYNC_PROPERTIES:
@@ -105,9 +104,9 @@ class SyncResults:
         return header
 
     @property
-    def results_dict(self):
+    def results_dict(self) -> dict[str, dict[str, Any]]:
         """Return dictionary of results"""
-        results = {}
+        results: dict[str, dict[str, Any]] = {}
         for uuid, record in self._results.items():
             results[uuid] = {
                 "uuid": uuid,
@@ -128,10 +127,10 @@ class SyncResults:
             results[uuid]["error"] = record.get("error", "")
         return results
 
-    def results_summary(self):
+    def results_summary(self) -> dict[str, int]:
         """Get summary of results"""
         updated = sum(bool(self._any_updated(uuid)) for uuid in self._results)
-        property_updated = {}
+        property_updated: dict[str, int] = {}
         for property in SYNC_PROPERTIES:
             property_updated[property] = 0
             for uuid in self._results:
@@ -153,23 +152,11 @@ class SyncResults:
             for property in SYNC_PROPERTIES
         )
 
-    def __add__(self, other):
-        """Add results from another SyncResults"""
-        for uuid in other._results:
-            for property, values in other._results[uuid]["properties"].items():
-                self.add_result(
-                    uuid,
-                    other._results[uuid]["filename"],
-                    other._results[uuid]["fingerprint"],
-                    property,
-                    values["updated"],
-                    values["before"],
-                    values["after"],
-                    values["error"],
-                )
-        return self
+    def __add__(self, other: SyncResults) -> SyncResults:
+        """Add results from another SyncResults (updates and returns self, like +=)"""
+        return self.__iadd__(other)
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: SyncResults) -> Self:
         """Add results from another SyncResults"""
         for uuid in other._results:
             for property, values in other._results[uuid]["properties"].items():
@@ -194,5 +181,5 @@ class SyncResults:
             )
         return self
 
-    def __str__(self):
+    def __str__(self) -> str:
         return json.dumps(self._results, indent=2)

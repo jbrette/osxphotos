@@ -15,18 +15,19 @@ import stat
 import subprocess
 import tempfile
 import types
-import typing as t
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self, TypedDict
 
 if TYPE_CHECKING:
     from .stat_cache import DirectoryStatCache
 
+import contextlib
+
 from tenacity import (
     RetryCallState,
     after_log,
-    before_log,
     retry,
     retry_if_exception,
     stop_after_attempt,
@@ -41,8 +42,17 @@ from .unicode import normalize_fs_path
 logger = logging.getLogger(__name__)
 
 
+class _RetryConfig(TypedDict):
+    """Shape of RETRY_FILEUTIL_CONFIG"""
+
+    retry_enabled: bool
+    retries: int
+    wait_seconds: int
+    nas_export_alias: str
+
+
 # module-level dict RETRY_FILEUTIL_CONFIG that controls retry behavior. See cfg_fileutil_retry
-RETRY_FILEUTIL_CONFIG = {
+RETRY_FILEUTIL_CONFIG: _RetryConfig = {
     "retry_enabled": False,
     "retries": 3,
     "wait_seconds": 15,
@@ -55,7 +65,7 @@ def cfg_fileutil_retry(
     retries: int | None = None,
     wait_seconds: int | None = None,
     nas_export_alias: str | None = None,
-):
+) -> None:
     """Change global retry behavior for FileUtil.
 
     Retry configuration for fileutil operations.
@@ -147,7 +157,7 @@ RECOVERABLE_ERRNOS = {
 
 
 # Check for errot PermissionError or OSError in RECOVERABLE_ERRNOS to allow retry
-def is_fileutil_error(exception) -> bool:
+def is_fileutil_error(exception: BaseException) -> bool:
     """Determine whether an exception should be treated as a recoverable fileutil error.
 
     If retry is enabled via RETRY_FILEUTIL_CONFIG["retry_enabled"], exception is logged (warning)
@@ -184,25 +194,30 @@ def is_fileutil_error(exception) -> bool:
     )
 
 
-def retry_all_methods():
+def _open_alias_before_sleep(retry_state: RetryCallState) -> None:
+    """tenacity before_sleep hook; tenacity ignores the hook's return value"""
+    open_alias_script(retry_state)
+
+
+def retry_all_methods[T]() -> Callable[[type[T]], type[T]]:
     """Apply tenacity.retry to all callable methods of a class."""
 
-    def decorator(cls):
+    def decorator(cls: type[T]) -> type[T]:
         for name, value in cls.__dict__.items():
             # Skip dunder methods (e.g. __init__, __str__, etc.)
             if name.startswith("__"):
                 continue
 
-            def make_retry(func):
+            def make_retry(func: Callable[..., Any]) -> Callable[..., Any]:
                 @functools.wraps(func)
-                def wrapper(*args, **kwargs):
+                def wrapper(*args: Any, **kwargs: Any) -> Any:
                     if not RETRY_FILEUTIL_CONFIG["retry_enabled"]:
                         return func(*args, **kwargs)
                     retryer = retry(
                         stop=stop_after_attempt(RETRY_FILEUTIL_CONFIG["retries"]),
                         wait=wait_fixed(RETRY_FILEUTIL_CONFIG["wait_seconds"]),
                         retry=retry_if_exception(is_fileutil_error),
-                        before_sleep=open_alias_script,
+                        before_sleep=_open_alias_before_sleep,
                         # before=before_log(logger, logging.WARNING),
                         after=after_log(logger, logging.WARNING),
                         reraise=True,
@@ -279,7 +294,7 @@ def open_alias_script(retry_state: RetryCallState) -> int | None:
     end tell
     """
 
-    if rc := subprocess.call(["osascript", "-e", script]) == 0:
+    if (rc := subprocess.call(["osascript", "-e", script])) == 0:
         logger.warning("✅ fileutil: re-mounted SMB alias succssefully.")
     else:
         logger.warning(
@@ -301,6 +316,10 @@ class FileDateType(enum.IntFlag):
     ACCESS = 4
 
 
+class InvalidDateTypeError(TypeError, ValueError):
+    """date_type is not a FileDateType; a ValueError too, for existing callers"""
+
+
 __all__ = [
     "FileDateType",
     "FileUtil",
@@ -308,13 +327,21 @@ __all__ = [
     "FileUtilMacOS",
     "FileUtilNoOp",
     "FileUtilShUtil",
+    "InvalidDateTypeError",
     "set_file_dates",
 ]
 
 logger = logging.getLogger("osxphotos")
 
 
-def utime_no_cache(path: os.PathLike, times: tuple[int, int]) -> bool:
+def _normalize_path(path: str | os.PathLike[str]) -> str | pathlib.Path:
+    """normalize_fs_path for any str or path-like (non-Path path-likes become str)"""
+    if isinstance(path, (str, pathlib.Path)):
+        return normalize_fs_path(path)
+    return normalize_fs_path(os.fspath(path))
+
+
+def utime_no_cache(path: str | os.PathLike[str], times: tuple[float, float]) -> bool:
     """Set file modification and access times with filesystem caching disabled
 
     Args:
@@ -345,14 +372,12 @@ def utime_no_cache(path: os.PathLike, times: tuple[int, int]) -> bool:
                 # Clear F_NOCACHE flag before closing
                 fcntl.fcntl(fd, fcntl.F_NOCACHE, 0)
                 os.close(fd)
-            except:
-                try:
+            except Exception:
+                with contextlib.suppress(Exception):
                     os.close(fd)
-                except:
-                    pass
 
 
-def utime_macos(path: os.PathLike, times: tuple[int, int]) -> bool:
+def utime_macos(path: str | os.PathLike[str], times: tuple[float, float]) -> bool:
     """Adjust file access, modified time, and creation time on macOS
 
     Args:
@@ -374,12 +399,12 @@ def utime_macos(path: os.PathLike, times: tuple[int, int]) -> bool:
 
 
 def set_file_dates(
-    file_path: pathlib.Path | os.PathLike,
+    file_path: str | pathlib.Path | os.PathLike[str],
     date: datetime.datetime,
     date_type: FileDateType = FileDateType.CREATION
     | FileDateType.MODIFICATION
     | FileDateType.ACCESS,
-):
+) -> bool:
     """
     Sets the specified date(s) of a file to the given datetime
 
@@ -407,7 +432,7 @@ def set_file_dates(
         )
 
     if not isinstance(date_type, FileDateType):
-        raise ValueError(
+        raise InvalidDateTypeError(
             f"Error: Invalid date_type - must be FileDateType, got {type(date_type)}"
         )
 
@@ -428,13 +453,15 @@ def set_file_dates(
     }
 
     # Set each requested date type
-    all_success = True
+    all_success: bool = True
     for flag, key in date_key_map.items():
         if date_type & flag:
             success, error = file_url.setResourceValue_forKey_error_(ns_date, key, None)
             if not success:
                 error_msg = error.localizedDescription() if error else "Unknown error"
-                logger.warning(f"Error setting {flag.name.lower()} date: {error_msg}")
+                logger.warning(
+                    f"Error setting {(flag.name or '').lower()} date: {error_msg}"
+                )
                 all_success = False
 
     return all_success
@@ -445,64 +472,82 @@ class FileUtilABC(ABC):
 
     @classmethod
     @abstractmethod
-    def hardlink(cls, src, dest):
+    def hardlink(
+        cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]
+    ) -> None:
         pass
 
     @classmethod
     @abstractmethod
-    def copy(cls, src, dest):
+    def copy(cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]) -> bool:
         pass
 
     @classmethod
     @abstractmethod
-    def unlink(cls, filepath):
+    def unlink(cls, filepath: str | os.PathLike[str]) -> None:
         pass
 
     @classmethod
     @abstractmethod
-    def rmdir(cls, dirpath):
+    def rmdir(cls, dirpath: str | os.PathLike[str]) -> None:
         pass
 
     @classmethod
     @abstractmethod
-    def makedirs(cls, name, mode: int = 511, exist_ok: bool = False) -> None:
+    def makedirs(
+        cls, name: str | os.PathLike[str], mode: int = 511, exist_ok: bool = False
+    ) -> None:
         pass
 
     @classmethod
     @abstractmethod
-    def utime(cls, path, times):
+    def utime(cls, path: str | os.PathLike[str], times: tuple[float, float]) -> None:
         pass
 
     @classmethod
     @abstractmethod
-    def cmp(cls, file1, file2, mtime1=None):
+    def cmp(
+        cls,
+        file1: str | os.PathLike[str],
+        file2: str | os.PathLike[str],
+        mtime1: float | None = None,
+    ) -> bool:
         pass
 
     @classmethod
     @abstractmethod
-    def cmp_file_sig(cls, file1, sig2):
+    def cmp_file_sig(
+        cls, file1: str | os.PathLike[str], sig2: tuple[int, int, int | None] | None
+    ) -> bool:
         pass
 
     @classmethod
     @abstractmethod
-    def file_sig(cls, file1):
+    def file_sig(cls, file1: str | os.PathLike[str]) -> tuple[int, int, int]:
         pass
 
     @classmethod
     @abstractmethod
-    def convert_to_jpeg(cls, src_file, dest_file, compression_quality=1.0):
+    def convert_to_jpeg(
+        cls,
+        src_file: str | os.PathLike[str],
+        dest_file: str | os.PathLike[str],
+        compression_quality: float = 1.0,
+    ) -> bool | None:
         pass
 
     @classmethod
     @abstractmethod
-    def rename(cls, src, dest):
+    def rename(
+        cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]
+    ) -> str | pathlib.Path | None:
         pass
 
     @classmethod
     @abstractmethod
     def tmpdir(
         cls, prefix: str | None = None, dirpath: str | None = None
-    ) -> tempfile.TemporaryDirectory:
+    ) -> tempfile.TemporaryDirectory[str]:
         pass
 
 
@@ -511,7 +556,9 @@ class FileUtilMacOS(FileUtilABC):
     """Various file utilities"""
 
     @classmethod
-    def hardlink(cls, src, dest):
+    def hardlink(
+        cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]
+    ) -> None:
         """Hardlinks a file from src path to dest path
         src: source path as string
         dest: destination path as string
@@ -520,8 +567,8 @@ class FileUtilMacOS(FileUtilABC):
         if src is None or dest is None:
             raise ValueError("src and dest must not be None", src, dest)
 
-        src = normalize_fs_path(src)
-        dest = normalize_fs_path(dest)
+        src = _normalize_path(src)
+        dest = _normalize_path(dest)
 
         if not os.path.isfile(src):
             raise FileNotFoundError("src file does not appear to exist", src)
@@ -532,7 +579,7 @@ class FileUtilMacOS(FileUtilABC):
             raise e from e
 
     @classmethod
-    def copy(cls, src, dest):
+    def copy(cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]) -> bool:
         """Copies a file from src path to dest path
 
         Args:
@@ -548,8 +595,8 @@ class FileUtilMacOS(FileUtilABC):
             OSError if copy fails
             TypeError if either path is None
         """
-        src = normalize_fs_path(src)
-        dest = normalize_fs_path(dest)
+        src = _normalize_path(src)
+        dest = _normalize_path(dest)
 
         if not isinstance(src, pathlib.Path):
             src = pathlib.Path(src)
@@ -569,40 +616,47 @@ class FileUtilMacOS(FileUtilABC):
         return True
 
     @classmethod
-    def unlink(cls, filepath):
+    def unlink(cls, filepath: str | os.PathLike[str]) -> None:
         """unlink filepath; if it's pathlib.Path, use Path.unlink, otherwise use os.unlink"""
-        filepath = normalize_fs_path(filepath)
+        filepath = _normalize_path(filepath)
         if isinstance(filepath, pathlib.Path):
             filepath.unlink()
         else:
             os.unlink(filepath)
 
     @classmethod
-    def rmdir(cls, dirpath):
+    def rmdir(cls, dirpath: str | os.PathLike[str]) -> None:
         """remove directory filepath; dirpath must be empty"""
-        dirpath = normalize_fs_path(dirpath)
+        dirpath = _normalize_path(dirpath)
         if isinstance(dirpath, pathlib.Path):
             dirpath.rmdir()
         else:
             os.rmdir(dirpath)
 
     @classmethod
-    def makedirs(cls, name, mode: int = 511, exist_ok: bool = False) -> None:
+    def makedirs(
+        cls, name: str | os.PathLike[str], mode: int = 511, exist_ok: bool = False
+    ) -> None:
         """create directory path; creates parent directories if needed"""
-        dirpath = normalize_fs_path(name)
+        dirpath = _normalize_path(name)
         if isinstance(dirpath, pathlib.Path):
             dirpath.mkdir(parents=True, mode=mode, exist_ok=exist_ok)
         else:
             os.makedirs(dirpath, mode=mode, exist_ok=exist_ok)
 
     @classmethod
-    def utime(cls, path, times):
+    def utime(cls, path: str | os.PathLike[str], times: tuple[float, float]) -> None:
         """Set the access and modified time of path."""
-        path = normalize_fs_path(path)
+        path = _normalize_path(path)
         utime_macos(path, times)
 
     @classmethod
-    def cmp(cls, file1, file2, mtime1=None):
+    def cmp(
+        cls,
+        file1: str | os.PathLike[str],
+        file2: str | os.PathLike[str],
+        mtime1: float | None = None,
+    ) -> bool:
         """Does shallow compare (file signatures) of file1 to file file2.
 
         Args:
@@ -615,8 +669,8 @@ class FileUtilMacOS(FileUtilABC):
             Does not do a byte-by-byte comparison.
         """
 
-        file1 = normalize_fs_path(file1)
-        file2 = normalize_fs_path(file2)
+        file1 = _normalize_path(file1)
+        file2 = _normalize_path(file2)
 
         sig1 = cls._sig(os.stat(file1))
         if mtime1 is not None:
@@ -629,10 +683,10 @@ class FileUtilMacOS(FileUtilABC):
     @classmethod
     def cmp_file_sig(
         cls,
-        file1,
-        sig2,
+        file1: str | os.PathLike[str],
+        sig2: tuple[int, int, int | None] | None,
         stat_cache: DirectoryStatCache | None = None,
-    ):
+    ) -> bool:
         """Compare file file1 to signature sig2.
 
         Args:
@@ -647,7 +701,7 @@ class FileUtilMacOS(FileUtilABC):
         if not sig2:
             return False
 
-        file1 = normalize_fs_path(file1)
+        file1 = _normalize_path(file1)
 
         # Use cached stat if cache provided, otherwise direct stat
         if stat_cache is not None:
@@ -663,14 +717,16 @@ class FileUtilMacOS(FileUtilABC):
         return sig1 == sig2
 
     @classmethod
-    def file_sig(cls, file1, stat_cache: DirectoryStatCache | None = None):
+    def file_sig(
+        cls, file1: str | os.PathLike[str], stat_cache: DirectoryStatCache | None = None
+    ) -> tuple[int, int, int]:
         """return os.stat signature for file file1 as tuple of (mode, size, mtime)
 
         Args:
             file1 -- File name
             stat_cache -- Optional DirectoryStatCache to use for efficient stat operations
         """
-        file1 = normalize_fs_path(file1)
+        file1 = _normalize_path(file1)
 
         # Use cached stat if cache provided, otherwise direct stat
         if stat_cache is not None:
@@ -683,7 +739,12 @@ class FileUtilMacOS(FileUtilABC):
         return cls._sig(os.stat(file1))
 
     @classmethod
-    def convert_to_jpeg(cls, src_file, dest_file, compression_quality=1.0):
+    def convert_to_jpeg(
+        cls,
+        src_file: str | os.PathLike[str],
+        dest_file: str | os.PathLike[str],
+        compression_quality: float = 1.0,
+    ) -> bool | None:
         """converts image file src_file to jpeg format as dest_file
 
         Args:
@@ -694,15 +755,17 @@ class FileUtilMacOS(FileUtilABC):
         Returns:
             True if success, otherwise False
         """
-        src_file = normalize_fs_path(src_file)
-        dest_file = normalize_fs_path(dest_file)
+        src_file = _normalize_path(src_file)
+        dest_file = _normalize_path(dest_file)
         converter = ImageConverter()
         return converter.write_jpeg(
             src_file, dest_file, compression_quality=compression_quality
         )
 
     @classmethod
-    def rename(cls, src, dest):
+    def rename(
+        cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]
+    ) -> str | pathlib.Path | None:
         """Copy src to dest
 
         Args:
@@ -713,15 +776,15 @@ class FileUtilMacOS(FileUtilABC):
             Name of renamed file (dest)
 
         """
-        src = normalize_fs_path(src)
-        dest = normalize_fs_path(dest)
+        src = _normalize_path(src)
+        dest = _normalize_path(dest)
         os.rename(str(src), str(dest))
         return dest
 
     @classmethod
     def tmpdir(
         cls, prefix: str | None = None, dirpath: str | None = None
-    ) -> tempfile.TemporaryDirectory:
+    ) -> tempfile.TemporaryDirectory[str]:
         """Securely creates a temporary directory using the same rules as mkdtemp().
         The resulting object can be used as a context manager.
         On completion of the context or destruction of the temporary directory object,
@@ -730,7 +793,7 @@ class FileUtilMacOS(FileUtilABC):
         return TemporaryDirectory(prefix=prefix, dir=dirpath)
 
     @staticmethod
-    def _sig(st):
+    def _sig(st: os.stat_result) -> tuple[int, int, int]:
         """return tuple of (mode, size, mtime) of file based on os.stat
         Args:
             st: os.stat signature
@@ -744,7 +807,7 @@ class FileUtilShUtil(FileUtilMacOS):
     """Various file utilities, uses shutil.copy to copy files instead of NSFileManager (#807)"""
 
     @classmethod
-    def copy(cls, src, dest):
+    def copy(cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]) -> bool:
         """Copies a file from src path to dest path using shutil.copy
 
         Args:
@@ -760,8 +823,8 @@ class FileUtilShUtil(FileUtilMacOS):
             OSError if copy fails
             TypeError if either path is None
         """
-        src = normalize_fs_path(src)
-        dest = normalize_fs_path(dest)
+        src = _normalize_path(src)
+        dest = _normalize_path(dest)
 
         if not isinstance(src, pathlib.Path):
             src = pathlib.Path(src)
@@ -782,9 +845,9 @@ class FileUtilShUtil(FileUtilMacOS):
         return True
 
     @classmethod
-    def utime(cls, path, times):
+    def utime(cls, path: str | os.PathLike[str], times: tuple[float, float]) -> None:
         """Set the access and modified time of path."""
-        path = normalize_fs_path(path)
+        path = _normalize_path(path)
         if is_macos:
             utime_macos(path, times)
         else:
@@ -802,11 +865,13 @@ class FileUtilNoOp(FileUtil):
     file_cmp returns mock data
     """
 
+    verbose: Callable[..., Any]
+
     @staticmethod
-    def noop(*args):
+    def noop(*args: Any) -> None:
         pass
 
-    def __new__(cls, verbose=None):
+    def __new__(cls, verbose: Callable[..., Any] | None = None) -> Self:
         if verbose:
             if callable(verbose):
                 cls.verbose = verbose
@@ -815,49 +880,62 @@ class FileUtilNoOp(FileUtil):
         return super().__new__(cls)
 
     @classmethod
-    def hardlink(cls, src, dest):
+    def hardlink(
+        cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]
+    ) -> None:
         pass
 
     @classmethod
-    def copy(cls, src, dest):
+    def copy(cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]) -> bool:
+        return True
+
+    @classmethod
+    def unlink(cls, filepath: str | os.PathLike[str]) -> None:
         pass
 
     @classmethod
-    def unlink(cls, filepath):
+    def rmdir(cls, dirpath: str | os.PathLike[str]) -> None:
         pass
 
     @classmethod
-    def rmdir(cls, dirpath):
+    def makedirs(
+        cls, name: str | os.PathLike[str], mode: int = 511, exist_ok: bool = False
+    ) -> None:
         pass
 
     @classmethod
-    def makedirs(cls, name, mode: int = 511, exist_ok: bool = False) -> None:
+    def utime(cls, path: str | os.PathLike[str], times: tuple[float, float]) -> None:
         pass
 
     @classmethod
-    def utime(cls, path, times):
-        pass
-
-    @classmethod
-    def file_sig(cls, file1, stat_cache: DirectoryStatCache | None = None):
+    def file_sig(
+        cls, file1: str | os.PathLike[str], stat_cache: DirectoryStatCache | None = None
+    ) -> tuple[int, int, int]:
         """return os.stat signature for file file1 as tuple of (mode, size, mtime)"""
         if pathlib.Path(file1).exists():
-            file1 = normalize_fs_path(file1)
+            file1 = _normalize_path(file1)
             return cls._sig(os.stat(file1))
         return (42, 42, 42)
 
     @classmethod
-    def convert_to_jpeg(cls, src_file, dest_file, compression_quality=1.0):
+    def convert_to_jpeg(
+        cls,
+        src_file: str | os.PathLike[str],
+        dest_file: str | os.PathLike[str],
+        compression_quality: float = 1.0,
+    ) -> bool | None:
         pass
 
     @classmethod
-    def rename(cls, src, dest):
+    def rename(
+        cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]
+    ) -> str | pathlib.Path | None:
         pass
 
     @classmethod
     def tmpdir(
         cls, prefix: str | None = None, dirpath: str | None = None
-    ) -> tempfile.TemporaryDirectory:
+    ) -> tempfile.TemporaryDirectory[str]:
         """Securely creates a temporary directory using the same rules as mkdtemp().
         The resulting object can be used as a context manager.
         On completion of the context or destruction of the temporary directory object,

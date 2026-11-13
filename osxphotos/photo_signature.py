@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import os
+from typing import Any
 
 from .photoinfo import PhotoInfo
 from .photoinfo_dict import PhotoInfoFromDict, photoinfo_from_dict
@@ -15,14 +16,14 @@ if is_macos:
 
 
 def photo_signature(
-    photo: PhotoInfo | PhotoInfoFromFile | dict | str | os.PathLike,
+    photo: PhotoInfo | PhotoInfoFromFile | dict[str, Any] | str | os.PathLike[str],
     exiftool: str | None = None,
 ) -> str:
     """Compute photo signature for a PhotoInfo, a PhotoInfo dict, or file path"""
     if isinstance(photo, dict):
         photo = photoinfo_from_dict(photo)
-    elif not isinstance(photo, PhotoInfo):
-        photo = PhotoInfoFromFile(photo, exiftool=exiftool)
+    elif isinstance(photo, str | os.PathLike):
+        photo = PhotoInfoFromFile(os.fspath(photo), exiftool=exiftool)
 
     if photo.shared:
         return _shared_photo_signature(photo)

@@ -12,11 +12,6 @@ from contextlib import contextmanager
 
 import pytest
 
-from osxphotos.datetime_utils import (
-    datetime_naive_to_local,
-    datetime_remove_tz,
-    get_local_tz,
-)
 from osxphotos.platform import is_macos
 
 if is_macos:
@@ -24,7 +19,6 @@ if is_macos:
     from applescript import AppleScript
     from photoscript.utils import ditto
 
-    from .test_catalina_10_15_7 import UUID_DICT_LOCAL
 
 from osxphotos.exiftool import _ExifToolProc
 
@@ -400,7 +394,7 @@ def copy_photos_library(photos_library, delay=0, open=True):
     shutil.rmtree(str(dest), ignore_errors=True)
 
     print(f"copying {src} to {picture_folder} ...")
-    copyFolder = AppleScript(
+    copy_folder = AppleScript(
         """
         on copyFolder(sourceFolder, destinationFolder)
             -- sourceFolder and destinationFolder are strings of POSIX paths
@@ -412,7 +406,7 @@ def copy_photos_library(photos_library, delay=0, open=True):
         end copyFolder
         """
     )
-    copyFolder.call("copyFolder", str(src), str(picture_folder))
+    copy_folder.call("copyFolder", str(src), str(picture_folder))
 
     # open Photos
     if open:
@@ -455,7 +449,7 @@ def photoslib():
 
 @pytest.fixture
 def suspend_capture(pytestconfig):
-    class suspend_guard:
+    class SuspendGuard:
         def __init__(self):
             self.capmanager = pytestconfig.pluginmanager.getplugin("capturemanager")
 
@@ -465,7 +459,7 @@ def suspend_capture(pytestconfig):
         def __exit__(self, _1, _2, _3):
             self.capmanager.resume_global_capture()
 
-    yield suspend_guard()
+    yield SuspendGuard()
 
 
 @pytest.fixture

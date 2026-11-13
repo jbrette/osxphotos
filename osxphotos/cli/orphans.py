@@ -1,5 +1,7 @@
 """Find orphaned photos in a Photos library"""
 
+from __future__ import annotations
+
 import os
 import os.path
 import re
@@ -9,6 +11,7 @@ import sys
 from os.path import join as joinpath
 from os.path import splitext
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
@@ -23,6 +26,9 @@ from .common import get_photos_db
 from .help import get_help_msg
 from .list import _list_libraries
 from .verbose import verbose_print
+
+if TYPE_CHECKING:
+    from .cli import CLI_Obj
 
 
 @click.command(name="orphans")
@@ -39,7 +45,15 @@ from .verbose import verbose_print
 @THEME_OPTION
 @click.pass_obj
 @click.pass_context
-def orphans(ctx, cli_obj, export, db, verbose_flag, timestamp, theme):
+def orphans(
+    ctx: click.Context,
+    cli_obj: CLI_Obj | None,
+    export: str | None,
+    db: str | None,
+    verbose_flag: int,
+    timestamp: bool,
+    theme: str | None,
+) -> None:
     """Find orphaned photos in a Photos library"""
 
     verbose_ = verbose_print(verbose=verbose_flag, timestamp=timestamp, theme=theme)
@@ -71,7 +85,7 @@ def orphans(ctx, cli_obj, export, db, verbose_flag, timestamp, theme):
     uuids_in_db = {photo.uuid: photo for photo in photos}
 
     # walk the Photos library looking for photos associated with a uuid
-    uuids_in_library = {}
+    uuids_in_library: dict[str, list[str]] = {}
 
     verbose_("Scanning for orphan files")
     # originals
@@ -141,16 +155,16 @@ def orphans(ctx, cli_obj, export, db, verbose_flag, timestamp, theme):
         )
 
 
-def scan_for_files(directory: str, uuid_dict: dict):
+def scan_for_files(directory: str, uuid_dict: dict[str, list[str]]) -> None:
     """Walk a directory path finding any files named with UUID in the filename and add to uuid_dict
 
     Note: modifies uuid_dict
     """
     uuid_regex = re.compile(UUID_PATTERN)
-    for dirpath, dirname, filenames in os.walk(directory):
+    for dirpath, _dirname, filenames in os.walk(directory):
         for filename in filenames:
             if match := uuid_regex.match(filename):
-                stem, ext = splitext(filename)
+                _stem, ext = splitext(filename)
                 # .plist and .aae files may hold data on adjustments but these
                 # are not useful by themselves so skip them
                 if ext.lower() in [".plist", ".aae"]:

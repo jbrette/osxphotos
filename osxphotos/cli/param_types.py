@@ -6,14 +6,13 @@ import datetime
 import os
 import pathlib
 import re
-import tempfile
+from typing import Any
 
 import bitmath
 import click
-import pytimeparse2
+import pytimeparse2  # type: ignore[import-untyped]  # ships no stubs or py.typed
 from strpdatetime import strpdatetime
 
-from osxphotos import tempdir
 from osxphotos.cli.template_utils import suggest_template_fields
 from osxphotos.export_db_utils import export_db_get_version
 from osxphotos.photoinfo import PhotoInfoNone
@@ -55,19 +54,21 @@ class CatchSmartQuotesPath(click.Path):
 
     name = "CATCH_SMART_QUOTES_PATH"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             return super().convert(value, param, ctx)
         except click.exceptions.BadParameter as e:
             # check to see if the error is due to smart quotes (curly quotes created by some apps such as Notes)
             # if so, print a more helpful error message
-            if "“" in str(e) or "”" in str(e) or "‘" in str(e) or "’" in str(e):
+            if "“" in str(e) or "”" in str(e) or "‘" in str(e) or "’" in str(e):  # noqa: RUF001  (smart quotes on purpose)
                 self.fail(
                     f"Path {value} contains smart quotes. Please check the path and try again. "
                     "If you copied this path from an app like Notes or TextEdit, try disabling smart quotes in the app."
                 )
             else:
-                self.fail(e)
+                self.fail(str(e))
 
 
 class DeprecatedPath(click.Path):
@@ -75,16 +76,18 @@ class DeprecatedPath(click.Path):
 
     name = "DEPRECATED_PATH"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         if "deprecation_warning" in kwargs:
             self.deprecation_warning = kwargs.pop("deprecation_warning")
         else:
             self.deprecation_warning = "This option is deprecated and will be removed in a future version of osxphotos."
         super().__init__(*args, **kwargs)
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         click.echo(
-            f"WARNING: {param.name} is deprecated. {self.deprecation_warning}",
+            f"WARNING: {param.name if param is not None else None} is deprecated. {self.deprecation_warning}",
             err=True,
         )
         return super().convert(value, param, ctx)
@@ -95,10 +98,12 @@ class PathOrStdin(click.Path):
 
     name = "PATH_OR_STDIN"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         return value if value == "-" else super().convert(value, param, ctx)
 
 
@@ -107,10 +112,12 @@ class PathOrURL(click.Path):
 
     name = "PATH_OR_URL"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         if is_http_url(value):
             # users often pass the URL of the GitHub page showing a file
             # instead of the raw file; download the raw file they intended
@@ -133,10 +140,12 @@ class PathOrURL(click.Path):
         return value
 
 
-class DateTimeISO8601(click.ParamType):
+class DateTimeISO8601(click.ParamType[Any]):
     name = "DATETIME"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         # Handle datetime objects that may come from TOML files
         if isinstance(value, datetime.datetime):
             return value
@@ -154,10 +163,12 @@ class DateTimeISO8601(click.ParamType):
             )
 
 
-class BitMathSize(click.ParamType):
+class BitMathSize(click.ParamType[Any]):
     name = "BITMATH"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             value = bitmath.parse_string(value)
         except ValueError:
@@ -165,7 +176,7 @@ class BitMathSize(click.ParamType):
             try:
                 value = int(value)
                 value = bitmath.Byte(value)
-            except ValueError as e:
+            except ValueError:
                 self.fail(
                     f"{value} must be specified as bytes or using SI/NIST units. "
                     + "For example, the following are all valid and equivalent sizes: '1048576' '1.048576MB', '1 MiB'."
@@ -173,10 +184,12 @@ class BitMathSize(click.ParamType):
         return value
 
 
-class TimeISO8601(click.ParamType):
+class TimeISO8601(click.ParamType[Any]):
     name = "TIME"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             return datetime.time.fromisoformat(value).replace(tzinfo=None)
         except Exception:
@@ -187,10 +200,12 @@ class TimeISO8601(click.ParamType):
             )
 
 
-class FunctionCall(click.ParamType):
+class FunctionCall(click.ParamType[Any]):
     name = "FUNCTION"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         if "::" not in value:
             self.fail(
                 f"Could not parse function name from '{value}'. "
@@ -212,16 +227,18 @@ class FunctionCall(click.ParamType):
 
         try:
             function = load_function(filename_validated, funcname)
-        except Exception as e:
+        except Exception:
             self.fail(f"Could not load function {funcname} from {filename_validated}")
 
         return (function, value)
 
 
-class ExportDBType(click.ParamType):
+class ExportDBType(click.ParamType[Any]):
     name = "EXPORTDB"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             export_db_name = pathlib.Path(value)
             if export_db_name.is_dir():
@@ -229,18 +246,20 @@ class ExportDBType(click.ParamType):
             if export_db_name.is_file():
                 # verify it's actually an osxphotos export_db
                 # export_db_get_version will raise an error if it's not valid
-                osxphotos_ver, export_db_ver = export_db_get_version(value)
+                _osxphotos_ver, _export_db_ver = export_db_get_version(value)
             return value
         except Exception:
             self.fail(f"{value} exists but is not a valid osxphotos export database. ")
 
 
-class TemplateString(click.ParamType):
+class TemplateString(click.ParamType[Any]):
     """Validate an osxphotos template language (OTL) template string"""
 
     name = "OTL_TEMPLATE"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             cwd = os.getcwd()
             _, unmatched = PhotoTemplate(photo=PhotoInfoNone()).render(
@@ -254,15 +273,17 @@ class TemplateString(click.ParamType):
                 )
             return value
         except ValueError as e:
-            self.fail(e)
+            self.fail(str(e))
 
 
-class TimeString(click.ParamType):
+class TimeString(click.ParamType[Any]):
     """A timestring in format HH:MM:SS, HH:MM:SS.fff, HH:MM"""
 
     name = "TIMESTRING"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             return time_string_to_datetime(value)
         except ValueError:
@@ -272,12 +293,14 @@ class TimeString(click.ParamType):
             )
 
 
-class DateOffset(click.ParamType):
+class DateOffset(click.ParamType[Any]):
     """A date offset string in the format ±D days, ±W weeks, ±Y years, ±D where D is days"""
 
     name = "DATEOFFSET"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         # if it's a single number treat it as days
         # but pytimeparse2 treats is as seconds so need to verify it's just a number and if so,
         # convert it to seconds
@@ -305,12 +328,14 @@ class DateOffset(click.ParamType):
         )
 
 
-class TimeOffset(click.ParamType):
+class TimeOffset(click.ParamType[Any]):
     """A time offset string in the format [+-]HH:MM[:SS[.fff[fff]]] or +1 days, -2 hours, -18000, etc"""
 
     name = "TIMEOFFSET"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         offset = pytimeparse2.parse(value)
         if offset is not None:
             return datetime.timedelta(seconds=offset)
@@ -321,33 +346,37 @@ class TimeOffset(click.ParamType):
         )
 
 
-class TimezoneOffset(click.ParamType):
+class TimezoneOffset(click.ParamType[Any]):
     """A UTC offset timezone in format ±[hh]:[mm], ±[h]:[mm], or ±[hh][mm] or a named timezone such as "America/Los_Angeles" """
 
     name = "TIMEZONE_OFFSET"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             offset_seconds = utc_offset_string_to_seconds(value)
             tz = Timezone(offset_seconds)
             return tz
-        except ValueError as e:
+        except ValueError:
             try:
                 # might be named timezone
                 return Timezone(value)
-            except ValueError as e:
+            except ValueError:
                 self.fail(
                     f"Invalid timezone format or name: {value}. "
                     "Valid format for timezone offset: '±HH:MM', '±H:MM', or '±HHMM' or named timezone such as 'America/Los_Angeles'"
                 )
 
 
-class StrpDateTimePattern(click.ParamType):
+class StrpDateTimePattern(click.ParamType[Any]):
     """A pattern to be used with strpdatetime()"""
 
     name = "STRPDATETIME_PATTERN"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             strpdatetime("", value)
             return value
@@ -363,10 +392,12 @@ class StrpDateTimePattern(click.ParamType):
                 return value
 
 
-class Latitude(click.ParamType):
+class Latitude(click.ParamType[Any]):
     name = "Latitude"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             latitude = float(value)
             if latitude < -90 or latitude > 90:
@@ -378,10 +409,12 @@ class Latitude(click.ParamType):
             )
 
 
-class Longitude(click.ParamType):
+class Longitude(click.ParamType[Any]):
     name = "Longitude"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         try:
             longitude = float(value)
             if longitude < -180 or longitude > 180:
@@ -393,12 +426,14 @@ class Longitude(click.ParamType):
             )
 
 
-class BooleanString(click.ParamType):
+class BooleanString(click.ParamType[Any]):
     """A boolean string in the format True/False, Yes/No, T/F, Y/N, 1/0 (case insensitive)"""
 
     name = "BooleanString"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         if value.lower() in ["true", "yes", "t", "y", "1"]:
             return True
         elif value.lower() in ["false", "no", "f", "n", "0"]:
@@ -409,12 +444,12 @@ class BooleanString(click.ParamType):
             )
 
 
-class CSVOptions(click.ParamType):
+class CSVOptions(click.ParamType[Any]):
     """A comma-separated list of option values, not case sensitive"""
 
     name = "CSVOptions"
 
-    def __init__(self, options: list[str]):
+    def __init__(self, options: list[str]) -> None:
         """Initialize CSVOptions
 
         Args:
@@ -425,7 +460,9 @@ class CSVOptions(click.ParamType):
         """
         self._csv_options = options
 
-    def convert(self, value, param, ctx) -> tuple[str, ...]:
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> tuple[str, ...]:
         values = value.split(",")
         values = [v.lower().strip() for v in values]
         for v in values:

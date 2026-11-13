@@ -8,6 +8,7 @@ if not is_macos:
     raise ImportError("PhotosSelection only supported on macOS")
 
 import re
+from collections.abc import Iterator
 
 import photoscript
 from applescript import ScriptError
@@ -47,15 +48,15 @@ class PhotosSelection:
         """Return list of selected photos"""
         return get_selected(self._photosdb)
 
-    def __getitem__(self, index) -> PhotoInfo:
+    def __getitem__(self, index: int) -> PhotoInfo:
         """Return PhotoInfo object for selected photo at index"""
         return self._get_selection()[index]
 
-    def __iter__(self) -> iter:
+    def __iter__(self) -> Iterator[PhotoInfo]:
         """Iterate over selected photos"""
         return iter(self._get_selection())
 
-    def __contains__(self, item) -> bool:
+    def __contains__(self, item: object) -> bool:
         """Return True if item is in selection, else False"""
         return item in self._get_selection()
 
@@ -72,16 +73,16 @@ class PhotosSelection:
         return len(self._get_selection())
 
 
-def get_selected(photosdb: PhotosDB):
+def get_selected(photosdb: PhotosDB) -> list[PhotoInfo]:
     assert_macos()
     try:
         selected = photoscript.PhotosLibrary().selection
         return photosdb.photos(uuid=[p.uuid for p in selected]) if selected else []
     except ScriptError as e:
         # some photos (e.g. shared items) can't be selected and raise ScriptError:
-        # applescript.ScriptError: Photos got an error: Can’t get media item id "34C26DFA-0CEA-4DB7-8FDA-B87789B3209D/L0/001". (-1728) app='Photos' range=16820-16873
+        # applescript.ScriptError: Photos got an error: Can't get media item id "34C26DFA-0CEA-4DB7-8FDA-B87789B3209D/L0/001". (-1728) app='Photos' range=16820-16873
         # In this case, we can parse the UUID from the error (though this only works for a single selected item)
-        if match := re.match(r".*Can’t get media item id \"(.*)\".*", str(e)):
+        if match := re.match(r".*Can’t get media item id \"(.*)\".*", str(e)):  # noqa: RUF001  (Apple's apostrophe)
             uuid = match[1].split("/")[0]
             return photosdb.photos(uuid=[uuid])
     return []

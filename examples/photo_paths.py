@@ -6,7 +6,7 @@ Run with: osxphotos run photo_paths.py
 from __future__ import annotations
 
 import osxphotos
-from osxphotos.cli import query_command, verbose
+from osxphotos.cli import query_command
 
 
 @query_command

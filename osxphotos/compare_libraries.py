@@ -6,7 +6,7 @@ import csv
 import dataclasses
 import datetime
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sized
 from io import StringIO
 from typing import Any
 
@@ -19,7 +19,7 @@ from .utils import noop, pluralize
 __all__ = ["PhotosDBDiff", "compare_photos_libraries"]
 
 
-def pluralize_assets(photolist: list[PhotoInfo]) -> str:
+def pluralize_assets(photolist: Sized) -> str:
     """Return pluralized form of '1 asset', '2 assets', etc based on number of photos in list"""
     length = len(photolist)
     photo_word = pluralize(length, "asset", "assets")
@@ -38,7 +38,7 @@ class PhotosDBDiff:
     in_both_different: list[tuple[PhotoInfo, PhotoInfo, Any]]
     signature: Callable[[PhotoInfo], Any] = photo_signature
 
-    def asdict(self) -> dict:
+    def asdict(self) -> dict[str, Any]:
         """Return PhotosDBDiff as a dict"""
         in_a_not_b = [
             {
@@ -85,18 +85,18 @@ class PhotosDBDiff:
             "in_a_and_b_different": in_a_and_b_different,
         }
 
-    def json(self, indent=2) -> str:
+    def json(self, indent: int | str | None = 2) -> str:
         """Return PhotosDBDiff as a JSON string"""
         d = self.asdict()
 
-        def _default(o):
+        def _default(o: Any) -> Any:
             if isinstance(o, datetime.datetime):
                 return o.isoformat()
             return o
 
         return json.dumps(d, indent=indent, default=_default)
 
-    def csv(self, delimiter=",") -> str:
+    def csv(self, delimiter: str = ",") -> str:
         """Return PhotosDBDiff as a CSV string"""
         headers = [
             "original_filename",
@@ -109,7 +109,7 @@ class PhotosDBDiff:
             "in_a_and_b_different",
             "difference",
         ]
-        rows = []
+        rows: list[list[Any]] = []
 
         for photo_a in self.in_a_not_b:
             rows.append(
@@ -209,7 +209,7 @@ def photo_diff(photo_a: PhotoInfo, photo_b: PhotoInfo) -> list[list[Any]]:
     diffs = [
         diff
         for diff in diffs
-        if not diff[0] in ("library", "face_info", "labels", "filename", "uuid")
+        if diff[0] not in ("library", "face_info", "labels", "filename", "uuid")
         and not diff[0].startswith("path")
         and not diff[0].startswith("score")
     ]
@@ -220,7 +220,7 @@ def photo_diff(photo_a: PhotoInfo, photo_b: PhotoInfo) -> list[list[Any]]:
 def compare_photos_libraries(
     library_a: PhotosDB,
     library_b: PhotosDB,
-    verbose: Callable[[Any], bool] | None = None,
+    verbose: Callable[..., Any] | None = None,
     signature_function: Callable[[PhotoInfo], Any] | None = None,
     diff_function: Callable[[PhotoInfo, PhotoInfo], Any] | None = None,
 ) -> PhotosDBDiff:
@@ -247,7 +247,7 @@ def compare_photos_libraries(
     signature_function = signature_function or photo_signature
     diff_function = diff_function or photo_diff
 
-    verbose(f"Comparing libraries:")
+    verbose("Comparing libraries:")
     verbose(f"library_a = {library_a.library_path}")
     verbose(f"library_b = {library_b.library_path}")
 
@@ -276,7 +276,7 @@ def _map_signatures(
     photosdb: PhotosDB, signature: Callable[[PhotoInfo], Any]
 ) -> dict[Any, list[PhotoInfo]]:
     """Return dictionary of signatures for all photos in library"""
-    mapping = {}
+    mapping: dict[Any, list[PhotoInfo]] = {}
     for photo in photosdb.photos():
         sig = signature(photo)
         if sig in mapping:
@@ -291,10 +291,10 @@ def _compare_mappings(
     mapping_b: dict[Any, list[PhotoInfo]],
     diff_function: Callable[[PhotoInfo, PhotoInfo], Any],
 ) -> tuple[
+    list[PhotoInfo],
+    list[PhotoInfo],
     list[tuple[PhotoInfo, PhotoInfo]],
     list[tuple[PhotoInfo, PhotoInfo, Any]],
-    list[PhotoInfo],
-    list[PhotoInfo],
 ]:
     """Compare two mappings of photo signatures and return differences
 
@@ -304,16 +304,16 @@ def _compare_mappings(
         diff_function: function to compare two PhotoInfo objects
 
     Returns: tuple of:
-        list of tuples of PhotoInfo objects in both mapping_a and mapping_b that are the same
-        list of tuples of PhotoInfo objects in both mapping_a and mapping_b that are different
         list of PhotoInfo objects in only mapping_a
         list of PhotoInfo objects in only mapping_b
+        list of tuples of PhotoInfo objects in both mapping_a and mapping_b that are the same
+        list of tuples of PhotoInfo objects in both mapping_a and mapping_b that are different
     """
 
-    in_a_and_b_same = []
-    in_a_and_b_diff = []
-    in_a_not_b = []
-    in_b_not_a = []
+    in_a_and_b_same: list[tuple[PhotoInfo, PhotoInfo]] = []
+    in_a_and_b_diff: list[tuple[PhotoInfo, PhotoInfo, Any]] = []
+    in_a_not_b: list[PhotoInfo] = []
+    in_b_not_a: list[PhotoInfo] = []
 
     keys_a = set(mapping_a.keys())
     keys_b = set(mapping_b.keys())
@@ -372,7 +372,7 @@ def _compare_mappings(
                     break
 
         if b_photos and a_photos:
-            for photo_a, photo_b in zip(a_photos, b_photos):
+            for photo_a, photo_b in zip(a_photos, b_photos, strict=False):
                 if diff_function(photo_a, photo_b):
                     in_a_and_b_diff.append(
                         (photo_a, photo_b, diff_function(photo_a, photo_b))

@@ -113,14 +113,14 @@ def get_original_stems_for_edited_with_increment(stem: str) -> list[str]:
 class Groupable:
     path: pathlib.Path
     stem: str
-    _edited_stem_func: Callable[[pathlib.Path], str]
-    _burst_uuid_func: Callable[[pathlib.Path], str | None]
+    _edited_stem_func: Callable[[pathlib.Path], str] | None
+    _burst_uuid_func: Callable[[pathlib.Path], str | None] | None
 
     def __init__(
         self,
         path: pathlib.Path,
-        edited_stem_func: Callable[[pathlib.Path], str],
-        burst_uuid_func: Callable[[pathlib.Path], str | None],
+        edited_stem_func: Callable[[pathlib.Path], str] | None,
+        burst_uuid_func: Callable[[pathlib.Path], str | None] | None,
     ):
         self.path = path
         self.stem = path.stem.lower()
@@ -129,10 +129,14 @@ class Groupable:
 
     @cached_property
     def edited_stem(self) -> str:
+        if self._edited_stem_func is None:
+            raise TypeError("edited_stem_func is required to compute edited_stem")
         return self._edited_stem_func(self.path)
 
     @cached_property
     def burst_uuid(self) -> str | None:
+        if self._burst_uuid_func is None:
+            raise TypeError("burst_uuid_func is required to compute burst_uuid")
         return self._burst_uuid_func(self.path)
 
     def __eq__(self, other: object) -> bool:
@@ -213,27 +217,26 @@ class GroupingNode:
 
         # Handle _O pattern for original adjustment AAE files (e.g., IMG_O1234.AAE or Filename_O.AAE)
         # These are adjustments to the original file used for Portrait images, etc.
+        # Only skip _o if:
+        # 1. At the end (remaining == "_o"), e.g., Filename_O.AAE
+        # 2. After IMG_ and before digits (e.g., IMG_O1234.AAE)
         if (
             key == "_"
             and len(remaining) > 1
             and remaining[1] == "o"
             and item.path.suffix.lower() == ".aae"
-        ):
-            # Only skip _o if:
-            # 1. At the end (remaining == "_o"), e.g., Filename_O.AAE
-            # 2. After IMG_ and before digits (e.g., IMG_O1234.AAE)
-            if len(remaining) == 2 or remaining[2:].isdigit():
-                if len(remaining) == 2:
-                    # Filename_O.AAE pattern - add to current node if there are existing files
-                    if self.files:
-                        self.files.append(item)
-                        return None
-                    # If no existing files, fall through to normal tree traversal (standalone file)
-                else:
-                    # IMG_O1234.AAE pattern - skip _o and traverse the digits
-                    result = child.add(item, remaining[2:], maybe_e)
-                    if not result:
-                        return None
+        ) and (len(remaining) == 2 or remaining[2:].isdigit()):
+            if len(remaining) == 2:
+                # Filename_O.AAE pattern - add to current node if there are existing files
+                if self.files:
+                    self.files.append(item)
+                    return None
+                # If no existing files, fall through to normal tree traversal (standalone file)
+            else:
+                # IMG_O1234.AAE pattern - skip _o and traverse the digits
+                result = child.add(item, remaining[2:], maybe_e)
+                if not result:
+                    return None
 
         return child.add(item, remaining[1:], maybe_e)
 
@@ -269,7 +272,7 @@ class GroupingNode:
 class GroupingRoot:
     tree: GroupingNode = field(default_factory=GroupingNode)
 
-    def add(self, item: Groupable):
+    def add(self, item: Groupable) -> None:
         # Check if this is an edited file with increment suffix that should be matched
         # to an original with the increment suffix in a different position.
         # E.g., 'img_0102_edited (1)' should match original 'img_0102 (1)'.
@@ -299,7 +302,7 @@ def group_files_for_import(
     files: list[pathlib.Path],
     edited_stem_func: Callable[[pathlib.Path], str] | None = None,
     burst_uuid_func: Callable[[pathlib.Path], str | None] | None = None,
-    advance_progress=None,
+    advance_progress: Callable[[float], object] | None = None,
 ) -> list[tuple[pathlib.Path, ...]]:
     """Group related files for import.
 
@@ -339,14 +342,14 @@ def group_files_for_import(
             advance_progress(tree_advance_multiplier)
 
     grouped = root_node.collect()
-    burst_groups = defaultdict(list)
+    burst_groups: defaultdict[str, list[Groupable]] = defaultdict(list)
 
     # Divide the remaining advance for the remaining burst checks
     burst_advance_multiplier = (
         len(sorted_files) * (1 - tree_advance_multiplier) / len(grouped)
     )
 
-    non_bursts = []
+    non_bursts: list[list[Groupable]] = []
     for group in grouped:
         if group[0].burst_uuid:
             burst_groups[group[0].burst_uuid].extend(group)

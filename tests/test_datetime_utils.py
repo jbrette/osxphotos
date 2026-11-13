@@ -1,11 +1,18 @@
 import datetime
-import os
-from datetime import date, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
 
-from osxphotos.datetime_utils import *
+from osxphotos.datetime_utils import (
+    datetime_add_tz,
+    datetime_has_tz,
+    datetime_naive_to_local,
+    datetime_naive_to_utc,
+    datetime_remove_tz,
+    datetime_tz_to_utc,
+    datetime_utc_to_local,
+    get_local_tz,
+)
 
 
 @pytest.mark.usefixtures("set_tz_pacific")

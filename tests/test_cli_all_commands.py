@@ -18,17 +18,6 @@ import pytest
 from click.testing import CliRunner
 
 import osxphotos.cli.common as cli_common
-
-TEST_DB = "tests/Test-13.0.0.photoslibrary"
-TEST_DB = os.path.join(os.getcwd(), TEST_DB)
-TEST_RUN_SCRIPT = "examples/cli_example_1.py"
-
-
-@pytest.fixture(scope="module")
-def runner() -> CliRunner:
-    return CliRunner()
-
-
 from osxphotos.cli import (
     about,
     albums,
@@ -53,6 +42,15 @@ from osxphotos.platform import is_macos
 
 if is_macos:
     from osxphotos.cli import uuid
+
+TEST_DB = "tests/Test-13.0.0.photoslibrary"
+TEST_DB = os.path.join(os.getcwd(), TEST_DB)
+TEST_RUN_SCRIPT = "examples/cli_example_1.py"
+
+
+@pytest.fixture(scope="module")
+def runner() -> CliRunner:
+    return CliRunner()
 
 
 def test_about(runner: CliRunner):

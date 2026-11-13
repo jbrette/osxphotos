@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 from functools import partial
+from typing import Any, cast
 
 import click
 from rich import pretty, print
@@ -18,7 +19,7 @@ from rich import pretty, print
 import osxphotos
 from osxphotos._constants import _PHOTOS_4_VERSION
 from osxphotos.cli.click_rich_echo import rich_echo_error as echo_error
-from osxphotos.iphoto import is_iphoto_library
+from osxphotos.iphoto import iPhotoDB, iPhotoPhotoInfo, is_iphoto_library
 from osxphotos.photoinfo import PhotoInfo
 from osxphotos.photoquery import (
     IncompatibleQueryOptions,
@@ -59,11 +60,20 @@ from .common import get_photos_db
 )
 @QUERY_OPTIONS
 @DELETED_OPTIONS
-def repl(ctx, cli_obj, db, emacs, beta, **kwargs):
+def repl(
+    ctx: click.Context,
+    cli_obj: Any,
+    db: str | None,
+    emacs: bool,
+    beta: bool,
+    **kwargs: Any,
+) -> None:
     """Run interactive osxphotos REPL shell (useful for debugging, prototyping, and inspecting your Photos library)"""
     import logging
 
-    from objexplore import explore
+    from objexplore import (
+        explore,
+    )
 
     if is_macos:
         from photoscript import Album, Photo, PhotosLibrary
@@ -97,7 +107,8 @@ def repl(ctx, cli_obj, db, emacs, beta, **kwargs):
     photosdb = _load_photos_db(db)
     # enable beta features if requested
     if beta:
-        photosdb._beta = beta
+        # iPhotoDB mirrors the PhotosDB interface; _beta is just set on the instance
+        cast(PhotosDB, photosdb)._beta = beta
         print("Beta mode enabled")
     print("Getting photos")
     tic = time.perf_counter()
@@ -113,9 +124,10 @@ def repl(ctx, cli_obj, db, emacs, beta, **kwargs):
     if is_macos:
         show = _show_photo
         spotlight = _spotlight_photo
-        selected = PhotosSelection(photosdb)
+        # iPhotoDB mirrors the PhotosDB interface used by PhotosSelection
+        selected = PhotosSelection(cast(PhotosDB, photosdb))
 
-    def inspect(obj):
+    def inspect(obj: Any) -> None:
         """inspect object"""
         return _inspect(obj, methods=True)
 
@@ -139,7 +151,7 @@ def repl(ctx, cli_obj, db, emacs, beta, **kwargs):
             f"- selected: list of PhotoInfo objects for any photos selected in Photos (len={len(selected)}); "
             "will dynamically update as photos are selected in Photos"
         )
-    print(f"\nThe following functions may be helpful:")
+    print("\nThe following functions may be helpful:")
     print(
         "- get_photo(uuid): return a PhotoInfo object for photo with uuid; e.g. get_photo('B13F4485-94E0-41CD-AF71-913095D62E31')"
     )
@@ -174,7 +186,7 @@ def repl(ctx, cli_obj, db, emacs, beta, **kwargs):
     )
 
 
-def _show_photo(photo: PhotoInfo):
+def _show_photo(photo: PhotoInfo | str) -> str | None:
     """open image with default image viewer
 
     Note: This is for debugging only -- it will actually open any filetype which could
@@ -185,18 +197,19 @@ def _show_photo(photo: PhotoInfo):
     """
     photopath = photo.path if isinstance(photo, osxphotos.PhotoInfo) else photo
 
-    if not os.path.isfile(photopath):
+    if photopath is None or not os.path.isfile(photopath):
         return f"'{photopath}' does not appear to be a valid photo path"
 
     os.system(f"open '{photopath}'")
+    return None
 
 
-def _load_photos_db(dbpath):
+def _load_photos_db(dbpath: str | None) -> PhotosDB | iPhotoDB:
     print("Loading database")
     tic = time.perf_counter()
     photosdb = (
         osxphotos.iPhotoDB(dbpath, verbose=print)
-        if is_iphoto_library(dbpath)
+        if dbpath is not None and is_iphoto_library(dbpath)
         else osxphotos.PhotosDB(dbfile=dbpath, verbose=print)
     )
     toc = time.perf_counter()
@@ -205,20 +218,25 @@ def _load_photos_db(dbpath):
     return photosdb
 
 
-def _get_all_photos(photosdb):
+def _get_all_photos(
+    photosdb: PhotosDB | iPhotoDB,
+) -> list[PhotoInfo | iPhotoPhotoInfo]:
     """get list of all photos in photosdb"""
-    photos = photosdb.photos(images=True, movies=True)
-    photos.extend(photosdb.photos(images=True, movies=True, intrash=True))
-    return photos
+    return [
+        *photosdb.photos(images=True, movies=True),
+        *photosdb.photos(images=True, movies=True, intrash=True),
+    ]
 
 
-def _spotlight_photo(photo: PhotoInfo):
+def _spotlight_photo(photo: PhotoInfo) -> None:
     assert_macos()
     photo_ = photoscript.Photo(photo.uuid)
     photo_.spotlight()
 
 
-def _query_photos(photosdb: PhotosDB, query_options: QueryOptions) -> list:
+def _query_photos(
+    photosdb: PhotosDB | iPhotoDB, query_options: QueryOptions
+) -> list[PhotoInfo] | list[iPhotoPhotoInfo]:
     """Query photos given a QueryOptions instance"""
     try:
         photos = photosdb.query(query_options)
@@ -233,7 +251,7 @@ def _query_photos(photosdb: PhotosDB, query_options: QueryOptions) -> list:
     return photos
 
 
-def _find_in_library(photosdb: PhotosDB, search_str: str) -> list[str]:
+def _find_in_library(photosdb: PhotosDB | iPhotoDB, search_str: str) -> list[str]:
     """Find files in Photos library matching search_str using find command"""
     # this is a quick and dirty way to find files in the Photos library
     # e.g. those matching a UUID or a filename
@@ -242,8 +260,9 @@ def _find_in_library(photosdb: PhotosDB, search_str: str) -> list[str]:
         raise ValueError("Could not find Photos library")
 
     search_str = shlex.quote(search_str)
-    library_path = shlex.quote(library_path)
-    cmd = f"find {library_path} | grep {search_str}"
+    # iPhotoDB.library_path is a pathlib.Path
+    quoted_library_path = shlex.quote(os.fspath(library_path))
+    cmd = f"find {quoted_library_path} | grep {search_str}"
     output = subprocess.check_output(cmd, shell=True, universal_newlines=True)
 
     # Split the output into lines and return as a list

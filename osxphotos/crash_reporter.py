@@ -9,26 +9,29 @@ import sys
 import time
 import traceback
 from collections.abc import Callable
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 import click
 from rich import print
 
 from ._version import __version__
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
 # store data to print out in crash log, set by set_crash_data
-_global_crash_data = {}
+_global_crash_data: dict[Any, Any] = {}
 
 # store callback functions to execute if a crash is handled
-_global_callbacks = {}
+_global_callbacks: dict[int, tuple[Callable[[], Any], str | None]] = {}
 
 
-def set_crash_data(key_: Any, data: Any):
+def set_crash_data(key_: Any, data: Any) -> None:
     """Set data to be printed in crash log"""
     _global_crash_data[key_] = data
 
 
-def register_crash_callback(func: Callable, message: str | None = None) -> int:
+def register_crash_callback(func: Callable[[], Any], message: str | None = None) -> int:
     """Register callback to be run if crash is caught.
 
     Args:
@@ -47,7 +50,7 @@ def register_crash_callback(func: Callable, message: str | None = None) -> int:
     return callback_id
 
 
-def unregister_crash_callback(callback_id: int):
+def unregister_crash_callback(callback_id: int) -> None:
     """Unregister a crash callback previously registered with register_crash_callback().
 
     Args:
@@ -58,13 +61,13 @@ def unregister_crash_callback(callback_id: int):
     """
     try:
         del _global_callbacks[callback_id]
-    except KeyError:
-        raise ValueError(f"Invalid callback_id: {callback_id}")
+    except KeyError as err:
+        raise ValueError(f"Invalid callback_id: {callback_id}") from err
 
 
 def crash_reporter(
     filename: str, message: str, title: str, postamble: str, *extra_args: Any
-):
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Create a crash dump file on error named filename
 
     On error, create a crash dump file named filename with exception and stack trace.
@@ -74,9 +77,9 @@ def crash_reporter(
     If extra_args is not None, any additional arguments to the function will be printed to the file.
     """
 
-    def decorated(func):
+    def decorated(func: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(func)
-        def wrapped(*args, **kwargs):
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             try:
                 return func(*args, **kwargs)
             except click.ClickException, click.Abort, click.exceptions.Exit:
@@ -126,7 +129,7 @@ def crash_reporter(
                 print(f"{postamble}", file=sys.stderr)
                 sys.exit(1)
 
-        wrapped.__osxphotos_crash_reporter__ = True
+        wrapped.__osxphotos_crash_reporter__ = True  # type: ignore[attr-defined]  # dynamic marker attribute
         return wrapped
 
     return decorated

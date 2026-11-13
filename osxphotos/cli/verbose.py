@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 from datetime import datetime
-from typing import IO, Any
+from typing import IO, Any, cast
 
 import click
 from rich.console import Console
@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 
-def _reset_verbose_globals():
+def _reset_verbose_globals() -> None:
     """Reset globals for testing"""
     global __verbose_level
     global __verbose_function
@@ -55,11 +55,11 @@ def _reset_verbose_globals():
     _console = _Console()
 
 
-def noop(*args, **kwargs):
+def noop(*args: Any, **kwargs: Any) -> None:
     """no-op function"""
 
 
-def verbose(*args, level: int = 1):
+def verbose(*args: Any, level: int = 1) -> None:
     """Print verbose output
 
     Args:
@@ -76,7 +76,7 @@ def verbose(*args, level: int = 1):
     __verbose_function(*args, level=level)
 
 
-def set_verbose_level(level: int):
+def set_verbose_level(level: int) -> None:
     """Set verbose level"""
     global __verbose_level
     global __verbose_function
@@ -98,15 +98,15 @@ def get_verbose_level() -> int:
 class _Console:
     """Store console object for verbose output"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._console: Console | None = None
 
     @property
-    def console(self):
+    def console(self) -> Console | None:
         return self._console
 
     @console.setter
-    def console(self, console: Console):
+    def console(self, console: Console) -> None:
         self._console = console
 
 
@@ -122,9 +122,11 @@ def get_verbose_console(theme: Theme | None = None) -> Console:
     Returns:
         Console object
     """
-    if _console.console is None:
-        _console.console = Console(force_terminal=True, theme=theme)
-    return _console.console
+    console = _console.console
+    if console is None:
+        console = Console(force_terminal=True, theme=theme)
+        _console.console = console
+    return console
 
 
 def verbose_print(
@@ -133,7 +135,7 @@ def verbose_print(
     rich: bool = True,
     theme: str | None = None,
     highlight: bool = False,
-    file: IO | None = None,
+    file: IO[str] | None = None,
     **kwargs: Any,
 ) -> Callable[..., None]:
     """Configure verbose printing and create verbose function to print output
@@ -178,12 +180,12 @@ def verbose_print(
 
 
 def _verbose_print_function(
-    verbose: bool = True,
+    verbose: int | bool = True,
     timestamp: bool = False,
     rich: bool = False,
     highlight: bool = False,
     theme: Theme | None = None,
-    file: IO | None = None,
+    file: IO[str] | None = None,
     **kwargs: Any,
 ) -> Callable[..., None]:
     """Create verbose function to print output
@@ -211,11 +213,11 @@ def _verbose_print_function(
         return noop
 
     # closure to capture timestamp
-    def verbose_(*args, level: int = 1):
+    def verbose_(*args: Any, level: int = 1) -> None:
         """print output if verbose flag set"""
         if get_verbose_level() < level:
             return
-        styled_args = []
+        styled_args: list[Any] = []
         timestamp_str = f"{datetime.now()!s} -- " if timestamp else ""
         for arg in args:
             if isinstance(arg, str):
@@ -225,9 +227,10 @@ def _verbose_print_function(
                 elif "warning" in arg.lower():
                     arg = click.style(arg, fg=CLI_COLOR_WARNING)
             styled_args.append(arg)
-        click.echo(*styled_args, **kwargs, file=file or None)
+        # callers pass a single message; mypy cannot rule out extra positionals reaching file
+        click.echo(*styled_args, **kwargs, file=file or None)  # type: ignore[misc]
 
-    def rich_verbose_(*args, level: int = 1):
+    def rich_verbose_(*args: Any, level: int = 1) -> None:
         """rich.print output if verbose flag set"""
         if get_verbose_level() < level:
             return
@@ -245,9 +248,10 @@ def _verbose_print_function(
                         arg = f":warning-emoji:  {arg}"
                 arg = timestamp_str + arg
             new_args.append(arg)
-        _console.console.print(*new_args, highlight=highlight, **kwargs)
+        # the console is always set at the top of _verbose_print_function
+        cast(Console, _console.console).print(*new_args, highlight=highlight, **kwargs)
 
-    def rich_verbose_testing_(*args, level: int = 1):
+    def rich_verbose_testing_(*args: Any, level: int = 1) -> None:
         """print output if verbose flag set using rich.print"""
         if get_verbose_level() < level:
             return
@@ -265,7 +269,8 @@ def _verbose_print_function(
                         arg = f":warning-emoji:  {arg}"
                 arg = timestamp_str + arg
             new_args.append(arg)
-        rich_click_echo(*new_args, theme=theme, **kwargs)
+        # callers pass a single message; mypy cannot rule out extra positionals reaching theme
+        rich_click_echo(*new_args, theme=theme, **kwargs)  # type: ignore[misc]
 
     if rich and not OSXPHOTOS_IS_TESTING:
         return rich_verbose_
@@ -275,16 +280,20 @@ def _verbose_print_function(
         return verbose_
 
 
-def config_verbose_callback(ctx: click.Context, param: click.Parameter, value: Any):
+def config_verbose_callback(
+    ctx: click.Context, param: click.Parameter, value: Any
+) -> Any:
     """Callback for --verbose option"""
     # calling verbose_print() will set the verbose level for the verbose() function
     theme = ctx.params.get("theme")
-    timestamp = ctx.params.get("timestamp")
+    timestamp = bool(ctx.params.get("timestamp"))
     verbose_print(verbose=value, timestamp=timestamp, theme=theme)
     return value
 
 
-def config_theme_callback(ctx: click.Context, param: click.Parameter, value: Any):
+def config_theme_callback(
+    ctx: click.Context, param: click.Parameter, value: Any
+) -> Any:
     """Callback for --theme option"""
     # calling verbose_print() will set the verbose level for the verbose() function
     # if --verbose is passed after --theme, this callback won't have access it to
@@ -292,12 +301,14 @@ def config_theme_callback(ctx: click.Context, param: click.Parameter, value: Any
     # set to zero and if --verbose is passed, it will be set correctly by the
     # config_verbose_callback (#1186)
     verbose = ctx.params.get("verbose_option") or get_verbose_level()
-    timestamp = ctx.params.get("timestamp")
+    timestamp = bool(ctx.params.get("timestamp"))
     verbose_print(verbose=verbose, timestamp=timestamp, theme=value)
     return value
 
 
-def config_timestamp_callback(ctx: click.Context, param: click.Parameter, value: Any):
+def config_timestamp_callback(
+    ctx: click.Context, param: click.Parameter, value: Any
+) -> Any:
     """Callback for --timestamp option"""
     # calling verbose_print() will set the verbose level for the verbose() function
     # if --verbose is passed after --timestamp, this callback won't have access it to

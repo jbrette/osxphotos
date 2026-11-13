@@ -24,12 +24,12 @@ def photosdb_nocloud():
 
 
 def test_album_owner_cloud(photosdb_cloud):
-    album = [a for a in photosdb_cloud.album_info_shared if a.title == "osxphotos"][0]
+    album = next(a for a in photosdb_cloud.album_info_shared if a.title == "osxphotos")
     assert album.owner == "Rhet Turnbull"
 
 
 def test_album_owner_not_cloud(photosdb_nocloud):
-    album = [a for a in photosdb_nocloud.album_info if a.title == "Test Album"][0]
+    album = next(a for a in photosdb_nocloud.album_info if a.title == "Test Album")
     assert album.owner is None
 
 

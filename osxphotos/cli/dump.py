@@ -1,5 +1,7 @@
 """dump command for osxphotos CLI"""
 
+from typing import Any
+
 import click
 
 import osxphotos
@@ -9,12 +11,11 @@ from osxphotos.cli.click_rich_echo import (
     set_rich_theme,
 )
 from osxphotos.cli.template_utils import suggest_template_fields
-from osxphotos.iphoto import is_iphoto_library
-from osxphotos.photoquery import QueryOptions
+from osxphotos.iphoto import iPhotoPhotoInfo, is_iphoto_library
+from osxphotos.photoinfo import PhotoInfo
 from osxphotos.phototemplate import RenderOptions
 
 from .cli_params import (
-    DB_ARGUMENT,
     DB_OPTION,
     DELETED_OPTIONS,
     FIELD_OPTION,
@@ -47,15 +48,15 @@ from .verbose import get_verbose_console
 @click.pass_obj
 @click.pass_context
 def dump(
-    ctx,
-    cli_obj,
-    db,
-    deleted,
-    deleted_only,
-    field,
-    json_,
-    print_template,
-):
+    ctx: click.Context,
+    cli_obj: Any,
+    db: str | None,
+    deleted: bool,
+    deleted_only: bool,
+    field: tuple[tuple[str, str], ...],
+    json_: bool,
+    print_template: tuple[str, ...],
+) -> None:
     """Print list of all photos & associated info from the Photos library.
 
     NOTE: dump is DEPRECATED and will be removed in a future release.
@@ -88,12 +89,11 @@ def dump(
         if is_iphoto_library(db)
         else osxphotos.PhotosDB(dbfile=db)
     )
+    photos: list[PhotoInfo | iPhotoPhotoInfo] = []
     if deleted or deleted_only:
-        photos = photosdb.photos(movies=True, intrash=True)
-    else:
-        photos = []
+        photos.extend(photosdb.photos(movies=True, intrash=True))
     if not deleted_only:
-        photos += photosdb.photos(movies=True)
+        photos.extend(photosdb.photos(movies=True))
 
     if not print_template and not field:
         # just dump and be done

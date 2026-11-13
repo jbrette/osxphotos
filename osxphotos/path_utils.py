@@ -11,6 +11,8 @@ sanitization functions and rely on them being called every time a unique
 filename is needed.
 """
 
+import pathlib
+
 import pathvalidate
 
 from osxphotos.unicode import normalize_unicode
@@ -26,17 +28,19 @@ __all__ = [
 ]
 
 
-def sanitize_filepath(filepath):
+def sanitize_filepath[PathT: (str, pathlib.Path)](filepath: PathT) -> PathT:
     """sanitize a filepath"""
     return pathvalidate.sanitize_filepath(filepath, platform="macos")
 
 
-def is_valid_filepath(filepath):
+def is_valid_filepath[PathT: (str, pathlib.Path)](filepath: PathT) -> bool:
     """returns True if a filepath is valid otherwise False"""
     return pathvalidate.is_valid_filepath(filepath, platform="macos")
 
 
-def sanitize_filename(filename, replacement=":"):
+def sanitize_filename[NameT: (str, None)](
+    filename: NameT, replacement: str = ":"
+) -> NameT:
     """replace any illegal characters in a filename, truncate filename if needed and normalize Unicode to NFC form
 
     Args:
@@ -67,7 +71,9 @@ def sanitize_filename(filename, replacement=":"):
     return filename
 
 
-def sanitize_dirname(dirname, replacement=":"):
+def sanitize_dirname[NameT: (str, None)](
+    dirname: NameT, replacement: str | None = ":"
+) -> NameT:
     """replace any illegal characters in a directory name, truncate directory name if needed, and normalize Unicode to NFC form
 
     Args:
@@ -82,7 +88,9 @@ def sanitize_dirname(dirname, replacement=":"):
     return dirname
 
 
-def sanitize_pathpart(pathpart, replacement=":"):
+def sanitize_pathpart[NameT: (str, None)](
+    pathpart: NameT, replacement: str | None = ":"
+) -> NameT:
     """replace any illegal characters in a path part (either directory or filename without extension), truncate name if needed, and normalize Unicode to NFC form
 
     Args:

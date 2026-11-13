@@ -119,7 +119,7 @@ def time_string_to_datetime(time: str) -> datetime.time:
     for dt_format in time_formats:
         try:
             parsed_dt = datetime.datetime.strptime(time, dt_format).time()
-        except ValueError as e:
+        except ValueError:
             pass
         else:
             return parsed_dt
@@ -138,6 +138,8 @@ def get_local_utc_offset_str(dt: datetime.datetime | str) -> str:
     local_tz = get_local_tz(dt)
 
     offset = local_tz.utcoffset(dt)
+    if offset is None:
+        raise ValueError(f"Could not determine UTC offset for {dt}")
     total_minutes = offset.total_seconds() / 60
     hours, minutes = divmod(abs(int(total_minutes)), 60)
 
@@ -196,7 +198,7 @@ def timezone_for_offset(offset: str, dt: datetime.datetime) -> str:
         raise ValueError("No matching named timezone found.") from e
 
 
-def timezone_for_delta_seconds(delta: int, dt: datetime.datetime):
+def timezone_for_delta_seconds(delta: int, dt: datetime.datetime) -> str:
     """Given a offset delta from UTC in seconds find the named timezone with the same UTC offset
 
     Args:

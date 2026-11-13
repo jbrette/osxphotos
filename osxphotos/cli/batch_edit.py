@@ -7,6 +7,7 @@ from __future__ import annotations
 import functools
 import json
 import sys
+from collections.abc import Sequence
 from typing import Any
 
 import click
@@ -26,13 +27,11 @@ from .cli_params import (
     THEME_OPTION,
     VERBOSE_OPTIONS,
 )
-from .param_types import PathOrStdin
-from .timewarp import unique_photos
 
 assert_macos()
 
 import photoscript
-from photoscript import Photo, PhotosLibrary
+from photoscript import PhotosLibrary
 
 from osxphotos.photosalbum import PhotosAlbumPhotoScript
 
@@ -133,7 +132,7 @@ def batch_edit(
     undo: bool,
     db: str | None,
     **kwargs: Any,
-):
+) -> None:
     """
     Batch edit photo metadata such as title, description, keywords, etc.
     Operates on currently selected photos.
@@ -183,13 +182,13 @@ def batch_edit(
         )
     except ValueError as e:
         echo_error(f"[error] {e} Use --help for more information.")
-        raise click.Abort()
+        raise click.Abort() from e
 
     photos = get_photos_for_processing(db=db, **kwargs)
     if not photos:
         # need this check here to avoid photosdb.photos() from retrieving all photos
         echo_error(
-            f"[error] No photos found to process. Select photos in the Photos app or use the one of the query options."
+            "[error] No photos found to process. Select photos in the Photos app or use the one of the query options."
         )
         raise click.Abort()
 
@@ -227,7 +226,7 @@ def validate_options(
     add_to_album: tuple[str, ...],
     split_folder: str | None,
     undo: bool,
-):
+) -> None:
     """Validate options; raises ValueError if options are invalid"""
     if not any(
         [
@@ -267,14 +266,14 @@ def photoscript_photo(photo: osxphotos.PhotoInfo) -> photoscript.Photo:
     return photoscript.Photo(photo.uuid)
 
 
-def save_photo_undo_info(undo_store: SQLiteKVStore, photo: osxphotos.PhotoInfo):
+def save_photo_undo_info(undo_store: SQLiteKVStore, photo: osxphotos.PhotoInfo) -> None:
     """Save undo information to undo store"""
     undo_store[photo.uuid] = photo.json()
 
 
 def undo_photo_edits(
     photo: osxphotos.PhotoInfo, undo_store: SQLiteKVStore, dry_run: bool
-):
+) -> None:
     """Undo edits for photo"""
     if not (undo_info := undo_store.get(photo.uuid)):
         verbose(
@@ -315,8 +314,8 @@ def undo_photo_edits(
 
 
 def set_photo_title_from_template(
-    photo: osxphotos.PhotoInfo, title_template: str, dry_run: bool
-):
+    photo: osxphotos.PhotoInfo, title_template: str | None, dry_run: bool
+) -> None:
     """Set photo title from template"""
     if not title_template:
         return
@@ -345,8 +344,8 @@ def set_photo_title_from_template(
 
 
 def set_photo_description_from_template(
-    photo: osxphotos.PhotoInfo, description_template: str, dry_run: bool
-):
+    photo: osxphotos.PhotoInfo, description_template: str | None, dry_run: bool
+) -> None:
     """Set photo description from template"""
     if not description_template:
         return
@@ -376,10 +375,10 @@ def set_photo_description_from_template(
 
 def set_photo_keywords_from_template(
     photo: osxphotos.PhotoInfo,
-    keyword_template: list[str],
+    keyword_template: Sequence[str],
     replace_keywords: bool,
     dry_run: bool,
-):
+) -> None:
     """Set photo keywords from template"""
     if not keyword_template:
         return
@@ -387,7 +386,7 @@ def set_photo_keywords_from_template(
     # don't render None values
     render_options = RenderOptions(none_str="")
 
-    keywords = set()
+    keywords: set[str] = set()
     for kw in keyword_template:
         kw_string, _ = photo.render_template(kw, render_options)
         if kw_string:
@@ -413,7 +412,7 @@ def set_photo_keywords_from_template(
 
 def set_photo_location(
     photo: osxphotos.PhotoInfo, location: tuple[float, float], dry_run: bool
-):
+) -> None:
     """Set photo location"""
     if not location or location[0] is None or location[1] is None:
         return
@@ -429,12 +428,12 @@ def set_photo_location(
 
 def set_photo_favorite(
     photo: osxphotos.PhotoInfo, set_favorite: bool, clear_favorite: bool, dry_run: bool
-):
+) -> None:
     """Set or clear photo favorite status"""
     if set_favorite:
-        verbose(f"Setting [i]favorite[/] flag")
+        verbose("Setting [i]favorite[/] flag")
     if clear_favorite:
-        verbose(f"Clearing [i]favorite[/] flag")
+        verbose("Clearing [i]favorite[/] flag")
 
     if not dry_run:
         ps_photo = photoscript_photo(photo)
@@ -449,12 +448,12 @@ def set_photo_albums_from_template(
     album: tuple[str, ...],
     split_folder: str | None,
     dry_run: bool,
-):
+) -> None:
     """Add photo to album(s) based on album template"""
     if not album:
         return
 
-    albums = []
+    albums: list[str] = []
     for a in album:
         albums.extend(render_album_template(photo, a))
     verbose(
@@ -475,7 +474,7 @@ def set_photo_albums_from_template(
 def render_album_template(
     photo: osxphotos.PhotoInfo,
     album_template: str,
-):
+) -> list[str]:
     """Render template string for a photo"""
     options = RenderOptions(none_str=_OSXPHOTOS_NONE_SENTINEL, caller="batch_edit")
     template_values, _ = photo.render_template(album_template, options=options)
@@ -487,7 +486,7 @@ def render_album_template(
 
 
 def get_photos_for_processing(
-    db: str | None = None, **kwargs
+    db: str | None = None, **kwargs: Any
 ) -> list[osxphotos.PhotoInfo]:
     """Get photos for processing from query options or selection.
 
@@ -524,7 +523,7 @@ def get_photos_for_processing(
             echo_error(
                 f"[error]Could not get selected photos. Ensure Photos is open and photos to process are selected. {e}[/]",
             )
-        raise click.Abort()
+        raise click.Abort() from e
 
     if not photo_sel:
         return []

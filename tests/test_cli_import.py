@@ -13,7 +13,6 @@ import pathlib
 import re
 import shutil
 import sqlite3
-import sys
 import unicodedata
 from tempfile import TemporaryDirectory
 from zoneinfo import ZoneInfo
@@ -23,8 +22,8 @@ from click.testing import CliRunner
 from pytest import MonkeyPatch, approx
 
 from osxphotos import PhotosDB, QueryOptions
-from osxphotos._constants import OSXPHOTOS_EXPORT_DB, UUID_PATTERN
-from osxphotos.datetime_utils import datetime_remove_tz, get_local_tz
+from osxphotos._constants import UUID_PATTERN
+from osxphotos.datetime_utils import datetime_remove_tz
 from osxphotos.exiftool import get_exiftool_path
 from osxphotos.platform import is_macos
 
@@ -1008,7 +1007,6 @@ def test_import_favorite_rating():
 def test_import_glob():
     """Test import with --glob"""
     cwd = os.getcwd()
-    test_image_1 = os.path.join(cwd, TEST_IMAGE_1)
     runner = CliRunner()
     result = runner.invoke(
         import_main,
@@ -1024,7 +1022,6 @@ def test_import_glob():
 def test_import_glob_walk():
     """Test import with --walk --glob"""
     cwd = os.getcwd()
-    test_image_1 = os.path.join(cwd, TEST_IMAGE_1)
     runner = CliRunner()
     result = runner.invoke(
         import_main,
@@ -1144,7 +1141,7 @@ def test_import_report():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.csv")
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -1161,7 +1158,7 @@ def test_import_report():
             ],
         )
         assert result.exit_code == 0
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -1179,7 +1176,7 @@ def test_import_report():
             ],
         )
         assert result.exit_code == 0
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -1211,7 +1208,7 @@ def test_import_report_append():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             records = json.load(f)
         assert records[0]["filename"] == pathlib.Path(TEST_IMAGE_1).name
 
@@ -1237,7 +1234,7 @@ def test_import_report_json():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert filenames == [pathlib.Path(TEST_IMAGE_1).name]
@@ -1255,7 +1252,7 @@ def test_import_report_json():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert filenames == [pathlib.Path(TEST_IMAGE_1).name]
@@ -1274,7 +1271,7 @@ def test_import_report_json():
         assert result.exit_code == 0
         assert "Wrote import report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert filenames == [
@@ -2208,7 +2205,6 @@ def test_import_exportdb_sidecar_sidecar_ignore_date(tmp_path):
 @pytest.mark.test_import
 def test_import_aae(tmp_path):
     """Test import with aae files; test that invalid AAE are ignored during import"""
-    cwd = os.getcwd()
     shutil.copy(TEST_IMAGE_VALID_AAE, os.path.join(tmp_path, "valid_aae.jpg"))
     shutil.copy(TEST_AAE_VALID_AAE, os.path.join(tmp_path, "valid_aae.aae"))
     shutil.copy(TEST_IMAGE_INVALID_AAE, os.path.join(tmp_path, "invalid_aae.jpg"))

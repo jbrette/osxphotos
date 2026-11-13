@@ -12,7 +12,7 @@ import click
 import photoscript
 
 import osxphotos
-from osxphotos.cli import echo, query_command, verbose
+from osxphotos.cli import echo, query_command
 
 
 @query_command

@@ -28,7 +28,6 @@ from osxphotos.cli import (
     albums,
     cli_main,
     export,
-    exportdb,
     keywords,
     labels,
     persons,
@@ -1216,7 +1215,7 @@ def reset_globals():
 # determine if exiftool installed so exiftool tests can be skipped
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 
@@ -1299,7 +1298,6 @@ def test_about():
     """Test about"""
 
     runner = CliRunner()
-    cwd = os.getcwd()
     result = runner.invoke(about, [])
     assert result.exit_code == 0
     assert "MIT License" in result.output
@@ -1774,7 +1772,7 @@ def test_export_alt_db():
         )
         assert result.exit_code == 0
         files = glob.glob("*")
-        assert sorted(files) == sorted(CLI_EXPORT_FILENAMES + ["database"])
+        assert sorted(files) == sorted([*CLI_EXPORT_FILENAMES, "database"])
 
 
 def test_export_no_exportdb():
@@ -2265,7 +2263,7 @@ def test_export_using_hardlinks_incompat_options():
     runner = CliRunner()
     cwd = os.getcwd()
     photosdb = osxphotos.PhotosDB(dbfile=CLI_PHOTOS_DB)
-    photo = photosdb.photos(uuid=[CLI_EXPORT_UUID])[0]
+    photosdb.photos(uuid=[CLI_EXPORT_UUID])[0]
 
     # pylint: disable=not-context-manager
     with isolated_filesystem_here():
@@ -2401,7 +2399,7 @@ def test_export_exiftool():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL:
+        for uuid, value in CLI_EXIFTOOL.items():
             result = runner.invoke(
                 export,
                 [
@@ -2416,14 +2414,14 @@ def test_export_exiftool():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert sorted(files) == sorted([CLI_EXIFTOOL[uuid]["File:FileName"]])
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL[uuid]:
-                if type(exif[key]) == list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
+                if type(exif[key]) is list:
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL[uuid][key]
+                    assert exif[key] == value[key]
             assert (
                 "XMP:Rating" not in exif
             )  # non-iPhoto library doesn't have rating, #1353
@@ -2489,7 +2487,7 @@ def test_export_exiftool_tmpdir():
     tmpdir = TemporaryDirectory()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL:
+        for uuid, value in CLI_EXIFTOOL.items():
             result = runner.invoke(
                 export,
                 [
@@ -2506,14 +2504,14 @@ def test_export_exiftool_tmpdir():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert sorted(files) == sorted([CLI_EXIFTOOL[uuid]["File:FileName"]])
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL[uuid]:
-                if type(exif[key]) == list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
+                if type(exif[key]) is list:
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2605,7 +2603,7 @@ def test_export_exiftool_path():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL:
+        for uuid, value in CLI_EXIFTOOL.items():
             result = runner.invoke(
                 export,
                 [
@@ -2623,21 +2621,21 @@ def test_export_exiftool_path():
             assert result.exit_code == 0
             assert f"exiftool path: {exiftool}" in result.output
             files = glob.glob("*")
-            assert sorted(files) == sorted([CLI_EXIFTOOL[uuid]["File:FileName"]])
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL[uuid]:
-                if type(exif[key]) == list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
+                if type(exif[key]) is list:
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
 def test_export_exiftool_path_render_template():
     """test --exiftool-path with {exiftool:} template rendering"""
 
-    exiftool_source = osxphotos.exiftool.get_exiftool_path()
+    osxphotos.exiftool.get_exiftool_path()
 
     # monkey patch get_exiftool_path so it returns None
     get_exiftool_path = osxphotos.exiftool.get_exiftool_path
@@ -2675,7 +2673,7 @@ def test_export_exiftool_ignore_date_modified():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_IGNORE_DATE_MODIFIED:
+        for uuid, value in CLI_EXIFTOOL_IGNORE_DATE_MODIFIED.items():
             result = runner.invoke(
                 export,
                 [
@@ -2691,16 +2689,12 @@ def test_export_exiftool_ignore_date_modified():
             )
             assert result.exit_code == 0
 
-            exif = ExifTool(
-                CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid]["File:FileName"]
-            ).asdict()
-            for key in CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid]:
-                if type(exif[key]) == list:
-                    assert sorted(exif[key]) == sorted(
-                        CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid][key]
-                    )
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
+                if type(exif[key]) is list:
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2711,7 +2705,7 @@ def test_export_exiftool_quicktime():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_QUICKTIME:
+        for uuid, value in CLI_EXIFTOOL_QUICKTIME.items():
             result = runner.invoke(
                 export,
                 [
@@ -2727,13 +2721,11 @@ def test_export_exiftool_quicktime():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert sorted(files) == sorted(
-                [CLI_EXIFTOOL_QUICKTIME[uuid]["File:FileName"]]
-            )
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL_QUICKTIME[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL_QUICKTIME[uuid]:
-                assert exif[key] == CLI_EXIFTOOL_QUICKTIME[uuid][key]
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
+                assert exif[key] == value[key]
 
             # clean up exported files to avoid name conflicts
             for filename in files:
@@ -2748,8 +2740,8 @@ def test_export_exiftool_duplicate_keywords():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_DUPLICATE_KEYWORDS:
-            result = runner.invoke(
+        for uuid, value in CLI_EXIFTOOL_DUPLICATE_KEYWORDS.items():
+            runner.invoke(
                 export,
                 [
                     "--library",
@@ -2761,7 +2753,7 @@ def test_export_exiftool_duplicate_keywords():
                     f"{uuid}",
                 ],
             )
-            exif = ExifTool(CLI_EXIFTOOL_DUPLICATE_KEYWORDS[uuid])
+            exif = ExifTool(value)
             exifdict = exif.asdict()
             assert sorted(exifdict["IPTC:Keywords"]) == ["Maria", "wedding"]
             assert sorted(exifdict["XMP:Subject"]) == ["Maria", "wedding"]
@@ -2775,7 +2767,7 @@ def test_export_exiftool_error():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL:
+        for uuid, value in CLI_EXIFTOOL.items():
             result = runner.invoke(
                 export,
                 [
@@ -2790,14 +2782,14 @@ def test_export_exiftool_error():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert sorted(files) == sorted([CLI_EXIFTOOL[uuid]["File:FileName"]])
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL[uuid]:
-                if type(exif[key]) == list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
+                if type(exif[key]) is list:
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2843,7 +2835,7 @@ def test_export_exiftool_merge():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_MERGE:
+        for uuid, value in CLI_EXIFTOOL_MERGE.items():
             result = runner.invoke(
                 export,
                 [
@@ -2861,14 +2853,14 @@ def test_export_exiftool_merge():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert CLI_EXIFTOOL_MERGE[uuid]["File:FileName"] in files
+            assert value["File:FileName"] in files
 
-            exif = ExifTool(CLI_EXIFTOOL_MERGE[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL_MERGE[uuid]:
-                if type(exif[key]) == list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL_MERGE[uuid][key])
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
+                if type(exif[key]) is list:
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL_MERGE[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2879,7 +2871,7 @@ def test_export_exiftool_merge_sidecar():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_MERGE:
+        for uuid, value in CLI_EXIFTOOL_MERGE.items():
             result = runner.invoke(
                 export,
                 [
@@ -2898,24 +2890,20 @@ def test_export_exiftool_merge_sidecar():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            json_file = f"{CLI_EXIFTOOL_MERGE[uuid]['File:FileName']}.json"
+            json_file = f"{value['File:FileName']}.json"
             assert json_file in files
 
-            with open(json_file, "r") as fp:
+            with open(json_file) as fp:
                 exif = json.load(fp)[0]
 
-            for key in CLI_EXIFTOOL_MERGE[uuid]:
+            for key in value:
                 if key == "File:FileName":
                     continue
-                if type(exif[key]) == list:
-                    expected = (
-                        CLI_EXIFTOOL_MERGE[uuid][key]
-                        if type(CLI_EXIFTOOL_MERGE[uuid][key]) == list
-                        else [CLI_EXIFTOOL_MERGE[uuid][key]]
-                    )
+                if type(exif[key]) is list:
+                    expected = value[key] if type(value[key]) is list else [value[key]]
                     assert sorted(exif[key]) == sorted(expected)
                 else:
-                    assert exif[key] == CLI_EXIFTOOL_MERGE[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -4164,7 +4152,7 @@ def test_export_sidecar():
         assert sorted(files) == sorted(CLI_EXPORT_SIDECAR_FILENAMES)
 
         # testing that rating isn't included for non iPhoto libraries
-        with open(CLI_EXPORT_SIDECAR_XMP, "r") as fp:
+        with open(CLI_EXPORT_SIDECAR_XMP) as fp:
             xmp = fp.read()
         assert "<xmp:Rating>" not in xmp
 
@@ -4189,7 +4177,7 @@ def test_export_sidecar_iphoto():
             ],
         )
         assert result.exit_code == 0
-        with open("wedding.jpg.xmp", "r") as fp:
+        with open("wedding.jpg.xmp") as fp:
             xmp = fp.read()
         assert "<xmp:Rating>5</xmp:Rating>" in xmp
 
@@ -4346,7 +4334,7 @@ def test_export_sidecar_templates():
         )
         assert result.exit_code == 0
         assert os.path.isfile(CLI_TEMPLATE_SIDECAR_FILENAME)
-        with open(CLI_TEMPLATE_SIDECAR_FILENAME, "r") as jsonfile:
+        with open(CLI_TEMPLATE_SIDECAR_FILENAME) as jsonfile:
             exifdata = json.load(jsonfile)
         # order of multi-value templates is indeterminate so verify substrings instead of equality
         for tag in ["XMP:Description", "EXIF:ImageDescription"]:
@@ -4388,7 +4376,7 @@ def test_export_sidecar_templates_exiftool():
         )
         assert result.exit_code == 0
         assert os.path.isfile(CLI_TEMPLATE_SIDECAR_FILENAME)
-        with open(CLI_TEMPLATE_SIDECAR_FILENAME, "r") as jsonfile:
+        with open(CLI_TEMPLATE_SIDECAR_FILENAME) as jsonfile:
             exifdata = json.load(jsonfile)
         # order of multi-value templates is indeterminate so verify substrings instead of equality
         for tag in ["Description", "ImageDescription"]:
@@ -4593,7 +4581,7 @@ def test_export_live():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             ["--library", os.path.join(cwd, LIVE_PHOTOS_DB), ".", "--live", "-V"],
         )
@@ -4606,7 +4594,7 @@ def test_export_skip_live():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             ["--library", os.path.join(cwd, LIVE_PHOTOS_DB), ".", "--skip-live", "-V"],
         )
@@ -4619,7 +4607,7 @@ def test_export_raw():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             [
                 "--library",
@@ -4653,7 +4641,7 @@ def test_export_raw_original():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             ["--library", os.path.join(cwd, RAW_PHOTOS_DB), ".", "--skip-edited", "-V"],
         )
@@ -4666,7 +4654,7 @@ def test_export_raw_edited():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             [
                 "--library",
@@ -4685,7 +4673,7 @@ def test_export_raw_edited_original():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export, ["--library", os.path.join(cwd, RAW_PHOTOS_DB), ".", "-V"]
         )
         files = glob.glob("*")
@@ -5002,7 +4990,7 @@ def test_export_filename_template_long_description():
             ],
         )
         assert result.exit_code == 0
-        files = glob.glob("*.*")
+        glob.glob("*.*")
         for fname in CLI_EXPORTED_FILENAME_TEMPLATE_LONG_DESCRIPTION:
             assert pathlib.Path(fname).is_file()
 
@@ -5259,7 +5247,7 @@ def test_export_exif(exiftag, exifvalue, files_expected):
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        result = runner.invoke(
+        runner.invoke(
             export,
             [
                 "--library",
@@ -5652,7 +5640,7 @@ def test_export_sidecar_keyword_template():
             """
         )[0]
 
-        with open("Pumkins2.jpg.json", "r") as json_file:
+        with open("Pumkins2.jpg.json") as json_file:
             json_got = json.load(json_file)[0]
 
         # some gymnastics to account for different sort order in different pythons
@@ -5739,7 +5727,7 @@ def test_export_force_update():
         try:
             conn = sqlite3.connect(dbpath)
             c = conn.cursor()
-        except sqlite3.Error as e:
+        except sqlite3.Error:
             pytest.exit("An error occurred opening sqlite file")
 
         # photo is IMG_4547.jpg
@@ -5849,8 +5837,8 @@ def test_export_update_complex():
         try:
             conn = sqlite3.connect(dbpath)
             c = conn.cursor()
-        except sqlite3.Error as e:
-            pytest.exit(f"An error occurred opening sqlite file")
+        except sqlite3.Error:
+            pytest.exit("An error occurred opening sqlite file")
 
         # photo is IMG_4547.jpg
         c.execute(
@@ -6530,7 +6518,9 @@ def test_export_touch_files():
 
         assert f"touched date: {touched_files}" in result.output
 
-        for fname, mtime in zip(CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES):
+        for fname, mtime in zip(
+            CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES, strict=True
+        ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
 
@@ -6627,7 +6617,9 @@ def test_export_touch_files_update():
         assert f"touched date: {touched_files}" in result.output
 
         for fname, mtime in zip(
-            CLI_EXPORT_BY_DATE_NEED_TOUCH, CLI_EXPORT_BY_DATE_NEED_TOUCH_TIMES
+            CLI_EXPORT_BY_DATE_NEED_TOUCH,
+            CLI_EXPORT_BY_DATE_NEED_TOUCH_TIMES,
+            strict=True,
         ):
             st = os.stat(fname)
             assert int(st.st_mtime) != int(mtime)
@@ -6652,7 +6644,9 @@ def test_export_touch_files_update():
         assert f"touched date: {touched_files}" in result.output
 
         for fname, mtime in zip(
-            CLI_EXPORT_BY_DATE_NEED_TOUCH, CLI_EXPORT_BY_DATE_NEED_TOUCH_TIMES
+            CLI_EXPORT_BY_DATE_NEED_TOUCH,
+            CLI_EXPORT_BY_DATE_NEED_TOUCH_TIMES,
+            strict=True,
         ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
@@ -6679,7 +6673,9 @@ def test_export_touch_files_update():
         )
         assert "touched date: 1" in result.output
 
-        for fname, mtime in zip(CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES):
+        for fname, mtime in zip(
+            CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES, strict=True
+        ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
 
@@ -6822,7 +6818,9 @@ def test_export_touch_files_exiftool_update():
         assert "skipped: 19" in result.output
         assert "touched date: 18" in result.output
 
-        for fname, mtime in zip(CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES):
+        for fname, mtime in zip(
+            CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES, strict=True
+        ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
 
@@ -6847,7 +6845,9 @@ def test_export_touch_files_exiftool_update():
         assert "updated EXIF data: 1" in result.output
         assert "touched date: 1" in result.output
 
-        for fname, mtime in zip(CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES):
+        for fname, mtime in zip(
+            CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES, strict=True
+        ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
 
@@ -7159,7 +7159,7 @@ def test_export_report():
         assert result.exit_code == 0
         assert "Wrote export report" in result.output
         assert os.path.exists("report.csv")
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -7181,7 +7181,7 @@ def test_export_report():
             ],
         )
         assert result.exit_code == 0
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -7205,7 +7205,7 @@ def test_export_report():
             ],
         )
         assert result.exit_code == 0
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -7240,7 +7240,7 @@ def test_export_report_append_new():
         assert result.exit_code == 0
         assert "Wrote export report" in result.output
         assert os.path.exists("report.csv")
-        with open("report.csv", "r") as f:
+        with open("report.csv") as f:
             reader = csv.DictReader(f)
             rows = list(reader)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
@@ -7272,7 +7272,7 @@ def test_export_report_json():
         assert result.exit_code == 0
         assert "Wrote export report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert sorted(filenames) == sorted(UUID_REPORT[0]["filenames"])
@@ -7293,7 +7293,7 @@ def test_export_report_json():
             ],
         )
         assert result.exit_code == 0
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert sorted(filenames) == sorted(UUID_REPORT[1]["filenames"])
@@ -7316,7 +7316,7 @@ def test_export_report_json():
             ],
         )
         assert result.exit_code == 0
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert sorted(filenames) == sorted(
@@ -7350,7 +7350,7 @@ def test_export_report_json_append():
         assert result.exit_code == 0
         assert "Wrote export report" in result.output
         assert os.path.exists("report.json")
-        with open("report.json", "r") as f:
+        with open("report.json") as f:
             rows = json.load(f)
         filenames = [str(pathlib.Path(row["filename"]).name) for row in rows]
         assert sorted(filenames) == sorted(UUID_REPORT[0]["filenames"])
@@ -7927,7 +7927,6 @@ def test_export_cleanup_keep_leading_slash():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        tmpdir = os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -7962,11 +7961,11 @@ def test_export_cleanup_keep_leading_slash():
                 "--update",
                 "--cleanup",
                 "--keep",
-                f"/keep_me/",
+                "/keep_me/",
                 "--keep",
-                f"/keep_me.txt",
+                "/keep_me.txt",
                 "--keep",
-                f"/*.db",
+                "/*.db",
                 "--dry-run",
             ],
         )
@@ -7986,11 +7985,11 @@ def test_export_cleanup_keep_leading_slash():
                 "--update",
                 "--cleanup",
                 "--keep",
-                f"/keep_me/",
+                "/keep_me/",
                 "--keep",
-                f"/keep_me.txt",
+                "/keep_me.txt",
                 "--keep",
-                f"/*.db",
+                "/*.db",
             ],
         )
         assert "Deleted: 2 files, 2 directories" in result.output
@@ -8103,7 +8102,6 @@ def test_export_cleanup_osxphotos_keep():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        tmpdir = os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -8180,7 +8178,6 @@ def test_export_cleanup_osxphotos_keep_keep():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        tmpdir = os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -8924,7 +8921,7 @@ def test_export_finder_tag_keywords():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -8947,7 +8944,7 @@ def test_export_finder_tag_keywords():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -8972,7 +8969,7 @@ def test_export_finder_tag_keywords():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9004,7 +9001,7 @@ def test_export_finder_tag_template():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9028,7 +9025,7 @@ def test_export_finder_tag_template():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9054,7 +9051,7 @@ def test_export_finder_tag_template():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9088,9 +9085,9 @@ def test_export_finder_tag_template_multiple():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             persons = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            persons = [persons] if type(persons) != list else persons
+            persons = [persons] if type(persons) is not list else persons
             expected = [Tag(x, 0) for x in set(keywords + persons)]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9123,9 +9120,9 @@ def test_export_finder_tag_template_keywords():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             persons = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            persons = [persons] if type(persons) != list else persons
+            persons = [persons] if type(persons) is not list else persons
             expected = [Tag(x, 0) for x in set(keywords + persons)]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9174,7 +9171,6 @@ def test_export_xattr_template_dry_run():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        test_dir = os.getcwd()
         for uuid in CLI_FINDER_TAGS:
             result = runner.invoke(
                 export,
@@ -9580,7 +9576,7 @@ def test_export_burst_uuid(local_photosdb: osxphotos.PhotosDB):
                 ],
             )
             assert result.exit_code == 0
-            assert f"exported: 1" in result.output
+            assert "exported: 1" in result.output
 
 
 @pytest.mark.skipif(
@@ -10312,7 +10308,7 @@ def test_export_export_dir_template():
         )
         assert result.exit_code == 0
         assert os.path.isfile(CLI_TEMPLATE_SIDECAR_FILENAME)
-        with open(CLI_TEMPLATE_SIDECAR_FILENAME, "r") as jsonfile:
+        with open(CLI_TEMPLATE_SIDECAR_FILENAME) as jsonfile:
             exifdata = json.load(jsonfile)
         assert exifdata[0]["XMP:Description"] == isolated_cwd
 
@@ -10343,7 +10339,7 @@ def test_export_filepath_template():
         )
         assert result.exit_code == 0
         assert os.path.isfile(CLI_TEMPLATE_SIDECAR_FILENAME)
-        with open(CLI_TEMPLATE_SIDECAR_FILENAME, "r") as jsonfile:
+        with open(CLI_TEMPLATE_SIDECAR_FILENAME) as jsonfile:
             exifdata = json.load(jsonfile)
         assert exifdata[0]["XMP:Description"] == os.path.join(
             isolated_cwd, CLI_TEMPLATE_FILENAME
@@ -10834,7 +10830,7 @@ def test_export_description_template_conditional():
             ],
         )
         assert result.exit_code == 0
-        with open(f"{FILENAME_EMPTY_TITLE}.json", "r") as fp:
+        with open(f"{FILENAME_EMPTY_TITLE}.json") as fp:
             json_got = json.load(fp)[0]
             assert (
                 json_got["EXIF:ImageDescription"] == DESCRIPTION_VALUE_TITLE_CONDITIONAL

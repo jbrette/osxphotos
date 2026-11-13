@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+from typing import cast
 
 from .platform import assert_macos
 
@@ -34,7 +35,7 @@ bundle = objc.loadBundle(
 CPLResourceIdentity = bundle.classNamed_("CPLResourceIdentity")
 
 
-def fingerprint(filepath: str | pathlib.Path | os.PathLike) -> str:
+def fingerprint(filepath: str | pathlib.Path | os.PathLike[str]) -> str:
     """Compute fingerprint of a file using the same algorithm as Photos.app
 
     Args:
@@ -60,9 +61,14 @@ def fingerprint(filepath: str | pathlib.Path | os.PathLike) -> str:
         # so try both, starting with the current version
         try:
             # this works on Ventura but not Catalina
-            return CPLResourceIdentity.fingerPrintForFileAtURL_error_(url, None)
+            return cast(
+                str, CPLResourceIdentity.fingerPrintForFileAtURL_error_(url, None)
+            )
         except AttributeError:
             # this works on Catalina
-            return CPLResourceIdentity.fingerPrintForFileAtURL_typeIdentifier_error_(
-                url, None, None
+            return cast(
+                str,
+                CPLResourceIdentity.fingerPrintForFileAtURL_typeIdentifier_error_(
+                    url, None, None
+                ),
             )

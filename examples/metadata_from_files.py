@@ -16,7 +16,6 @@ from osxphotos.cli.batch_edit import photoscript_photo
 from osxphotos.cli.cli_params import DB_OPTION
 from osxphotos.cli.param_types import TemplateString
 from osxphotos.cli.signaturequery import SignatureQuery
-from osxphotos.fingerprint import fingerprint
 from osxphotos.fingerprintquery import FingerprintQuery
 from osxphotos.image_file_utils import is_image_file, is_video_file
 from osxphotos.photosalbum import PhotosAlbumPhotoScript
@@ -113,8 +112,7 @@ def main(
     for file in files:
         matches = fq.possible_duplicates(file)
         if matches:
-            parent_path = os.path.dirname(file)
-            for uuid, date, filename in matches:
+            for uuid, _date, filename in matches:
                 echo(
                     f"Found match for file [filename]{file}[/] in Photos: "
                     f"[filename]{filename}[/] ([uuid]{uuid}[/])"

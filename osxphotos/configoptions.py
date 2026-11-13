@@ -1,6 +1,8 @@
 """ConfigOptions class to load/save config settings for osxphotos CLI"""
 
 import datetime
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Self
 
 import bitmath
 import toml
@@ -13,10 +15,10 @@ __all__ = [
 ]
 
 
-class ConfigOptionsException(Exception):
+class ConfigOptionsException(Exception):  # noqa: N818  (public name)
     """Invalid combination of options."""
 
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 
@@ -32,7 +34,17 @@ class ConfigOptionsLoadError(ConfigOptionsException):
 class ConfigOptions:
     """data class to store and load options for osxphotos commands"""
 
-    def __init__(self, name, attrs, ignore=None):
+    if TYPE_CHECKING:
+        # option attributes are set dynamically from the command's parameters
+        def __getattr__(self, name: str) -> Any: ...
+        def __setattr__(self, name: str, value: Any) -> None: ...
+
+    def __init__(
+        self,
+        name: str,
+        attrs: Mapping[str, Any],
+        ignore: Iterable[str] | None = None,
+    ) -> None:
         """init ConfigOptions class
 
         Args:
@@ -41,20 +53,20 @@ class ConfigOptions:
             ignore: optional list of strings of keys to ignore from attrs dict
         """
         self._name = name
-        self._attrs = attrs.copy()
+        self._attrs: dict[str, Any] = dict(attrs)
         if ignore:
             for attrname in ignore:
                 self._attrs.pop(attrname, None)
 
         self.set_attributes(attrs)
 
-    def set_attributes(self, args):
+    def set_attributes(self, args: Mapping[str, Any]) -> None:
         for attr in self._attrs:
             try:
                 arg = args[attr]
                 # don't test 'not arg'; need to handle empty strings as valid values
                 if arg is None or arg is False:
-                    if type(self._attrs[attr]) == tuple:
+                    if type(self._attrs[attr]) is tuple:
                         setattr(self, attr, ())
                     else:
                         setattr(self, attr, self._attrs[attr])
@@ -63,7 +75,13 @@ class ConfigOptions:
             except KeyError as e:
                 raise KeyError(f"Missing argument: {attr}") from e
 
-    def validate(self, exclusive=None, inclusive=None, dependent=None, cli=False):
+    def validate(
+        self,
+        exclusive: Iterable[tuple[str, str]] | None = None,
+        inclusive: Iterable[tuple[str, str]] | None = None,
+        dependent: Iterable[tuple[str, str | tuple[str, ...]]] | None = None,
+        cli: bool = False,
+    ) -> bool:
         """validate combinations of otions
 
         Args:
@@ -112,26 +130,27 @@ class ConfigOptions:
                         f"{prefix}{stra} and {prefix}{strb} options must be used together."
                     )
         if dependent:
-            for a, b in dependent:
+            for a, deps in dependent:
                 vala = getattr(self, a)
-                if not isinstance(b, tuple):
-                    # python unrolls the tuple if there's a single element
-                    b = (b,)
-                valb = [getattr(self, x) for x in b]
+                # python unrolls the tuple if there's a single element
+                dep_names = deps if isinstance(deps, tuple) else (deps,)
+                valb = [getattr(self, x) for x in dep_names]
                 valb = [any(x) if isinstance(x, tuple) else x for x in valb]
                 if vala and not any(valb):
                     if cli:
                         stra = prefix + a.replace("_", "-")
-                        strb = ", ".join(prefix + x.replace("_", "-") for x in b)
+                        strb = ", ".join(
+                            prefix + x.replace("_", "-") for x in dep_names
+                        )
                     else:
                         stra = a
-                        strb = ", ".join(b)
+                        strb = ", ".join(dep_names)
                     raise ConfigOptionsInvalidError(
                         f"{stra} must be used with at least one of: {strb}."
                     )
         return True
 
-    def write_to_file(self, filename):
+    def write_to_file(self, filename: str) -> None:
         """Write self to TOML file
 
         Args:
@@ -145,7 +164,7 @@ class ConfigOptions:
         """Write self to TOML str"""
         return toml.dumps(self._get_toml_dict())
 
-    def load_from_file(self, filename, override=False):
+    def load_from_file(self, filename: str, override: bool = False) -> Self:
         """Load options from a TOML file.
 
         Args:
@@ -158,7 +177,7 @@ class ConfigOptions:
         loaded = toml.load(filename)
         return self._load_from_toml_dict(loaded, override)
 
-    def load_from_str(self, str, override=False):
+    def load_from_str(self, str: str, override: bool = False) -> Self:
         """Load options from a TOML str.
 
         Args:
@@ -171,7 +190,7 @@ class ConfigOptions:
         loaded = toml.loads(str)
         return self._load_from_toml_dict(loaded, override)
 
-    def _load_from_toml_dict(self, loaded, override):
+    def _load_from_toml_dict(self, loaded: dict[str, Any], override: bool) -> Self:
         """Load options from a TOML dict (as returned by toml.load or toml.loads)"""
         name = self._name
         if name not in loaded:
@@ -186,7 +205,7 @@ class ConfigOptions:
             if not override:
                 # use value from self if set
                 val = getattr(self, attr) or val
-            if type(self._attrs[attr]) == tuple:
+            if type(self._attrs[attr]) is tuple:
                 val = tuple(val)
             # TOML parser converts date strings to datetime.date objects
             # but osxphotos expects datetime.datetime objects, so convert them
@@ -197,12 +216,12 @@ class ConfigOptions:
             setattr(self, attr, val)
         return self
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return {attr: getattr(self, attr) for attr in sorted(self._attrs.keys())}
 
-    def _get_toml_dict(self):
+    def _get_toml_dict(self) -> dict[str, dict[str, Any]]:
         """Return dict for writing to TOML file"""
-        data = {}
+        data: dict[str, Any] = {}
         for attr in sorted(self._attrs.keys()):
             val = getattr(self, attr)
 
@@ -212,7 +231,7 @@ class ConfigOptions:
             if val in [False, ()]:
                 val = None
             else:
-                val = list(val) if type(val) == tuple else val
+                val = list(val) if type(val) is tuple else val
 
             data[attr] = val
 

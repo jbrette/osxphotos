@@ -1,16 +1,13 @@
 """Test for volume_util.py"""
 
+import contextlib
 import pathlib
-
-import pytest
 
 
 def _clear_cache(mod):
     # ensure cache does not leak between tests
-    try:
+    with contextlib.suppress(Exception):
         mod._is_path_on_network_volume_cached.cache_clear()  # type: ignore[attr-defined]
-    except Exception:
-        pass
 
 
 def test_nsurl_reports_network_true(tmp_path, monkeypatch):

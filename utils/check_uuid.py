@@ -28,12 +28,12 @@ with open(inputfile) as csv_file:
 # check for uuids in photos not in the library
 shared = 0
 not_shared = 0
-for uuid in photos_uuid:
+for uuid, value in photos_uuid.items():
     if uuid not in got_uuid:
-        if photos_uuid[uuid].shared:
+        if value.shared:
             shared += 1
         else:
             not_shared += 1
-            print(f"missing uuid not in library:\n{photos_uuid[uuid].json()}")
+            print(f"missing uuid not in library:\n{value.json()}")
 
 print(f"shared: {shared}, not_shared: {not_shared}")

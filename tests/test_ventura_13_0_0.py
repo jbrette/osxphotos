@@ -1,6 +1,7 @@
 """Test macOS 13.0 Photos library"""
 
 import collections
+import contextlib
 import datetime
 import json
 import os
@@ -10,17 +11,13 @@ import shutil
 import sqlite3
 import tempfile
 import time
-import zoneinfo
-from collections import Counter, namedtuple
+import zoneinfo  # noqa: F401  (needed by eval(repr(photo)))
+from collections import namedtuple
 
 import pytest
 
 import osxphotos
-from osxphotos import PhotosDB
-from osxphotos._constants import _UNKNOWN_PERSON
 from osxphotos.adjustmentsinfo import AdjustmentsInfo
-from osxphotos.exifwriter import ExifWriter
-from osxphotos.platform import get_macos_version, is_macos
 
 PHOTOS_DB = "tests/Test-13.0.0.photoslibrary/database/photos.db"
 PHOTOS_DB_PATH = "tests/Test-13.0.0.photoslibrary/database/Photos.sqlite"
@@ -337,7 +334,7 @@ def test_init2():
 def test_init3():
     # test positional and named argument (raises exception)
 
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         assert osxphotos.PhotosDB(PHOTOS_DB, dbfile=PHOTOS_DB)
 
 
@@ -347,16 +344,14 @@ def test_init4():
     bad_db, bad_db_name = tempfile.mkstemp(suffix=".db", prefix="osxphotos-")
     os.close(bad_db)
 
-    with pytest.raises(Exception):
+    with pytest.raises(sqlite3.OperationalError):
         assert osxphotos.PhotosDB(bad_db_name)
 
-    with pytest.raises(Exception):
+    with pytest.raises(sqlite3.OperationalError):
         assert osxphotos.PhotosDB(dbfile=bad_db_name)
 
-    try:
+    with contextlib.suppress(Exception):
         os.remove(bad_db_name)
-    except:
-        pass
 
 
 def test_init5(mocker):
@@ -369,7 +364,7 @@ def test_init5(mocker):
     # because of the layout of photosdb/ need to patch it this way...don't really understand why, but it works
     mocker.patch("osxphotos.photosdb.photosdb.get_last_library_path", new=bad_library)
 
-    with pytest.raises(Exception):
+    with pytest.raises(FileNotFoundError):
         assert osxphotos.PhotosDB()
 
 
@@ -424,7 +419,7 @@ def test_albums_as_dict(photosdb):
 
 
 def test_album_sort_order(photosdb):
-    album = [a for a in photosdb.album_info if a.title == "Pumpkin Farm"][0]
+    album = next(a for a in photosdb.album_info if a.title == "Pumpkin Farm")
     photos = album.photos
 
     uuids = [p.uuid for p in photos]
@@ -432,7 +427,7 @@ def test_album_sort_order(photosdb):
 
 
 def test_album_empty_album(photosdb):
-    album = [a for a in photosdb.album_info if a.title == "EmptyAlbum"][0]
+    album = next(a for a in photosdb.album_info if a.title == "EmptyAlbum")
     photos = album.photos
     assert photos == []
 
@@ -842,7 +837,7 @@ def test_export_3(photosdb):
     filename2 = f"{filename2.stem} (1){filename2.suffix}"
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     got_dest_2 = photos[0].export(dest)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -861,7 +856,7 @@ def test_export_4(photosdb):
     filename2 = f"osxphotos-export-2-test-{timestamp} (1).jpg"
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest = photos[0].export(dest, filename)[0]
+    photos[0].export(dest, filename)[0]
     got_dest_2 = photos[0].export(dest, filename)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -915,13 +910,11 @@ def test_export_7(photosdb):
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
-    filename = photos[0].filename
-
-    got_dest = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     with pytest.raises(Exception) as e:
         # try to export again with increment = False
         assert photos[0].export(dest, increment=False)
-    assert e.type == type(FileExistsError())
+    assert e.type is type(FileExistsError())
 
 
 def test_export_8(photosdb):
@@ -943,11 +936,9 @@ def test_export_9(photosdb):
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["no_adjustments"]])
 
-    filename = photos[0].filename
-
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, edited=True)
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_export_10(photosdb):
@@ -963,7 +954,7 @@ def test_export_10(photosdb):
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, filename, edited=True)
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_export_11(photosdb):
@@ -1014,11 +1005,9 @@ def test_export_13(photosdb):
 
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
-    filename = photos[0].filename
-
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest)
-    assert e.type == type(FileNotFoundError())
+    assert e.type is type(FileNotFoundError())
 
 
 def test_export_14(caplog, photosdb):
@@ -1119,7 +1108,6 @@ def test_date_invalid():
 
 def test_date_modified_invalid(photosdb):
     """Test date modified is invalid"""
-    from datetime import datetime, timedelta, timezone
 
     # UUID_DICT["date_invalid"] has an invalid modified date that's
     # been manually adjusted in the database

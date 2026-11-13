@@ -13,7 +13,6 @@ if is_macos:
         PHOTOS_VERSION_CURRENT,
         PHOTOS_VERSION_ORIGINAL,
         PHOTOS_VERSION_UNADJUSTED,
-        LivePhotoAsset,
         PhotoAsset,
         PhotoLibrary,
         VideoAsset,
@@ -76,7 +75,6 @@ UUID_DICT = {
 def test_fetch_uuid():
     """test fetch_uuid"""
     uuid = UUID_DICT["plain_photo"]["uuid"]
-    filename = UUID_DICT["plain_photo"]["filename"]
 
     lib = PhotoLibrary()
     photo = lib.fetch_uuid(uuid)
@@ -418,7 +416,6 @@ def test_fetch_burst_uuid():
     """test fetch_burst_uuid"""
     test_dict = UUID_DICT["burst"]
     uuid = test_dict["uuid"]
-    filename = test_dict["filename"]
 
     lib = PhotoLibrary()
     photo = lib.fetch_uuid(uuid)

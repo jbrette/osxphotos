@@ -4,7 +4,6 @@ import pathlib
 import pytest
 
 import osxphotos
-from osxphotos._constants import _UNKNOWN_PERSON
 from osxphotos.exportoptions import ExportOptions
 from osxphotos.sidecars import exiftool_json_sidecar, xmp_sidecar
 
@@ -109,10 +108,9 @@ def test_export_3(photosdb):
     filename = photos[0].filename
     filename2 = pathlib.Path(filename)
     filename2 = f"{filename2.stem} (1){filename2.suffix}"
-    expected_dest = os.path.join(dest, filename)
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     got_dest_2 = photos[0].export(dest)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -123,7 +121,6 @@ def test_export_4(photosdb):
     # test user supplied file already exists and test increment=True (default)
     import os
     import os.path
-    import pathlib
     import tempfile
     import time
 
@@ -134,10 +131,9 @@ def test_export_4(photosdb):
     timestamp = time.time()
     filename = f"osxphotos-export-2-test-{timestamp}.jpg"
     filename2 = f"osxphotos-export-2-test-{timestamp} (1).jpg"
-    expected_dest = os.path.join(dest, filename)
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest = photos[0].export(dest, filename)[0]
+    photos[0].export(dest, filename)[0]
     got_dest_2 = photos[0].export(dest, filename)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -171,7 +167,6 @@ def test_export_6(photosdb):
     # and overwrite = True
     import os
     import os.path
-    import pathlib
     import tempfile
     import time
 
@@ -194,28 +189,21 @@ def test_export_6(photosdb):
 def test_export_7(photosdb):
     # test file already exists and test increment=False (not default), overwrite=False (default)
     # should raise exception
-    import os
-    import os.path
     import tempfile
 
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
-    filename = photos[0].filename
-    expected_dest = os.path.join(dest, filename)
-
-    got_dest = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     with pytest.raises(Exception) as e:
         # try to export again with increment = False
         assert photos[0].export(dest, increment=False)[0]
-    assert e.type == type(FileExistsError())
+    assert e.type is type(FileExistsError())
 
 
 def test_export_8(photosdb):
     # try to export missing file
-    import os
-    import os.path
     import tempfile
 
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
@@ -228,27 +216,20 @@ def test_export_8(photosdb):
 def test_export_9(photosdb):
     # try to export edited file that's not edited
     # should raise exception
-    import os
-    import os.path
     import tempfile
 
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["no_adjustments"]])
 
-    filename = photos[0].filename
-    expected_dest = os.path.join(dest, filename)
-
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, edited=True)
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_export_10(photosdb):
     # try to export edited file that's not edited and name provided
     # should raise exception
-    import os
-    import os.path
     import tempfile
     import time
 
@@ -258,11 +239,10 @@ def test_export_10(photosdb):
 
     timestamp = time.time()
     filename = f"osxphotos-export-test-{timestamp}.jpg"
-    expected_dest = os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, filename, edited=True)[0]
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_export_11(photosdb):
@@ -322,19 +302,16 @@ def test_export_13(photosdb):
 
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
-    filename = photos[0].filename
-    expected_dest = os.path.join(dest, filename)
-
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest)[0]
-    assert e.type == type(FileNotFoundError())
+    assert e.type is type(FileNotFoundError())
 
 
 def test_exiftool_json_sidecar(photosdb):
     uuid = UUID_DICT["location"]
     photo = photosdb.get_photo(uuid)
 
-    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}.json"), "r") as fp:
+    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}.json")) as fp:
         json_expected = json.load(fp)[0]
 
     json_got = exiftool_json_sidecar(photo)

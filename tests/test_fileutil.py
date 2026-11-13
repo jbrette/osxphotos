@@ -42,15 +42,13 @@ def test_copy_file_invalid():
     with pytest.raises(Exception) as e:
         src = "tests/test-images/wedding_DOES_NOT_EXIST.jpg"
         assert FileUtil.copy(src, temp_dir.name)
-    assert e.type == OSError
+    assert e.type is OSError
 
 
 def test_copy_file_valid_shutil():
     # copy file with valid src, dest with the shutil implementation
     import os.path
     import tempfile
-
-    from osxphotos.fileutil import FileUtil
 
     temp_dir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     src = "tests/test-images/wedding.jpg"
@@ -63,13 +61,11 @@ def test_copy_file_invalid_shutil():
     # copy file with invalid src with the shutil implementation
     import tempfile
 
-    from osxphotos.fileutil import FileUtil
-
     temp_dir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     with pytest.raises(Exception) as e:
         src = "tests/test-images/wedding_DOES_NOT_EXIST.jpg"
         assert FileUtilShUtil.copy(src, temp_dir.name)
-    assert e.type == OSError
+    assert e.type is OSError
 
 
 def test_hardlink_file_valid():
@@ -98,7 +94,7 @@ def test_unlink_file():
     temp_dir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     src = "tests/test-images/wedding.jpg"
     dest = os.path.join(temp_dir.name, "wedding.jpg")
-    result = FileUtil.copy(src, temp_dir.name)
+    FileUtil.copy(src, temp_dir.name)
     assert os.path.isfile(dest)
     FileUtil.unlink(dest)
     assert not os.path.isfile(dest)
@@ -358,7 +354,7 @@ def test_fileutil_utime():
     new_times = (new_time, new_time)
 
     # Update times using FileUtil.utime
-    result = FileUtil.utime(dest, new_times)
+    FileUtil.utime(dest, new_times)
 
     # Verify times were updated
     updated_stat = os.stat(dest)
@@ -392,7 +388,7 @@ def test_fileutil_macos_utime():
     new_times = (new_time, new_time)
 
     # Update times using FileUtilMacOS.utime
-    result = FileUtilMacOS.utime(dest, new_times)
+    FileUtilMacOS.utime(dest, new_times)
 
     # Verify times were updated
     updated_stat = os.stat(dest)
@@ -425,7 +421,7 @@ def test_fileutil_utime_with_pathlib():
     new_times = (new_time, new_time)
 
     # Update times using FileUtil.utime with pathlib.Path
-    result = FileUtil.utime(dest, new_times)
+    FileUtil.utime(dest, new_times)
 
     # Verify times were updated
     updated_stat = dest.stat()

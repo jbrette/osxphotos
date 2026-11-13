@@ -1,13 +1,11 @@
 """Test export for 10.15.7"""
 
-import datetime
 import json
 import os
 import os.path
 import pathlib
 import tempfile
 import time
-import zoneinfo
 
 import pytest
 
@@ -21,7 +19,7 @@ from osxphotos.utils import dd_to_dms_str
 # determine if exiftool installed so exiftool tests can be skipped
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 PHOTOS_DB = "./tests/Test-10.15.7.photoslibrary/database/photos.db"
@@ -136,7 +134,7 @@ def test_export_3(photosdb):
     filename2 = f"{filename2.stem} (1){filename2.suffix}"
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest_1 = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     got_dest_2 = photos[0].export(dest)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -155,7 +153,7 @@ def test_export_4(photosdb):
     filename2 = f"osxphotos-export-2-test-{timestamp} (1).jpg"
     expected_dest_2 = os.path.join(dest, filename2)
 
-    got_dest_1 = photos[0].export(dest, filename)[0]
+    photos[0].export(dest, filename)[0]
     got_dest_2 = photos[0].export(dest, filename)[0]
 
     assert got_dest_2 == expected_dest_2
@@ -209,14 +207,11 @@ def test_export_7(photosdb):
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
-    filename = photos[0].filename
-    expected_dest = os.path.join(dest, filename)
-
-    got_dest = photos[0].export(dest)[0]
+    photos[0].export(dest)[0]
     with pytest.raises(Exception) as e:
         # try to export again with increment = False
         assert photos[0].export(dest, increment=False)
-    assert e.type == type(FileExistsError())
+    assert e.type is type(FileExistsError())
 
 
 def test_export_8(photosdb):
@@ -239,7 +234,7 @@ def test_export_9(photosdb):
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, edited=True)
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_export_10(photosdb):
@@ -252,11 +247,10 @@ def test_export_10(photosdb):
 
     timestamp = time.time()
     filename = f"osxphotos-export-test-{timestamp}.jpg"
-    expected_dest = os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, filename, edited=True)
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_export_11(photosdb):
@@ -307,12 +301,9 @@ def test_export_13(photosdb):
 
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
-    filename = photos[0].filename
-    expected_dest = os.path.join(dest, filename)
-
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest)
-    assert e.type == type(FileNotFoundError())
+    assert e.type is type(FileNotFoundError())
 
 
 def test_dd_to_dms_str_1():
@@ -355,7 +346,7 @@ def test_exiftool_json_sidecar(photosdb):
     uuid = EXIF_JSON_UUID
     photo = photosdb.get_photo(uuid)
 
-    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}.json"), "r") as fp:
+    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}.json")) as fp:
         json_expected = json.load(fp)[0]
 
     json_got = exiftool_json_sidecar(photo)
@@ -372,7 +363,7 @@ def test_exiftool_json_sidecar_ignore_date_modified(photosdb):
     photo = photosdb.get_photo(uuid)
 
     with open(
-        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_ignore_date_modified.json"), "r"
+        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_ignore_date_modified.json")
     ) as fp:
         json_expected = json.load(fp)[0]
 
@@ -422,9 +413,7 @@ def test_exiftool_json_sidecar_keyword_template(photosdb):
     uuid = EXIF_JSON_UUID
     photo = photosdb.get_photo(uuid)
 
-    with open(
-        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_keyword_template.json"), "r"
-    ) as fp:
+    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_keyword_template.json")) as fp:
         json_expected = json.load(fp)
     json_got = exiftool_json_sidecar(
         photo, ExportOptions(keyword_template=["{folder_album}"])
@@ -444,7 +433,7 @@ def test_exiftool_json_sidecar_use_persons_keyword(photosdb):
     photo = photosdb.get_photo(uuid)
 
     with open(
-        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_persons_as_keywords.json"), "r"
+        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_persons_as_keywords.json")
     ) as fp:
         json_expected = json.load(fp)[0]
 
@@ -458,9 +447,7 @@ def test_exiftool_json_sidecar_use_albums_keywords(photosdb):
     uuid = UUID_DICT["xmp"]
     photo = photosdb.get_photo(uuid)
 
-    with open(
-        str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_albums_as_keywords.json"), "r"
-    ) as fp:
+    with open(str(pathlib.Path(SIDECAR_DIR) / f"{uuid}_albums_as_keywords.json")) as fp:
         json_expected = json.load(fp)[0]
 
     json_got = exiftool_json_sidecar(photo, ExportOptions(use_albums_as_keywords=True))
@@ -478,7 +465,7 @@ def test_exiftool_sidecar(photosdb):
     uuid = EXIF_JSON_UUID
     photo = photosdb.get_photo(uuid)
 
-    with open(pathlib.Path(SIDECAR_DIR) / f"{uuid}_no_tag_groups.json", "r") as fp:
+    with open(pathlib.Path(SIDECAR_DIR) / f"{uuid}_no_tag_groups.json") as fp:
         json_expected = fp.read()
 
     json_got = exiftool_json_sidecar(photo, tag_groups=False)
@@ -510,7 +497,7 @@ def test_xmp_sidecar(photosdb):
     uuid = UUID_DICT["xmp"]
     photos = photosdb.photos(uuid=[uuid])
 
-    with open(f"tests/sidecars/{uuid}.xmp", "r") as file:
+    with open(f"tests/sidecars/{uuid}.xmp") as file:
         xmp_expected = file.read()
     xmp_got = xmp_sidecar(photos[0], extension="jpg")
     assert xmp_got == xmp_expected
@@ -522,9 +509,9 @@ def test_xmp_sidecar_extension(photosdb):
     uuid = UUID_DICT["xmp"]
     photos = photosdb.photos(uuid=[uuid])
 
-    with open(f"tests/sidecars/{uuid}.xmp", "r") as file:
+    with open(f"tests/sidecars/{uuid}.xmp") as file:
         xmp_expected = file.read()
-        xmp_expected_lines = [line.strip() for line in xmp_expected.split("\n")]
+        [line.strip() for line in xmp_expected.split("\n")]
 
     xmp_got = xmp_sidecar(photos[0])
     assert xmp_got == xmp_expected

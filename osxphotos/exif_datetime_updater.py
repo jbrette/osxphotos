@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable
+from typing import Any
 
 from photoscript import Photo
 
@@ -13,7 +14,6 @@ from .datetime_utils import (
     datetime_remove_tz,
     datetime_to_new_tz,
     datetime_tz_to_utc,
-    datetime_utc_to_local,
 )
 from .exiftool import ExifTool
 from .exifutils import ExifDateTime, get_exif_date_time_offset
@@ -36,10 +36,10 @@ class ExifDateTimeUpdater:
     def __init__(
         self,
         library_path: str | None = None,
-        verbose: Callable | None = None,
+        verbose: Callable[..., Any] | None = None,
         exiftool_path: str | None = None,
-        plain=False,
-    ):
+        plain: bool = False,
+    ) -> None:
         self.library_path = library_path
         self.db = PhotosDB(self.library_path)
         self.verbose = verbose or noop
@@ -55,7 +55,7 @@ class ExifDateTimeUpdater:
         """Colorize uuid for display in verbose output"""
         return uuid if self.plain else f"[uuid]{uuid}[/uuid]"
 
-    def update_exif_from_photos(self, photo: Photo) -> tuple[str, str]:
+    def update_exif_from_photos(self, photo: Photo) -> tuple[str | None, str | None]:
         """Update EXIF data in photo to match the date/time/timezone in Photos library
 
         Args:
@@ -101,7 +101,7 @@ class ExifDateTimeUpdater:
         # for videos:
         # [QuickTime]     CreateDate                      : 2020:12:11 06:10:10
         # [Keys]          CreationDate                    : 2020:12:10 22:10:10-08:00
-        exif = {}
+        exif: dict[str, str | list[str]] = {}
         if _photo.isphoto:
             exif["EXIF:DateTimeOriginal"] = datetimeoriginal
             exif["EXIF:CreateDate"] = datetimeoriginal
@@ -132,7 +132,7 @@ class ExifDateTimeUpdater:
         )
         with ExifTool(filepath=_photo.path, exiftool=self.exiftool_path) as exiftool:
             for tag, val in exif.items():
-                if type(val) == list:
+                if type(val) is list:
                     for v in val:
                         exiftool.setvalue(tag, v)
                 else:

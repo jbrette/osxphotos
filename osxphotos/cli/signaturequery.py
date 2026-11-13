@@ -1,9 +1,13 @@
 """Check a signature template against Photos library to determine if a photo is a match"""
 
+from __future__ import annotations
+
 import datetime
 import os
 import pathlib
+from typing import Any
 
+from osxphotos.photoinfo import PhotoInfo
 from osxphotos.photoinfo_file import PhotoInfoFromFile
 from osxphotos.photosdb import PhotosDB
 from osxphotos.sidecars import get_sidecar_file_with_template
@@ -14,13 +18,13 @@ class SignatureQuery:
 
     def __init__(
         self,
-        library: str | os.PathLike | None,
+        library: str | os.PathLike[str] | None,
         signature: str,
         sidecar: bool = False,
         sidecar_template: str | None = None,
         edited_suffix: str | None = None,
         exiftool_path: str | None = None,
-    ):
+    ) -> None:
         """Create a new SignatureQuery object
 
         Args:
@@ -35,18 +39,20 @@ class SignatureQuery:
         self._mapping = self._map_signatures()
 
     def possible_duplicates(
-        self, filepath: str | os.PathLike
-    ) -> list[tuple[str, datetime.datetime, str]]:
+        self, filepath: str | os.PathLike[str]
+    ) -> list[tuple[str, datetime.datetime | None, str]]:
         """Return a list of tuples of (uuid, date_added, filename) for all photos matching signature"""
         sidecar_file = get_sidecar_file_with_template(
-            filepath=filepath,
+            filepath=pathlib.Path(filepath),
             sidecar=self.sidecar,
             sidecar_filename_template=self.sidecar_template,
             edited_suffix=self.edited_suffix,
             exiftool_path=self.exiftool_path,
         )
         photo = PhotoInfoFromFile(
-            filepath, exiftool=self.exiftool_path, sidecar=sidecar_file
+            os.fspath(filepath),
+            exiftool=self.exiftool_path,
+            sidecar=os.fspath(sidecar_file) if sidecar_file is not None else None,
         )
         rendered, _ = photo.render_template(self.signature)
         signature = rendered[0] if rendered else None
@@ -63,10 +69,10 @@ class SignatureQuery:
             ]
         return []
 
-    def _map_signatures(self):
+    def _map_signatures(self) -> dict[Any, list[PhotoInfo]]:
         """Map signature to photos in Photos library"""
         photos = self.photosdb.photos()
-        signature_map = {}
+        signature_map: dict[Any, list[PhotoInfo]] = {}
         for photo in photos:
             renderd, _ = photo.render_template(self.signature)
             sig = renderd[0] if renderd else None

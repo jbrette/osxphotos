@@ -15,10 +15,8 @@ from osxphotos._constants import (
     _PHOTOS_4_VERSION,
     _PHOTOS_5_SHARED_ALBUM_KIND,
 )
-from osxphotos._version import __version__
 from osxphotos.cli.albums import album_dict, shared_album_dict
 from osxphotos.cli.cli_params import DB_OPTION, JSON_OPTION
-from osxphotos.cli.click_rich_echo import rich_echo as echo
 from osxphotos.cli.common import get_photos_db
 from osxphotos.cli.list import _list_libraries
 from osxphotos.unicode import normalize_unicode

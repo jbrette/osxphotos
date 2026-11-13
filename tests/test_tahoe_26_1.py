@@ -1,24 +1,12 @@
 """Test macOS 26.1Photos library"""
 
-import collections
 import datetime
 import json
-import os
-import os.path
 import pathlib
-import sqlite3
-import tempfile
-import time
-from collections import Counter, namedtuple
 
 import pytest
 
-import osxphotos
 from osxphotos import PhotosDB
-from osxphotos._constants import _UNKNOWN_PERSON
-from osxphotos.adjustmentsinfo import AdjustmentsInfo
-from osxphotos.exifwriter import ExifWriter
-from osxphotos.platform import get_macos_version, is_macos
 
 PHOTOS_DB = "./tests/Test-26.1.photoslibrary/database/photos.db"
 PHOTOS_DB_PATH = "/Test-26.1.photoslibrary/database/photos.db"
@@ -36,12 +24,11 @@ def photosdb():
 @pytest.fixture(scope="session")
 def expected_photoinfo():
     """Load expected PhotoInfo JSON data."""
-    with open(TEST_JSON, "r") as f:
+    with open(TEST_JSON) as f:
         return json.load(f)
 
 
 def _normalize_for_comparison(obj):
-    tests_root = str(TEST_JSON.parent)
     if isinstance(obj, dict):
         return {k: _normalize_for_comparison(v) for k, v in obj.items()}
     if isinstance(obj, list):

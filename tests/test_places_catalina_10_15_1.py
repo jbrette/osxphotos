@@ -1,7 +1,5 @@
 """Test PlaceInfo"""
 
-import pytest
-
 PHOTOS_DB = "./tests/Test-Places-Catalina-10_15_1.photoslibrary/database/photos.db"
 
 UUID_DICT = {
@@ -109,7 +107,7 @@ def test_place_place_info_2():
         photo.place.address_str
         == "3700 Wailea Alanui Dr, Kihei, HI  96753, United States"
     )
-    assert type(photo.place.address) == osxphotos.placeinfo.PostalAddress
+    assert type(photo.place.address) is osxphotos.placeinfo.PostalAddress
     assert photo.place.address.city == "Kihei"
     assert photo.place.address.country == "United States"
     assert photo.place.address.postal_code == "96753"

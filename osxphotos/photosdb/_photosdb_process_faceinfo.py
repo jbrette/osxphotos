@@ -1,15 +1,19 @@
 """Methods for PhotosDB to add Photos face info"""
 
+from typing import TYPE_CHECKING, Any
+
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_4_VERSION
 from ..sqlite_utils import sqlite_open_ro
 from ..unicode import normalize_unicode
-from .photosdb_utils import get_db_version
+
+if TYPE_CHECKING:
+    from .photosdb import PhotosDB
 
 """
     This module should be imported in the class defintion of PhotosDB in photosdb.py
     Do not import this module directly
     This module adds the following method to PhotosDB:
-        _process_faceinfo: process photo face info 
+        _process_faceinfo: process photo face info
 
     The following data structures are added to PhotosDB
         self._db_faceinfo_pk: {pk: {faceinfo}}
@@ -18,7 +22,7 @@ from .photosdb_utils import get_db_version
 """
 
 
-def _process_faceinfo(self):
+def _process_faceinfo(self: PhotosDB) -> None:
     """Process face information"""
 
     self._db_faceinfo_pk = {}
@@ -31,7 +35,7 @@ def _process_faceinfo(self):
         _process_faceinfo_5(self)
 
 
-def _process_faceinfo_4(photosdb):
+def _process_faceinfo_4(photosdb: PhotosDB) -> None:
     """Process face information for Photos 4 databases
 
     Args:
@@ -45,31 +49,31 @@ def _process_faceinfo_4(photosdb):
         """
         SELECT
         RKFace.modelId,
-        RKVersion.uuid, 
+        RKVersion.uuid,
         RKFace.uuid,
         RKPerson.name,
         RKFace.isInTrash,
         RKFace.personId,
-        RKFace.imageModelId, 
+        RKFace.imageModelId,
         RKFace.sourceWidth,
-        RKFace.sourceHeight, 
+        RKFace.sourceHeight,
         RKFace.centerX,
         RKFace.centerY,
         RKFace.size,
-        RKFace.leftEyeX, 
+        RKFace.leftEyeX,
         RKFace.leftEyeY,
-        RKFace.rightEyeX, 
-        RKFace.rightEyeY, 
+        RKFace.rightEyeX,
+        RKFace.rightEyeY,
         RKFace.mouthX,
-        RKFace.mouthY, 
-        RKFace.hidden, 
-        RKFace.manual, 
-        RKFace.hasSmile, 
-        RKFace.isLeftEyeClosed, 
-        RKFace.isRightEyeClosed, 
-        RKFace.poseRoll, 
-        RKFace.poseYaw, 
-        RKFace.posePitch, 
+        RKFace.mouthY,
+        RKFace.hidden,
+        RKFace.manual,
+        RKFace.hasSmile,
+        RKFace.isLeftEyeClosed,
+        RKFace.isRightEyeClosed,
+        RKFace.poseRoll,
+        RKFace.poseYaw,
+        RKFace.posePitch,
         RKFace.faceType,
         RKFace.qualityMeasure
         FROM
@@ -112,7 +116,7 @@ def _process_faceinfo_4(photosdb):
         modelid = row[0]
         asset_uuid = row[1]
         person_id = row[5]
-        face = {}
+        face: dict[str, Any] = {}
         face["pk"] = modelid
         face["asset_uuid"] = asset_uuid
         face["uuid"] = row[2]
@@ -168,7 +172,7 @@ def _process_faceinfo_4(photosdb):
     conn.close()
 
 
-def _process_faceinfo_5(photosdb):
+def _process_faceinfo_5(photosdb: PhotosDB) -> None:
     """Process face information for Photos 5 databases
 
     Args:
@@ -184,7 +188,7 @@ def _process_faceinfo_5(photosdb):
     (conn, cursor) = sqlite_open_ro(db)
 
     result = cursor.execute(
-        f""" 
+        f"""
         SELECT
         ZDETECTEDFACE.Z_PK,
         {asset_table}.ZUUID,
@@ -275,7 +279,7 @@ def _process_faceinfo_5(photosdb):
         pk = row[0]
         asset_uuid = row[1]
         person_pk = row[3]
-        face = {}
+        face: dict[str, Any] = {}
         face["pk"] = pk
         face["asset_uuid"] = asset_uuid
         face["uuid"] = row[2]

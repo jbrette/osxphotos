@@ -12,7 +12,7 @@ import sqlite3
 import sys
 from abc import ABC, abstractmethod
 from contextlib import suppress
-from typing import Any
+from typing import Any, cast
 
 from osxphotos._constants import SQLITE_CHECK_SAME_THREAD
 from osxphotos.export_db import OSXPHOTOS_ABOUT_STRING
@@ -29,15 +29,15 @@ EXPORT_REPORT_BATCH_SIZE = int(
 __all__ = [
     "ExportReportWriterCSV",
     "ExportReportWriterJSON",
-    "ExportReportWriterSqlite",
+    "ExportReportWriterSQLite",
     "PushExifReportWriterCSV",
     "PushExifReportWriterJSON",
-    "PushExifReportWriterSqlite",
+    "PushExifReportWriterSQLite",
     "ReportWriterABC",
     "ReportWriterNoOp",
     "SyncReportWriterCSV",
     "SyncReportWriterJSON",
-    "SyncReportWriterSqlite",
+    "SyncReportWriterSQLite",
     "export_report_writer_factory",
     "push_exif_report_writer_factory",
     "sync_report_writer_factory",
@@ -49,27 +49,27 @@ class ReportWriterABC(ABC):
     """Abstract base class for report writers"""
 
     @abstractmethod
-    def write(self, *args, **kwargs):
+    def write(self, *args: Any, **kwargs: Any) -> None:
         """Write results to the output file"""
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
 
 
 # Report writer that does nothing, used for --dry-run or when --report not specified
 
 
-class ReportWriterNoOp(ABC):
+class ReportWriterNoOp(ReportWriterABC):
     """Report writer that does nothing"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def write(self, *args, **kwargs):
+    def write(self, *args: Any, **kwargs: Any) -> None:
         """Write results to the output file"""
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
 
 
@@ -77,7 +77,7 @@ class ReportWriterNoOp(ABC):
 class ExportReportWriterCSV(ReportWriterABC):
     """Write CSV report file for export results"""
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         self.output_file = pathlib.Path(output_file)
         self.append = append
 
@@ -120,7 +120,7 @@ class ExportReportWriterCSV(ReportWriterABC):
         if write_header:
             self._csv_writer.writeheader()
 
-    def write(self, export_results: ExportResults):
+    def write(self, export_results: ExportResults) -> None:
         """Write results to the output file"""
         all_results = prepare_export_results_for_writing(export_results)
         for data in list(all_results.values()):
@@ -129,11 +129,11 @@ class ExportReportWriterCSV(ReportWriterABC):
             self._csv_writer.writerow(data)
         self._output_fh.flush()
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
         self._output_fh.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self._output_fh.close()
 
@@ -141,14 +141,14 @@ class ExportReportWriterCSV(ReportWriterABC):
 class ExportReportWriterJSON(ReportWriterABC):
     """Write JSON report file for export results"""
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         self.output_file = output_file
         self.append = append
         self.indent = 4
 
         self._first_record_written = False
         if append and os.path.exists(self.output_file):
-            with open(self.output_file, "r") as fh:
+            with open(self.output_file) as fh:
                 existing_data = json.load(fh)
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")
@@ -159,7 +159,7 @@ class ExportReportWriterJSON(ReportWriterABC):
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")
 
-    def write(self, export_results: ExportResults):
+    def write(self, export_results: ExportResults) -> None:
         """Write results to the output file"""
         all_results = prepare_export_results_for_writing(
             export_results, bool_values=True
@@ -172,12 +172,12 @@ class ExportReportWriterJSON(ReportWriterABC):
             self._output_fh.write(json.dumps(data, indent=self.indent))
         self._output_fh.flush()
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
         self._output_fh.write("]")
         self._output_fh.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self.close()
 
@@ -196,7 +196,7 @@ class ExportReportWriterSQLite(ReportWriterABC):
         "(:datetime, :filename, :exported, :new, :updated, :skipped, :exif_updated, :touched, :converted_to_jpeg, :sidecar_xmp, :sidecar_json, :sidecar_exiftool, :missing, :error, :exiftool_warning, :exiftool_error, :extended_attributes_written, :extended_attributes_skipped, :cleanup_deleted_file, :cleanup_deleted_directory, :exported_album, :report_id, :sidecar_user, :sidecar_user_error, :user_written, :user_skipped, :user_error, :aae_written, :aae_skipped);"
     )
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         self.output_file = output_file
         self.append = append
 
@@ -211,7 +211,7 @@ class ExportReportWriterSQLite(ReportWriterABC):
         self.report_id = self._generate_report_id()
         self._write_buffer: list[dict[str, Any]] = []
 
-    def write(self, export_results: ExportResults):
+    def write(self, export_results: ExportResults) -> None:
         """Write results to a buffer; commits in batches for better performance"""
 
         all_results = prepare_export_results_for_writing(export_results)
@@ -222,7 +222,7 @@ class ExportReportWriterSQLite(ReportWriterABC):
         if len(self._write_buffer) >= self.BATCH_SIZE:
             self._flush()
 
-    def _flush(self):
+    def _flush(self) -> None:
         """Flush buffered writes to database"""
         if not self._write_buffer:
             return
@@ -231,12 +231,12 @@ class ExportReportWriterSQLite(ReportWriterABC):
         self._conn.commit()
         self._write_buffer.clear()
 
-    def close(self):
+    def close(self) -> None:
         """Flush any remaining buffered writes and close the database connection"""
         self._flush()
         self._conn.close()
 
-    def _create_tables(self):
+    def _create_tables(self) -> None:
         c = self._conn.cursor()
         c.execute(
             """
@@ -367,11 +367,12 @@ class ExportReportWriterSQLite(ReportWriterABC):
             "INSERT INTO report_id(datetime) VALUES (?);",
             (datetime.datetime.now().isoformat(),),
         )
-        report_id = c.lastrowid
+        # lastrowid is always set after a successful INSERT
+        report_id = cast(int, c.lastrowid)
         self._conn.commit()
         return report_id
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self.close()
 
@@ -479,14 +480,14 @@ def prepare_export_results_for_writing(
     for result in export_results.missing:
         all_results[str(result)]["missing"] = true
 
-    for result in export_results.error:
-        all_results[str(result[0])]["error"] = result[1]
+    for err in export_results.error:
+        all_results[str(err[0])]["error"] = err[1]
 
-    for result in export_results.exiftool_warning:
-        all_results[str(result[0])]["exiftool_warning"] = result[1]
+    for err in export_results.exiftool_warning:
+        all_results[str(err[0])]["exiftool_warning"] = err[1]
 
-    for result in export_results.exiftool_error:
-        all_results[str(result[0])]["exiftool_error"] = result[1]
+    for err in export_results.exiftool_error:
+        all_results[str(err[0])]["exiftool_error"] = err[1]
 
     for result in export_results.xattr_written:
         all_results[str(result)]["extended_attributes_written"] = true
@@ -511,8 +512,8 @@ def prepare_export_results_for_writing(
         all_results[str(result)]["sidecar_user"] = true
         all_results[str(result)]["skipped"] = true
 
-    for result in export_results.sidecar_user_error:
-        all_results[str(result[0])]["sidecar_user_error"] = result[1]
+    for err in export_results.sidecar_user_error:
+        all_results[str(err[0])]["sidecar_user_error"] = err[1]
 
     for result in export_results.user_written:
         all_results[str(result)]["user_written"] = true
@@ -522,8 +523,8 @@ def prepare_export_results_for_writing(
         all_results[str(result)]["user_skipped"] = true
         all_results[str(result)]["skipped"] = true
 
-    for result in export_results.user_error:
-        all_results[str(result[0])]["user_error"] = result[1]
+    for err in export_results.user_error:
+        all_results[str(err[0])]["user_error"] = err[1]
 
     for result in export_results.aae_written:
         all_results[str(result)]["aae_written"] = true
@@ -535,7 +536,7 @@ def prepare_export_results_for_writing(
 
 
 def export_report_writer_factory(
-    output_file: str | bytes | os.PathLike, append: bool = False
+    output_file: str | os.PathLike[str], append: bool = False
 ) -> ReportWriterABC:
     """Return a ReportWriter instance appropriate for the output file type"""
     output_type = os.path.splitext(output_file)[1]
@@ -556,7 +557,7 @@ def export_report_writer_factory(
 class SyncReportWriterCSV(ReportWriterABC):
     """Write CSV report file"""
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         self.output_file = output_file
         self.append = append
         self.write_header = (
@@ -565,7 +566,7 @@ class SyncReportWriterCSV(ReportWriterABC):
         mode = "a" if append else "w"
         self._output_fh = open(self.output_file, mode)
 
-    def write(self, sync_results: SyncResults):
+    def write(self, sync_results: SyncResults) -> None:
         """Write results to the output file"""
         report_columns = sync_results.results_header
         self._csv_writer = csv.DictWriter(self._output_fh, fieldnames=report_columns)
@@ -573,14 +574,14 @@ class SyncReportWriterCSV(ReportWriterABC):
             self._csv_writer.writeheader()
 
         for data in sync_results.results_list:
-            self._csv_writer.writerow(dict(zip(report_columns, data)))
+            self._csv_writer.writerow(dict(zip(report_columns, data, strict=False)))
         self._output_fh.flush()
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
         self._output_fh.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self._output_fh.close()
 
@@ -588,14 +589,14 @@ class SyncReportWriterCSV(ReportWriterABC):
 class SyncReportWriterJSON(ReportWriterABC):
     """Write JSON SyncResults report file"""
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         self.output_file = output_file
         self.append = append
         self.indent = 4
 
         self._first_record_written = False
         if append and os.path.exists(self.output_file):
-            with open(self.output_file, "r") as fh:
+            with open(self.output_file) as fh:
                 existing_data = json.load(fh)
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")
@@ -606,13 +607,14 @@ class SyncReportWriterJSON(ReportWriterABC):
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")
 
-    def write(self, results: SyncResults):
+    def write(self, results: SyncResults) -> None:
         """Write results to the output file"""
 
         # convert datetimes to strings
-        def default(o):
+        def default(o: object) -> str | None:
             if isinstance(o, (datetime.date, datetime.datetime)):
                 return o.isoformat()
+            return None
 
         for data in list(results.results_dict.values()):
             if self._first_record_written:
@@ -622,12 +624,12 @@ class SyncReportWriterJSON(ReportWriterABC):
             self._output_fh.write(json.dumps(data, indent=self.indent, default=default))
         self._output_fh.flush()
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
         self._output_fh.write("]")
         self._output_fh.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self.close()
 
@@ -635,7 +637,7 @@ class SyncReportWriterJSON(ReportWriterABC):
 class SyncReportWriterSQLite(ReportWriterABC):
     """Write sqlite SyncResults report file"""
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         self.output_file = output_file
         self.append = append
 
@@ -649,7 +651,7 @@ class SyncReportWriterSQLite(ReportWriterABC):
         self._create_tables()
         self.report_id = self._generate_report_id()
 
-    def write(self, results: SyncResults):
+    def write(self, results: SyncResults) -> None:
         """Write results to the output file"""
 
         # insert rows of values into sqlite report table
@@ -671,11 +673,11 @@ class SyncReportWriterSQLite(ReportWriterABC):
             )
         self._conn.commit()
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
         self._conn.close()
 
-    def _create_tables(self):
+    def _create_tables(self) -> None:
         c = self._conn.cursor()
         c.execute(
             """
@@ -763,17 +765,18 @@ class SyncReportWriterSQLite(ReportWriterABC):
             "INSERT INTO report_id(datetime) VALUES (?);",
             (datetime.datetime.now().isoformat(),),
         )
-        report_id = c.lastrowid
+        # lastrowid is always set after a successful INSERT
+        report_id = cast(int, c.lastrowid)
         self._conn.commit()
         return report_id
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self.close()
 
 
 def sync_report_writer_factory(
-    output_file: str | bytes | os.PathLike, append: bool = False
+    output_file: str | os.PathLike[str], append: bool = False
 ) -> ReportWriterABC:
     """Return a ReportWriter instance appropriate for the output file type"""
     output_type = os.path.splitext(output_file)[1]
@@ -791,7 +794,7 @@ def sync_report_writer_factory(
 class PushExifReportWriterCSV(ReportWriterABC):
     """Write CSV report file"""
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         report_columns = [
             "uuid",
             "original_filename",
@@ -813,7 +816,9 @@ class PushExifReportWriterCSV(ReportWriterABC):
         if write_header:
             self._csv_writer.writeheader()
 
-    def write(self, uuid: str, original_filename: str, push_results: PushResults):
+    def write(
+        self, uuid: str, original_filename: str, push_results: PushResults
+    ) -> None:
         """Write results to the output file"""
         errors_by_filename = {e[0]: e[1] for e in push_results.error}
         warnings_by_filename = {w[0]: w[1] for w in push_results.warning}
@@ -879,11 +884,11 @@ class PushExifReportWriterCSV(ReportWriterABC):
             )
         self._output_fh.flush()
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
         self._output_fh.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self._output_fh.close()
 
@@ -891,14 +896,14 @@ class PushExifReportWriterCSV(ReportWriterABC):
 class PushExifReportWriterJSON(ReportWriterABC):
     """Write JSON report file for push-exif results"""
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         self.output_file = output_file
         self.append = append
         self.indent = 4
 
         self._first_record_written = False
         if append and os.path.exists(self.output_file):
-            with open(self.output_file, "r") as fh:
+            with open(self.output_file) as fh:
                 existing_data = json.load(fh)
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")
@@ -909,7 +914,9 @@ class PushExifReportWriterJSON(ReportWriterABC):
             self._output_fh = open(self.output_file, "w")
             self._output_fh.write("[")
 
-    def write(self, uuid: str, original_filename: str, push_results: PushResults):
+    def write(
+        self, uuid: str, original_filename: str, push_results: PushResults
+    ) -> None:
         """Write results to the output file"""
         record = {"uuid": uuid, "original_filename": original_filename}
         for field in [
@@ -929,12 +936,12 @@ class PushExifReportWriterJSON(ReportWriterABC):
         self._output_fh.write(json.dumps(record, indent=self.indent))
         self._output_fh.flush()
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
         self._output_fh.write("]")
         self._output_fh.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self.close()
 
@@ -942,7 +949,7 @@ class PushExifReportWriterJSON(ReportWriterABC):
 class PushExifReportWriterSQLite(ReportWriterABC):
     """Write SQLite PushResults report file"""
 
-    def __init__(self, output_file: str | bytes | os.PathLike, append: bool = False):
+    def __init__(self, output_file: str | os.PathLike[str], append: bool = False):
         self.output_file = output_file
         self.append = append
 
@@ -956,7 +963,7 @@ class PushExifReportWriterSQLite(ReportWriterABC):
         self._create_tables()
         self.report_id = self._generate_report_id()
 
-    def write(self, uuid: str, original_filename: str, results: PushResults):
+    def write(self, uuid: str, original_filename: str, results: PushResults) -> None:
         """Write results to the output file"""
 
         errors_by_filename = {e[0]: e[1] for e in results.error}
@@ -1016,7 +1023,7 @@ class PushExifReportWriterSQLite(ReportWriterABC):
                 "",
             )
 
-    def _write_row(self, *data: Any):
+    def _write_row(self, *data: Any) -> None:
         """Write a row to the report table"""
         report_id = self.report_id
         # data = [str(v) if v else "" for v in row]
@@ -1027,11 +1034,11 @@ class PushExifReportWriterSQLite(ReportWriterABC):
         )
         self._conn.commit()
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
         self._conn.close()
 
-    def _create_tables(self):
+    def _create_tables(self) -> None:
         c = self._conn.cursor()
         c.execute(
             """
@@ -1085,17 +1092,18 @@ class PushExifReportWriterSQLite(ReportWriterABC):
             "INSERT INTO report_id(datetime, command_line) VALUES (?, ?);",
             (datetime.datetime.now().isoformat(), command_line),
         )
-        report_id = c.lastrowid
+        # lastrowid is always set after a successful INSERT
+        report_id = cast(int, c.lastrowid)
         self._conn.commit()
         return report_id
 
-    def __del__(self):
+    def __del__(self) -> None:
         with suppress(Exception):
             self.close()
 
 
 def push_exif_report_writer_factory(
-    output_file: str | bytes | os.PathLike, append: bool = False
+    output_file: str | os.PathLike[str], append: bool = False
 ) -> ReportWriterABC:
     """Return a ReportWriter instance appropriate for the output file type"""
     output_type = os.path.splitext(output_file)[1]

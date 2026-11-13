@@ -1,7 +1,5 @@
 """test ExportResults class"""
 
-import pytest
-
 from osxphotos.exportoptions import ExportResults
 
 EXPORT_RESULT_ATTRIBUTES = ExportResults().attributes
@@ -91,7 +89,11 @@ def test_all_files():
     assert sorted(results.all_files()) == sorted(
         [
             f"{x}1"
-            for x in all_file_attributes
-            + ["error", "exiftool_warning", "exiftool_error"]
+            for x in [
+                *all_file_attributes,
+                "error",
+                "exiftool_warning",
+                "exiftool_error",
+            ]
         ]
     )

@@ -1,7 +1,8 @@
 """Use Apple's Vision Framework via PyObjC to perform text detection on images (macOS 10.15+ only)"""
 
 import logging
-import sys
+from collections.abc import Callable
+from typing import Any
 
 from .platform import assert_macos, get_macos_version
 
@@ -17,7 +18,12 @@ from wurlitzer import pipes
 
 logger = logging.getLogger("osxphotos")
 
-__all__ = ["detect_text", "make_request_handler"]
+__all__ = ["InvalidResultsTypeError", "detect_text", "make_request_handler"]
+
+
+class InvalidResultsTypeError(TypeError, ValueError):
+    """results is not a list; a ValueError too, for existing callers"""
+
 
 ver, major, minor = get_macos_version()
 if ver == "10" and int(major) < 15:
@@ -28,7 +34,7 @@ else:
     vision = True
 
 
-def detect_text(img_path: str, orientation: int | None = None) -> list:
+def detect_text(img_path: str, orientation: int | None = None) -> list[list[Any]]:
     """process image at img_path with VNRecognizeTextRequest and return list of results
 
     Args:
@@ -42,7 +48,7 @@ def detect_text(img_path: str, orientation: int | None = None) -> list:
     with objc.autorelease_pool():
         input_url = NSURL.fileURLWithPath_(img_path)
 
-        with pipes() as (out, err):
+        with pipes() as (_out, _err):
             # capture stdout and stderr from system calls
             # otherwise, Quartz.CIImage.imageWithContentsOfURL_
             # prints to stderr something like:
@@ -63,12 +69,12 @@ def detect_text(img_path: str, orientation: int | None = None) -> list:
             )
         else:
             raise ValueError("orientation must be between 1 and 8")
-        results = []
+        results: list[list[Any]] = []
         handler = make_request_handler(results)
         vision_request = (
             Vision.VNRecognizeTextRequest.alloc().initWithCompletionHandler_(handler)
         )
-        error = vision_handler.performRequests_error_([vision_request], None)
+        vision_handler.performRequests_error_([vision_request], None)
 
         for result in results:
             result[0] = str(result[0])
@@ -76,12 +82,12 @@ def detect_text(img_path: str, orientation: int | None = None) -> list:
         return results
 
 
-def make_request_handler(results):
+def make_request_handler(results: list[list[Any]]) -> Callable[[Any, Any], None]:
     """results: list to store results"""
     if not isinstance(results, list):
-        raise ValueError("results must be a list")
+        raise InvalidResultsTypeError("results must be a list")
 
-    def handler(request, error):
+    def handler(request: Any, error: Any) -> None:
         if error:
             print(f"Error! {error}")
         else:

@@ -38,8 +38,8 @@ class TestCache(unittest.TestCase):
                 try:
                     return self.__filesystem[normalize_path(path)]
 
-                except KeyError:
-                    raise FileNotFoundError()
+                except KeyError as err:
+                    raise FileNotFoundError() from err
 
         for ignore_file_name in (".gitignore", ".mylovelytoolignore"):
             with self.subTest(ignore_file_name=ignore_file_name):
@@ -81,8 +81,8 @@ class TestCache(unittest.TestCase):
                     try:
                         return io.StringIO("\n".join(data[normalize_path(path)]))
 
-                    except KeyError:
-                        raise FileNotFoundError()
+                    except KeyError as err:
+                        raise FileNotFoundError() from err
 
                 def mock_isdir(path):
                     statistics["isdir"] += 1
@@ -116,14 +116,16 @@ class TestCache(unittest.TestCase):
                 ):
                     statistics = {"open": 0, "isdir": 0, "isfile": 0}
 
-                    with unittest.mock.patch("builtins.open", mock_open):
-                        with unittest.mock.patch("os.path.isdir", mock_isdir):
-                            with unittest.mock.patch("os.path.isfile", mock_isfile):
-                                matches = osxphotos.gitignorefile.Cache(
-                                    ignore_names=[ignore_file_name]
-                                )
-                                for path, expected in permutation:
-                                    self.assertEqual(matches(path), expected)
+                    with (
+                        unittest.mock.patch("builtins.open", mock_open),
+                        unittest.mock.patch("os.path.isdir", mock_isdir),
+                        unittest.mock.patch("os.path.isfile", mock_isfile),
+                    ):
+                        matches = osxphotos.gitignorefile.Cache(
+                            ignore_names=[ignore_file_name]
+                        )
+                        for path, expected in permutation:
+                            self.assertEqual(matches(path), expected)
 
                     self.assertEqual(statistics["open"], 2)
                     self.assertEqual(statistics["isdir"], len(data) - 1)

@@ -16,16 +16,14 @@ import re
 import sqlite3
 import sys
 import tempfile
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from contextlib import suppress
-from functools import cached_property
-from os import PathLike
 from textwrap import dedent
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 from rich.console import Console
-from rich.progress import Progress, TimeElapsedColumn
+from rich.progress import Progress, Task, TaskID, TimeElapsedColumn
 from strpdatetime import strpdatetime
 
 from osxphotos.cli.kill_photos import kill_photos
@@ -36,7 +34,7 @@ from osxphotos.photodates import (
     update_photo_time_for_new_timezone,
 )
 from osxphotos.photoinfo_protocol import PhotoInfoProtocol
-from osxphotos.phototz import PhotoTimeZone, PhotoTimeZoneUpdater
+from osxphotos.phototz import PhotoTimeZoneUpdater
 from osxphotos.platform import assert_macos
 from osxphotos.strpdatetime_parts import fmt_has_date_time_codes
 
@@ -58,7 +56,6 @@ from photoscript import Photo, PhotosLibrary
 from osxphotos import sqlite3_datetime
 from osxphotos._constants import (
     DEFAULT_EDITED_SUFFIX,
-    OSXPHOTOS_EXPORT_DB,
     SQLITE_CHECK_SAME_THREAD,
 )
 from osxphotos._version import __version__
@@ -105,10 +102,12 @@ from osxphotos.utils import get_last_library_path, pluralize
 
 from .cli_params import THEME_OPTION
 from .click_rich_echo import rich_click_echo, rich_echo_error
-from .rich_progress import rich_progress
+from .rich_progress import MockProgress, MockTask, rich_progress
 from .verbose import get_verbose_console, verbose_print
 
 if TYPE_CHECKING:
+    from osxphotos.photoinfo_dict import PhotoInfoFromDict
+
     from .cli import CLI_Obj
 
 # register datetime adapters/converters for sqlite3
@@ -121,6 +120,7 @@ OSXPHOTOS_ABOUT_STRING = f"Created by osxphotos version {__version__} (https://g
 # stores import status so imports can be resumed
 IMPORT_DB = "osxphotos_import.db"
 
+EXIFTOOL_PATH: str | None
 try:
     EXIFTOOL_PATH = get_exiftool_path()
 except FileNotFoundError:
@@ -151,7 +151,7 @@ def _increment_image_counter() -> str:
     return counter_str
 
 
-def echo(message, emoji=True, **kwargs):
+def echo(message: str, emoji: bool = True, **kwargs: Any) -> None:
     """Echo text with rich"""
     if emoji:
         if "[error]" in message:
@@ -162,14 +162,14 @@ def echo(message, emoji=True, **kwargs):
 
 
 # a decorator that when applied to a function, prints the name of the function and the name and type of each argument
-def watch(func):
+def watch(func: Callable[..., Any]) -> Callable[..., Any]:
     """Print name of function, name type of each argument"""
     # this is to help figure out type hint issues
 
     # avoid print() in checked in code
     echo = print
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         echo(f"Running {func.__name__}")
         for arg in itertools.chain(args, kwargs.values()):
             echo(f"{arg=}, {type(arg)=}")
@@ -187,7 +187,7 @@ def watch(func):
 class ImportCommand(click.Command):
     """Custom click.Command that overrides get_help() to show additional help info for import"""
 
-    def get_help(self, ctx):
+    def get_help(self, ctx: click.Context) -> str:
         help_text = super().get_help(ctx)
         formatter = click.HelpFormatter(width=HELP_WIDTH)
         extra_help = dedent(
@@ -965,12 +965,12 @@ def import_main(
     glob: tuple[str, ...],
     keyword: tuple[str, ...],
     library: str | None,
-    location: tuple[float, float],
+    location: tuple[float, float] | tuple[()],
     merge_keywords: bool,
     no_progress: bool,
     parse_date: str | None,
     parse_folder_date: str | None,
-    post_function: tuple[Callable[..., None]],
+    post_function: tuple[tuple[Callable[..., None], str], ...],
     relative_to: str | None,
     report: str | None,
     resume: bool,
@@ -988,7 +988,7 @@ def import_main(
     title: str | None,
     verbose_flag: bool,
     walk: bool,
-):
+) -> None:
     """Import photos and videos into Photos. Photos will be imported into the
     most recently opened Photos library.
 
@@ -1061,12 +1061,12 @@ def import_cli(
     glob: tuple[str, ...] = (),
     keyword: tuple[str, ...] = (),
     library: str | None = None,
-    location: tuple[float, float] = (),
+    location: tuple[float, float] | tuple[()] = (),
     merge_keywords: bool = False,
     no_progress: bool = False,
     parse_date: str | None = None,
     parse_folder_date: str | None = None,
-    post_function: tuple[Callable[..., None]] = (),
+    post_function: tuple[tuple[Callable[..., None], str], ...] = (),
     relative_to: str | None = None,
     report: str | None = None,
     resume: bool = False,
@@ -1084,7 +1084,7 @@ def import_cli(
     title: str | None = None,
     verbose_flag: bool = False,
     walk: bool = False,
-):
+) -> None:
     """Import photos and videos into Photos. Photos will be imported into the
     most recently opened Photos library.
 
@@ -1104,7 +1104,7 @@ def import_cli(
     if (timezone or set_timezone) and not force:
         click.confirm(
             rich_text(
-                f":warning-emoji: Using --timezone or --set-timezone will directly modify "
+                ":warning-emoji: Using --timezone or --set-timezone will directly modify "
                 "the Photos library database using undocumented features. "
                 "While this functionality has been well tested, it is possible this may "
                 "corrupt, damage, or destroy your Photos library. "
@@ -1123,7 +1123,7 @@ def import_cli(
             get_exiftool_path()
         except FileNotFoundError as e:
             rich_echo_error(f"[error] {e}")
-            raise click.Abort()
+            raise click.Abort() from e
 
     if sidecar and sidecar_filename_template:
         rich_echo_error(
@@ -1144,15 +1144,15 @@ def import_cli(
         raise click.Abort()
 
     report_file = render_and_validate_report(report) if report else None
-    relative_to = pathlib.Path(relative_to) if relative_to else None
+    relative_to_path = pathlib.Path(relative_to) if relative_to else None
 
-    files_or_dirs = collect_files_to_import(
+    import_paths = collect_files_to_import(
         files_or_dirs, walk, glob, verbose, no_progress
     )
     if check_templates:
         check_templates_and_exit(
-            files=files_or_dirs,
-            relative_to=relative_to,
+            files=import_paths,
+            relative_to=relative_to_path,
             title=title,
             description=description,
             keyword=keyword,
@@ -1168,10 +1168,10 @@ def import_cli(
         )
 
     files_to_import = group_files_to_import(
-        files_or_dirs,
+        import_paths,
         auto_live,
         edited_suffix,
-        relative_to,
+        relative_to_path,
         exiftool_path,
         sidecar,
         sidecar_filename_template,
@@ -1190,7 +1190,7 @@ def import_cli(
     if check:
         check_imported_files(
             files_to_import,
-            relative_to,
+            relative_to_path,
             last_library,
             signature,
             sidecar,
@@ -1204,7 +1204,7 @@ def import_cli(
     if check_not:
         check_not_imported_files(
             files_to_import,
-            relative_to,
+            relative_to_path,
             last_library,
             signature,
             sidecar,
@@ -1258,7 +1258,7 @@ def import_cli(
         dup_check=dup_check,
         dry_run=dry_run,
         report_data=report_data,
-        relative_to=relative_to,
+        relative_to=relative_to_path,
         import_db=import_db,
         auto_live=auto_live,
         signature=signature,
@@ -1271,7 +1271,8 @@ def import_cli(
     import_db.close()
 
     if report and not dry_run:
-        write_report(report_file, report_data, append)
+        # report_file is set whenever report is set
+        write_report(cast(str, report_file), report_data, append)
         verbose(f"Wrote import report to [filepath]{report_file}[/]")
 
     skipped_str = f", [num]{skipped_count}[/] skipped" if resume or skip_dups else ""
@@ -1301,14 +1302,14 @@ def import_cli(
 
 def collect_filepaths_for_import_check(
     filegroup: Iterable[pathlib.Path],
-    edited_suffix: str,
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
     sidecar_filename_template: str | None,
 ) -> tuple[list[pathlib.Path], list[pathlib.Path]]:
     """Collect filepaths for import check"""
-    filepaths = []
+    filepaths: list[pathlib.Path] = []
     # exclude .AAE files
     file_type = file_type_for_import_group(
         tuple(filegroup),
@@ -1336,7 +1337,7 @@ def collect_filepaths_for_import_check(
         # exclude the edited version
         filepaths.extend(
             non_edited_files(
-                filegroup, edited_suffix, relative_filepath, exiftool_path, sidecar
+                filegroup, edited_suffix, relative_filepath, exiftool_path, None
             )
         )
     else:
@@ -1346,7 +1347,7 @@ def collect_filepaths_for_import_check(
 
 
 def import_photo_group(
-    filepaths: tuple[pathlib.Path, ...], dup_check: bool, verbose: Callable[..., None]
+    filepaths: Sequence[pathlib.Path], dup_check: bool, verbose: Callable[..., None]
 ) -> tuple[Photo | None, str | None]:
     """Import a photo and return Photo object and error string if any
 
@@ -1389,7 +1390,7 @@ def add_photo_to_albums(
     dry_run: bool,
 ) -> list[str]:
     """Add photo to one or more albums"""
-    albums = []
+    albums: list[str] = []
     for a in album:
         album_names = render_photo_template_from_filepath(
             filepath, relative_filepath, a, exiftool_path, sidecar
@@ -1412,7 +1413,7 @@ def add_photo_to_albums(
 
 def add_photo_to_photoinfo_albums(
     photo: Photo | None,
-    photoinfo: PhotoInfoProtocol,
+    photoinfo: PhotoInfoProtocol | PhotoInfoFromDict,
     filepath: pathlib.Path,
     verbose: Callable[..., None],
     dry_run: bool,
@@ -1424,7 +1425,7 @@ def add_photo_to_photoinfo_albums(
     verbose(
         f"Adding photo [filename]{filepath.name}[/filename] to {len(photoinfo.album_info)} {pluralize(len(photoinfo.album_info), 'album', 'albums')}"
     )
-    albums = []
+    albums: list[str] = []
     for album_info in photoinfo.album_info:
         album_path = album_info.folder_names if album_info.folder_names else []
         album_path.append(album_info.title)
@@ -1446,7 +1447,7 @@ def add_photo_to_albums_from_exportdb(
     filepath: pathlib.Path,
     exportdb_path: str,
     exportdir_path: str | None,
-    exiftool_path: str,
+    exiftool_path: str | None,
     verbose: Callable[..., None],
     dry_run: bool,
 ) -> list[str]:
@@ -1470,10 +1471,11 @@ def add_photo_to_albums_from_exportdb(
                 f"Could not load metadata from export database for [filename]{filepath.name}[/]"
             )
         return []
+    return []
 
 
 def add_duplicate_to_albums(
-    duplicates: list[tuple[str, datetime.datetime, str]],
+    duplicates: Sequence[tuple[str, datetime.datetime | None, str]],
     filepath: pathlib.Path,
     relative_filepath: pathlib.Path,
     album: tuple[str, ...],
@@ -1526,11 +1528,11 @@ def add_duplicate_to_albums(
 
 
 def add_duplicate_to_albums_from_exportdb(
-    duplicates: list[tuple[str, datetime.datetime, str]],
+    duplicates: Sequence[tuple[str, datetime.datetime | None, str]],
     filepath: pathlib.Path,
     exportdb_path: str,
     exportdir_path: str | None,
-    exiftool_path: str,
+    exiftool_path: str | None,
     verbose: Callable[..., None],
     dry_run: bool,
 ) -> list[str]:
@@ -1578,7 +1580,7 @@ def clear_photo_metadata(
     filepath: pathlib.Path,
     verbose: Callable[..., None],
     dry_run: bool,
-):
+) -> None:
     """Clear any metadata (title, description, keywords) associated with Photo in the Photos Library"""
     verbose(f"Clearing metadata for [filename]{filepath.name}[/]")
 
@@ -1594,7 +1596,7 @@ def clear_photo_location(
     filepath: pathlib.Path,
     verbose: Callable[..., None],
     dry_run: bool,
-):
+) -> None:
     """Clear any location (latitude, longitude) associated with Photo in the Photos Library"""
     verbose(f"Clearing location for [filename]{filepath.name}[/]")
     if dry_run or not photo:
@@ -1624,10 +1626,9 @@ def set_photo_metadata(
     photo.description = normalize_unicode(metadata.description)
     keywords = metadata.keywords.copy()
     keywords = normalize_unicode(keywords)
-    if merge_keywords:
-        if old_keywords := normalize_unicode(photo.keywords):
-            keywords.extend(old_keywords)
-            keywords = list(set(keywords))
+    if merge_keywords and (old_keywords := normalize_unicode(photo.keywords)):
+        keywords.extend(old_keywords)
+        keywords = list(set(keywords))
     photo.keywords = keywords
     if metadata.favorite:
         # this will set favorite if True but cannot clear favorite as lack of favorite and not favorite is ambiguous
@@ -1638,15 +1639,15 @@ def set_photo_metadata(
 def set_photo_metadata_from_exportdb(
     photo: Photo | None,
     filepath: pathlib.Path,
-    exportdb_path: pathlib.Path,
-    exportdir_path: pathlib.Path | None,
-    exiftool_path: str,
+    exportdb_path: str | os.PathLike[str],
+    exportdir_path: str | os.PathLike[str] | None,
+    exiftool_path: str | None,
     merge_keywords: bool,
     verbose: Callable[..., None],
     dry_run: bool,
     library: str,
     timezone: bool,
-):
+) -> None:
     """Set photo's metadata by reading metadata from exportdb"""
     photoinfo = None
     with suppress(ValueError):
@@ -1681,12 +1682,12 @@ def set_photo_metadata_from_exportdb(
 def set_photo_metadata_from_exiftool(
     photo: Photo | None,
     filepath: pathlib.Path,
-    exiftool_path: str,
+    exiftool_path: str | None,
     merge_keywords: bool,
     verbose: Callable[..., None],
     dry_run: bool,
     library: str,
-):
+) -> None:
     """Set photo's metadata by reading metadata from file with exiftool"""
     verbose(f"Setting metadata and location from EXIF for [filename]{filepath.name}[/]")
     metadata = metadata_from_exiftool(filepath, exiftool_path)
@@ -1756,7 +1757,7 @@ def set_photo_metadata_from_sidecar(
     dry_run: bool,
     library: str,
     set_timezone: bool,
-):
+) -> None:
     """Set photo's metadata by reading metadata from sidecar. If sidecar format is XMP, exiftool must be installed."""
     verbose(
         f"Setting metadata and location from sidecar [filename]{sidecar.name}[/] for [filename]{filepath.name}[/]"
@@ -1799,14 +1800,17 @@ def set_photo_date(
     """
     if photo and not dry_run:
         verbose(
-            f"Set date for [filename]{photo.filename}[/] ([uuid]{photo.uuid}[/]): [time]{metadata.date.isoformat()}[/]"
+            # callers only invoke set_photo_date when metadata.date is set
+            f"Set date for [filename]{photo.filename}[/] ([uuid]{photo.uuid}[/]): [time]{cast(datetime.datetime, metadata.date).isoformat()}[/]"
         )
         photo.date = metadata.date
         if set_timezone and (metadata.tz_offset_sec is not None or metadata.tzname):
-            tz = Timezone(metadata.tzname or metadata.tz_offset_sec)
+            # the condition guarantees one of tzname / tz_offset_sec is set
+            tz = Timezone(cast(str | float, metadata.tzname or metadata.tz_offset_sec))
             tz_updater = PhotoTimeZoneUpdater(tz, verbose=verbose, library_path=library)
             tz_updater.update_photo(photo)
-        return photo.date
+        photo_date: datetime.datetime | None = photo.date
+        return photo_date
     return metadata.date
 
 
@@ -1815,7 +1819,7 @@ def set_photo_title(
     filepath: pathlib.Path,
     relative_filepath: pathlib.Path,
     title_template: str,
-    exiftool_path: str,
+    exiftool_path: str | None,
     sidecar: pathlib.Path | None,
     verbose: Callable[..., None],
     dry_run: bool,
@@ -1846,7 +1850,7 @@ def set_photo_description(
     filepath: pathlib.Path,
     relative_filepath: pathlib.Path,
     description_template: str,
-    exiftool_path: str,
+    exiftool_path: str | None,
     sidecar: pathlib.Path | None,
     verbose: Callable[..., None],
     dry_run: bool,
@@ -1880,15 +1884,15 @@ def set_photo_keywords(
     photo: Photo | None,
     filepath: pathlib.Path,
     relative_filepath: pathlib.Path,
-    keyword_template: str,
-    exiftool_path: str,
+    keyword_template: Iterable[str],
+    exiftool_path: str | None,
     merge: bool,
     sidecar: pathlib.Path | None,
     verbose: Callable[..., None],
     dry_run: bool,
 ) -> list[str]:
     """Set keywords of photo"""
-    keywords = []
+    keywords: list[str] = []
     for keyword in keyword_template:
         kw = render_photo_template_from_filepath(
             filepath, relative_filepath, keyword, exiftool_path, sidecar
@@ -1896,10 +1900,11 @@ def set_photo_keywords(
         keywords.extend(kw)
     if keywords:
         keywords = normalize_unicode(keywords)
-        if merge and photo is not None:
-            if old_keywords := normalize_unicode(photo.keywords):
-                keywords.extend(old_keywords)
-                keywords = list(set(keywords))
+        if (merge and photo is not None) and (
+            old_keywords := normalize_unicode(photo.keywords)
+        ):
+            keywords.extend(old_keywords)
+            keywords = list(set(keywords))
         verbose(f"Setting keywords of photo [filename]{filepath.name}[/] to {keywords}")
         if photo and not dry_run:
             photo.keywords = keywords
@@ -1926,11 +1931,11 @@ def set_photo_favorite(
     photo: Photo | None,
     filepath: pathlib.Path,
     sidecar_filepath: pathlib.Path | None,
-    exiftool_path: str,
-    favorite_rating: int | None,
+    exiftool_path: str | None,
+    favorite_rating: int,
     verbose: Callable[..., None],
     dry_run: bool,
-):
+) -> None:
     """Set favorite status of photo based on XMP:Rating value"""
     rating = get_photo_rating(filepath, sidecar_filepath, exiftool_path)
     if rating is not None and rating >= favorite_rating:
@@ -1942,7 +1947,7 @@ def set_photo_favorite(
 
 
 def get_photo_rating(
-    filepath: pathlib.Path, sidecar: pathlib.Path | None, exiftool_path: str
+    filepath: pathlib.Path, sidecar: pathlib.Path | None, exiftool_path: str | None
 ) -> int | None:
     """Get XMP:Rating from file"""
     photoinfo = PhotoInfoFromFile(
@@ -1984,17 +1989,17 @@ def apply_photo_metadata(
     description: str | None,
     dry_run: bool,
     exiftool: bool,
-    exiftool_path: str,
-    exportdb: pathlib.Path | None,
-    exportdir: pathlib.Path | None,
-    favorite_rating: bool,
+    exiftool_path: str | None,
+    exportdb: str | os.PathLike[str] | None,
+    exportdir: str | os.PathLike[str] | None,
+    favorite_rating: int | None,
     filepath: pathlib.Path,
-    keyword: str | None,
-    location: tuple[float, float],
+    keyword: tuple[str, ...],
+    location: tuple[float, float] | tuple[()],
     merge_keywords: bool,
     parse_date: str | None,
     parse_folder_date: str | None,
-    photo: Photo,
+    photo: Photo | None,
     relative_filepath: pathlib.Path,
     sidecar_file: pathlib.Path | None,
     sidecar_ignore_date: bool,
@@ -2003,7 +2008,7 @@ def apply_photo_metadata(
     library: str,
     set_timezone: bool,
     timezone: Timezone | None,
-):
+) -> None:
     """Set metadata for photo"""
 
     if clear_metadata:
@@ -2137,13 +2142,13 @@ def apply_photo_albums(
     exportdb: str | None,
     exportdir: str | None,
     filepath: pathlib.Path,
-    photo: Photo,
+    photo: Photo | None,
     relative_filepath: pathlib.Path,
     report_record: ReportRecord,
     sidecar_file: pathlib.Path | None,
     split_folder: str | None,
     verbose: Callable[..., None],
-):
+) -> None:
     """Apply album changes to photo"""
     if album:
         report_record.albums += add_photo_to_albums(
@@ -2180,7 +2185,7 @@ def check_templates_and_exit(
     sidecar_filename_template: str | None,
     edited_suffix: str | None,
     signature: str | None,
-):
+) -> None:
     """Renders templates against each file so user can verify correctness"""
     for file in files:
         if not (is_image_file(file) or is_video_file(file)):
@@ -2206,13 +2211,13 @@ def check_templates_and_exit(
             echo(f"exiftool keywords: {metadata.keywords}")
             echo(f"exiftool location: {metadata.location}")
         if title:
-            rendered_title = render_photo_template_from_filepath(
+            rendered_title: list[str] | str = render_photo_template_from_filepath(
                 file, relative_filepath, title, exiftool_path, sidecar_file
             )
             rendered_title = rendered_title[0] if rendered_title else "None"
             echo(f"title: [italic]{title}[/]: {rendered_title}")
         if description:
-            rendered_description = render_photo_template_from_filepath(
+            rendered_description: list[str] | str = render_photo_template_from_filepath(
                 file, relative_filepath, description, exiftool_path, sidecar_file
             )
             rendered_description = (
@@ -2221,14 +2226,16 @@ def check_templates_and_exit(
             echo(f"description: [italic]{description}[/]: {rendered_description}")
         if keyword:
             for kw in keyword:
-                rendered_keywords = render_photo_template_from_filepath(
-                    file, relative_filepath, kw, exiftool_path, sidecar_file
+                rendered_keywords: list[str] | str = (
+                    render_photo_template_from_filepath(
+                        file, relative_filepath, kw, exiftool_path, sidecar_file
+                    )
                 )
                 rendered_keywords = rendered_keywords or "None"
                 echo(f"keyword: [italic]{kw}[/]: {rendered_keywords}")
         if album:
             for al in album:
-                rendered_album = render_photo_template_from_filepath(
+                rendered_album: list[str] | str = render_photo_template_from_filepath(
                     file, relative_filepath, al, exiftool_path, sidecar_file
                 )
                 rendered_album = rendered_album[0] if rendered_album else "None"
@@ -2260,7 +2267,7 @@ def check_templates_and_exit(
                     f"[warning]Could not parse date from folder [filepath]{file.parent}[/][/]"
                 )
         if signature:
-            rendered_signature = render_photo_template_from_filepath(
+            rendered_signature: list[str] | str = render_photo_template_from_filepath(
                 file, relative_filepath, signature, exiftool_path, sidecar_file
             )
             rendered_signature = rendered_signature[0] if rendered_signature else "None"
@@ -2289,8 +2296,8 @@ class ReportRecord:
     aae_file: bool = False
     skipped_aae_file: bool = False
     keywords: list[str] = dataclasses.field(default_factory=list)
-    location: tuple[float, float] = dataclasses.field(default_factory=tuple)
-    title: str = ""
+    location: tuple[float | None, ...] = dataclasses.field(default_factory=tuple)
+    title: str | None = ""
     uuid: str = ""
     datetime: datetime.datetime | None = None
     skipped: bool = False
@@ -2316,17 +2323,17 @@ class ReportRecord:
         )
         return cls(**dict_data)
 
-    def update_from_metadata(self, metadata: MetaData):
+    def update_from_metadata(self, metadata: MetaData) -> None:
         """Update a ReportRecord with data from a MetaData"""
         self.title = metadata.title
         self.description = metadata.description
         self.keywords = metadata.keywords
         self.location = metadata.location
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
-    def asjsondict(self):
+    def asjsondict(self) -> dict[str, Any]:
         """Return a JSON serializable dict"""
         dict_data = self.asdict()
         dict_data["filepath"] = str(dict_data["filepath"])
@@ -2339,7 +2346,7 @@ class ReportRecord:
 
 def update_report_record(
     report_record: ReportRecord, photo: Photo, filepath: pathlib.Path
-):
+) -> ReportRecord:
     """Update a ReportRecord with data from a Photo"""
     # do not update albums as they are added to the report record as they are imported (#934)
     report_record.filename = filepath.name
@@ -2356,7 +2363,7 @@ def update_report_record(
 
 def write_report(
     report_file: str, report_data: dict[pathlib.Path, ReportRecord], append: bool
-):
+) -> None:
     """Write report to file"""
     report_type = os.path.splitext(report_file)[1][1:].lower()
     if report_type == "csv":
@@ -2372,7 +2379,7 @@ def write_report(
 
 def write_csv_report(
     report_file: str, report_data: dict[pathlib.Path, ReportRecord], append: bool
-):
+) -> None:
     """Write report to csv file"""
     with open(report_file, "a" if append else "w") as f:
         writer = csv.writer(f)
@@ -2430,11 +2437,11 @@ def write_csv_report(
 
 def write_json_report(
     report_file: str, report_data: dict[pathlib.Path, ReportRecord], append: bool
-):
+) -> None:
     """Write report to JSON file"""
     records = [v.asjsondict() for v in report_data.values()]
     if append and pathlib.Path(report_file).exists():
-        with open(report_file, "r") as f:
+        with open(report_file) as f:
             existing_records = json.load(f)
         records.extend(existing_records)
     with open(report_file, "w") as f:
@@ -2443,7 +2450,7 @@ def write_json_report(
 
 def write_sqlite_report(
     report_file: str, report_data: dict[pathlib.Path, ReportRecord], append: bool
-):
+) -> None:
     """Write report to SQLite file"""
     if not append:
         with suppress(FileNotFoundError):
@@ -2520,7 +2527,7 @@ def write_sqlite_report(
     conn.close()
 
 
-def create_or_migrate_sql_report_db(conn: sqlite3.Connection):
+def create_or_migrate_sql_report_db(conn: sqlite3.Connection) -> None:
     """Create or migrate the SQLite DB for the import report"""
 
     c = conn.cursor()
@@ -2653,7 +2660,7 @@ def collect_files_to_import(
 
     Note: ignores any files that appear to be image sidecar files
     """
-    files_to_import = []
+    files_to_import: list[str] = []
     with rich_progress(console=get_verbose_console(), mock=no_progress) as progress:
         task = progress.add_task("Collecting files to import...", total=None)
         for file in files:
@@ -2671,7 +2678,7 @@ def collect_files_to_import(
                     files_to_import.extend(dir_files)
                     progress.advance(task)
                 else:
-                    for root, dirs, filenames in os.walk(file):
+                    for root, _dirs, filenames in os.walk(file):
                         for file in filenames:
                             files_to_import.append(os.path.join(root, file))
                             progress.advance(task)
@@ -2687,17 +2694,17 @@ def collect_files_to_import(
             if filename_matches_patterns(os.path.basename(f), glob)
         ]
 
-    verbose(f"Getting absolute path of each import file...", level=2)
-    files_to_import = [pathlib.Path(f).absolute() for f in files_to_import]
+    verbose("Getting absolute path of each import file...", level=2)
+    paths_to_import = [pathlib.Path(f).absolute() for f in files_to_import]
 
     # keep only image files, video files, and .aae files
     filtered_file_list = []
     with rich_progress(console=get_verbose_console(), mock=no_progress) as progress:
         task = progress.add_task(
             "Filtering import list for image & video files...",
-            total=len(files_to_import),
+            total=len(paths_to_import),
         )
-        for f in files_to_import:
+        for f in paths_to_import:
             if is_image_file(f) or is_video_file(f) or f.suffix.lower() == ".aae":
                 filtered_file_list.append(f)
             progress.advance(task)
@@ -2711,7 +2718,7 @@ def collect_files_to_import(
 def group_files_to_import(
     files: list[pathlib.Path],
     auto_live: bool,
-    edited_suffix: str,
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
@@ -2721,7 +2728,7 @@ def group_files_to_import(
 ) -> list[tuple[pathlib.Path, ...]]:
     """Group files by live photo, burst UUID, raw+jpeg, etc."""
     # first collect all files by parent directory
-    files_by_parent = {}
+    files_by_parent: dict[pathlib.Path, list[pathlib.Path]] = {}
     count = len(files)
     with rich_progress(console=get_verbose_console(), mock=no_progress) as progress:
         task = progress.add_task("Grouping files by parent directory...", total=count)
@@ -2755,7 +2762,7 @@ def group_files_to_import(
                 f"Grouping files into import groups... {count} {pluralize(count, 'file', 'files')}"
             )
 
-        def advance_progress(advance: float):
+        def advance_progress(advance: float) -> None:
             progress.advance(task, advance=advance)
 
         for parent, parent_files in files_by_parent.items():
@@ -2773,7 +2780,7 @@ def group_files_to_import(
             if not get_verbose_console().is_terminal:
                 verbose(
                     f"...{parent.absolute()} "
-                    f" ({int(progress.tasks[task].completed)}/{progress.tasks[task].total})"
+                    f" ({int(_progress_task(progress, task).completed)}/{_progress_task(progress, task).total})"
                 )
 
     files_to_import = []
@@ -2795,7 +2802,7 @@ def group_files_to_import(
 def group_files_to_import_by_type(
     files_to_import: list[tuple[pathlib.Path, ...]],
     auto_live: bool,
-    edited_suffix: str,
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
@@ -2844,7 +2851,7 @@ def group_files_to_import_by_type(
 def split_edited_from_file_group(
     file_tuple: tuple[pathlib.Path, ...],
     relative_filepath: pathlib.Path | None,
-    edited_suffix: str,
+    edited_suffix: str | None,
     exiftool_path: str | None,
     sidecar: bool,
     sidecar_filename_template: str | None,
@@ -2862,7 +2869,7 @@ def split_edited_from_file_group(
     Returns:
         list[tuple[Path, ...]]: List of tuples with the edited file as an individual tuple.
     """
-    edited_files_group = []
+    edited_files_group: list[tuple[pathlib.Path, ...]] = []
     original_file_list = []
 
     for file in file_tuple:
@@ -2914,7 +2921,7 @@ def sort_paths(paths: Iterable[pathlib.Path]) -> tuple[pathlib.Path, ...]:
 
 def group_files_by_stem(
     files: list[pathlib.Path],
-    edited_suffix: str,
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
@@ -2945,7 +2952,7 @@ def group_files_by_stem(
 def file_type_for_import_group(
     file_tuple: tuple[pathlib.Path, ...],
     auto_live: bool,
-    edited_suffix: str,
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
@@ -2976,7 +2983,7 @@ def file_type_for_import_group(
             file_type |= FILE_TYPE_AUTO_LIVE_PAIR
             file_type |= FILE_TYPE_SHOULD_STAGE_FILES
         if has_aae(file_tuple):
-            if non_apple_aae_file := has_non_apple_aae(file_tuple):
+            if has_non_apple_aae(file_tuple):
                 file_type |= FILE_TYPE_HAS_NON_APPLE_AAE
                 file_type |= FILE_TYPE_SHOULD_STAGE_FILES
             else:
@@ -3024,6 +3031,13 @@ def noun_for_file_type(file_type: int) -> str:
     return noun
 
 
+def _progress_task(
+    progress: Progress | MockProgress, task_id: TaskID
+) -> Task | MockTask:
+    """Return the progress task for task_id (never removed while the import runs)"""
+    return cast("Task | MockTask", progress.tasks[task_id])
+
+
 def strip_non_apple_aae_file(
     file_tuple: tuple[pathlib.Path, ...], verbose: Callable[..., None]
 ) -> tuple[pathlib.Path, ...]:
@@ -3052,24 +3066,24 @@ def import_files(
     clear_location: bool,
     edited_suffix: str | None,
     exiftool: bool,
-    exiftool_path: str,
+    exiftool_path: str | None,
     exportdb: str | None,
     exportdir: str | None,
     favorite_rating: int | None,
     sidecar: bool,
     sidecar_ignore_date: bool,
-    sidecar_filename_template: str,
+    sidecar_filename_template: str | None,
     merge_keywords: bool,
     title: str | None,
     description: str | None,
     keyword: tuple[str, ...],
-    location: tuple[float, float],
+    location: tuple[float, float] | tuple[()],
     parse_date: str | None,
     parse_folder_date: str | None,
     album: tuple[str, ...],
     dup_albums: bool,
-    split_folder: str,
-    post_function: tuple[Callable[..., None], ...],
+    split_folder: str | None,
+    post_function: tuple[tuple[Callable[..., None], str], ...],
     skip_dups: bool,
     dup_check: bool,
     dry_run: bool,
@@ -3088,6 +3102,7 @@ def import_files(
     Returns: tuple of imported_count, skipped_count, error_count
     """
     # initialize FingerprintQuery to be able to find duplicates
+    fq: SignatureQuery | FingerprintQuery
     if signature:
         fq = SignatureQuery(
             last_library,
@@ -3131,24 +3146,25 @@ def import_files(
                 relative_filepath = get_relative_filepath(filepath, relative_to)
 
                 # check if file already imported
-                if resume:
-                    if record := import_db.get(str(filepath)):
-                        if record.imported and not record.error:
-                            # file already imported
-                            verbose(
-                                f"Skipping [filepath]{filepath}[/], already imported on "
-                                f"[time]{record.import_datetime.isoformat()}[/] with "
-                                f"UUID [uuid]{record.uuid}[/]"
-                                f" ({progress.tasks[task].completed + 1 + error_count}/{progress.tasks[task].total})"
-                            )
-                            skipped_count += 1
-                            progress.advance(task)
-                            continue
+                if resume and (
+                    (record := import_db.get(str(filepath)))
+                    and (record.imported and not record.error)
+                ):
+                    # file already imported
+                    verbose(
+                        f"Skipping [filepath]{filepath}[/], already imported on "
+                        f"[time]{record.import_datetime.isoformat()}[/] with "
+                        f"UUID [uuid]{record.uuid}[/]"
+                        f" ({_progress_task(progress, task).completed + 1 + error_count}/{_progress_task(progress, task).total})"
+                    )
+                    skipped_count += 1
+                    progress.advance(task)
+                    continue
 
                 verbose(
                     "Importing "
                     + ", ".join(f"[filepath]{f}[/]" for f in file_tuple)
-                    + f" ({progress.tasks[task].completed + 1 + error_count}/{progress.tasks[task].total})"
+                    + f" ({_progress_task(progress, task).completed + 1 + error_count}/{_progress_task(progress, task).total})"
                 )
 
                 report_data[filepath] = ReportRecord(
@@ -3239,6 +3255,7 @@ def import_files(
                     with tempfile.TemporaryDirectory(
                         prefix="osxphotos_import_", ignore_cleanup_errors=True
                     ) as temp_dir:
+                        files_to_import: Sequence[pathlib.Path]
                         if file_type & FILE_TYPE_SHOULD_STAGE_FILES:
                             verbose(
                                 f"Staging files to [filepath]{temp_dir}[/] prior to import",
@@ -3373,13 +3390,13 @@ def check_imported_files(
     files: list[tuple[pathlib.Path, ...]],
     relative_to: pathlib.Path | None,
     library: str,
-    signature: str,
+    signature: str | None,
     sidecar: bool,
     sidecar_filename_template: str | None,
     edited_suffix: str | None,
     exiftool_path: str | None,
     verbose: Callable[..., None],
-):
+) -> None:
     """Check if files have been previously imported and print results"""
 
     if not files:
@@ -3392,6 +3409,7 @@ def check_imported_files(
     verbose(
         f"Checking {filecount} {file_word} in {len(files)} {group_word} to see if previously imported"
     )
+    fq: SignatureQuery | FingerprintQuery
     if signature:
         fq = SignatureQuery(
             library,
@@ -3429,13 +3447,13 @@ def check_not_imported_files(
     files: list[tuple[pathlib.Path, ...]],
     relative_to: pathlib.Path | None,
     library: str,
-    signature: str,
+    signature: str | None,
     sidecar: bool,
     sidecar_filename_template: str | None,
     edited_suffix: str | None,
     exiftool_path: str | None,
     verbose: Callable[..., None],
-):
+) -> None:
     """Check if files have not been previously imported and print results"""
 
     if not files:
@@ -3448,6 +3466,7 @@ def check_not_imported_files(
     verbose(
         f"Checking {filecount} {file_word} in {len(files)} {group_word} to see if not previously imported"
     )
+    fq: SignatureQuery | FingerprintQuery
     if signature:
         fq = SignatureQuery(
             library,
@@ -3477,7 +3496,7 @@ def check_not_imported_files(
             echo(f"{filepath}{group_str}")
 
 
-def has_aae(filepaths: Iterable[str | os.PathLike]) -> bool:
+def has_aae(filepaths: Iterable[str | os.PathLike[str]]) -> bool:
     """Return True if any file in the list is an AAE file"""
     for filepath in filepaths:
         filepath = (
@@ -3490,7 +3509,7 @@ def has_aae(filepaths: Iterable[str | os.PathLike]) -> bool:
     return False
 
 
-def has_non_apple_aae(filepaths: Iterable[str | os.PathLike]) -> str | None:
+def has_non_apple_aae(filepaths: Iterable[str | os.PathLike[str]]) -> str | None:
     """Return True value if any file in the list are an AAE file but not an Apple AAE file (external edits)"""
     for filepath in filepaths:
         filepath = (
@@ -3498,15 +3517,16 @@ def has_non_apple_aae(filepaths: Iterable[str | os.PathLike]) -> str | None:
             if not isinstance(filepath, pathlib.Path)
             else filepath
         )
-        if filepath.name.lower().endswith(".aae"):
-            if not is_apple_photos_aae_file(filepath):
-                return str(filepath)
+        if filepath.name.lower().endswith(".aae") and not is_apple_photos_aae_file(
+            filepath
+        ):
+            return str(filepath)
     return None
 
 
 def has_original_and_edited_suffix(
-    filepaths: Iterable[str | os.PathLike],
-    edited_suffix: str,
+    filepaths: Iterable[pathlib.Path],
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
@@ -3527,7 +3547,7 @@ def has_original_and_edited_suffix(
 
 
 def has_original_and_edited(
-    filepaths: Iterable[str | os.PathLike],
+    filepaths: Iterable[pathlib.Path],
 ) -> bool:
     """Return True if any files in list appear to be an original and an edited version"""
 
@@ -3543,7 +3563,7 @@ def has_original_and_edited(
     return False
 
 
-def non_raw_file(filepaths: Iterable[str | os.PathLike]) -> str | os.PathLike:
+def non_raw_file[P: (str, pathlib.Path)](filepaths: Sequence[P]) -> P:
     """Return the non-RAW file from a RAW+non-RAW pair or the first file if non-RAW file not found"""
     for filepath in filepaths:
         if not is_raw_image(filepath):
@@ -3552,12 +3572,12 @@ def non_raw_file(filepaths: Iterable[str | os.PathLike]) -> str | os.PathLike:
 
 
 def non_edited_files(
-    filepaths: Iterable[str | os.PathLike],
-    edited_suffix: str,
+    filepaths: Iterable[pathlib.Path],
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: pathlib.Path | None,
-) -> list[os.PathLike]:
+) -> list[pathlib.Path]:
     """Return only the non-edited files from a file group"""
 
     edited_files = {
@@ -3582,15 +3602,15 @@ def non_edited_files(
 
 def edited_suffix_files(
     filepaths: Iterable[pathlib.Path],
-    edited_suffix: str,
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
     sidecar_filename_template: str | None,
-) -> list[os.PathLike]:
+) -> list[pathlib.Path]:
     """Return filepaths in filepaths that are the same as another file in filepaths but with edited_suffix otherwise empty list"""
 
-    edited_files = set()
+    edited_files: set[str] = set()
     for file in filepaths:
         sidecar_filename = get_sidecar_file_with_template(
             filepath=file,
@@ -3613,12 +3633,12 @@ def edited_suffix_files(
 
 def filepath_with_edited_suffix(
     filepath: pathlib.Path,
-    edited_suffix: str,
+    edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
     sidecar_filename_template: str | None,
-) -> os.PathLike:
+) -> pathlib.Path:
     """Return the file name of the filepath with the given edited_suffix rendered"""
 
     sidecar_filename = get_sidecar_file_with_template(
@@ -3637,7 +3657,7 @@ def filepath_with_edited_suffix(
 def edited_filename_from_template(
     filepath: pathlib.Path,
     relative_filepath: pathlib.Path | None,
-    template: str,
+    template: str | None,
     exiftool_path: str | None,
     sidecar: pathlib.Path | None,
 ) -> pathlib.Path:
@@ -3662,8 +3682,8 @@ def edited_filename_from_template(
 
 
 def stage_files(
-    filepaths: Iterable[str | os.PathLike], temp_dir: str | os.PathLike
-) -> tuple[pathlib.Path]:
+    filepaths: Iterable[str | os.PathLike[str]], temp_dir: str | os.PathLike[str]
+) -> tuple[pathlib.Path, ...]:
     """Stage files for import to temp directory"""
     staged = []
     for source in filepaths:
@@ -3674,13 +3694,13 @@ def stage_files(
 
 
 def rename_edited_group(
-    filepaths: list[pathlib.Path],
+    filepaths: Sequence[pathlib.Path],
     edited_suffix: str | None,
     relative_filepath: pathlib.Path | None,
     exiftool_path: str | None,
     sidecar: bool,
     sidecar_filename_template: str | None,
-) -> list[pathlib.Path]:
+) -> Sequence[pathlib.Path]:
     """Rename files if necessary so originals+edited+aae are correctly imported by Photos"""
     original_regex = re.compile(r"^(.*\/?)([A-Za-z]{3})_(\d{4})(.*)\.([a-zA-Z0-9]+)$")
     edited_regex = re.compile(r"^.*\/?(.*_E\d{4}).*$")
@@ -3693,18 +3713,19 @@ def rename_edited_group(
             edited_files.append(filepath)
             original_files.remove(filepath)
 
-    if not edited_files:
-        # look for edited file using template
-        if edited_files := edited_suffix_files(
+    # look for edited file using template
+    if not edited_files and (
+        edited_files := edited_suffix_files(
             filepaths,
             edited_suffix,
             relative_filepath,
             exiftool_path,
             sidecar,
             sidecar_filename_template,
-        ):
-            for e in edited_files:
-                original_files.remove(e)
+        )
+    ):
+        for e in edited_files:
+            original_files.remove(e)
 
     if not edited_files:
         return filepaths

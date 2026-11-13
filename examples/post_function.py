@@ -7,7 +7,6 @@ from collections.abc import Callable
 from typing import Any
 
 from osxphotos import ExportResults, PhotoInfo
-from osxphotos.cli import echo_error
 
 
 def post_function(

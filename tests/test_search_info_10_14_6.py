@@ -4,8 +4,6 @@
 
 import pytest
 
-from osxphotos._constants import _UNKNOWN_PERSON
-
 PHOTOS_DB = "./tests/Test-10.14.6.photoslibrary/database/photos.db"
 
 LABELS_DICT = {
@@ -75,15 +73,15 @@ def test_search_info(photosdb):
 
 
 def test_labels_normalized(photosdb):
-    for uuid in LABELS_NORMALIZED_DICT:
+    for uuid, value in LABELS_NORMALIZED_DICT.items():
         photo = photosdb.photos(uuid=[uuid])[0]
-        assert sorted(photo.labels_normalized) == sorted(LABELS_NORMALIZED_DICT[uuid])
+        assert sorted(photo.labels_normalized) == sorted(value)
 
 
 def test_labels(photosdb):
-    for uuid in LABELS_DICT:
+    for uuid, value in LABELS_DICT.items():
         photo = photosdb.photos(uuid=[uuid])[0]
-        assert sorted(photo.labels) == sorted(LABELS_DICT[uuid])
+        assert sorted(photo.labels) == sorted(value)
 
 
 def test_photosdb_labels(photosdb):

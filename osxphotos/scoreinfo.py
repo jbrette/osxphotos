@@ -2,8 +2,6 @@
 
 from dataclasses import asdict, dataclass
 
-from ._constants import _PHOTOS_4_VERSION
-
 __all__ = ["ScoreInfo"]
 
 
@@ -39,6 +37,6 @@ class ScoreInfo:
     well_framed_subject: float
     well_timed_shot: float
 
-    def asdict(self):
+    def asdict(self) -> dict[str, float]:
         """Return ScoreInfo as a dict"""
         return asdict(self)

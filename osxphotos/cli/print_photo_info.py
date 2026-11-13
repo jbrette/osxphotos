@@ -3,20 +3,26 @@
 import csv
 import json
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from osxphotos.cli.template_utils import suggest_template_fields
 from osxphotos.photoinfo import PhotoInfo
 
+if TYPE_CHECKING:
+    from osxphotos.iphoto import iPhotoPhotoInfo
+
 
 def print_photo_info(
-    photos: list[PhotoInfo], json: bool = False, print_func: Callable = print
-):
-    dump = []
+    photos: Sequence[PhotoInfo | iPhotoPhotoInfo],
+    json: bool = False,
+    print_func: Callable[..., Any] = print,
+) -> None:
     if json:
-        dump.extend(p.json(shallow=False) for p in photos)
-        print_func(f"[{', '.join(dump)}]")
+        json_dump = [p.json(shallow=False) for p in photos]
+        print_func(f"[{', '.join(json_dump)}]")
     else:
+        dump: list[list[Any]] = []
         # dump as CSV
         csv_writer = csv.writer(
             sys.stdout, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL
@@ -117,8 +123,10 @@ def print_photo_info(
 
 
 def print_photo_fields(
-    photos: list[PhotoInfo], fields: tuple[tuple[str]], json_format: bool
-):
+    photos: Sequence[PhotoInfo | iPhotoPhotoInfo],
+    fields: tuple[tuple[str, str], ...],
+    json_format: bool,
+) -> None:
     """Output custom field templates from PhotoInfo objects
 
     Args:

@@ -24,7 +24,7 @@ def pyapp() -> bool:
     return os.environ.get("PYAPP") == "1"
 
 
-def disclaim(library_path: str | None = None):
+def disclaim(library_path: str | None = None) -> None:
     """Run this function to disclaim the application and set the responsible process to the caller.
 
     Args:
@@ -47,7 +47,7 @@ def disclaim(library_path: str | None = None):
         # time we get here, which means re-launching the executable disclaimed
         # will unpack the binary again. To avoid this we reset _MEIPASS2 again,
         # so that our re-launch will pick up at second stage of the bootstrap.
-        os.environ["_MEIPASS2"] = sys._MEIPASS
+        os.environ["_MEIPASS2"] = sys._MEIPASS  # type: ignore[attr-defined]  # set by PyInstaller
 
     # Load the disclaim library and call the disclaim function
     machine = platform.machine()

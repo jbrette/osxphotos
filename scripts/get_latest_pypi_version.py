@@ -22,7 +22,7 @@ def get_latest_version(package_name: str) -> str:
         data = json.load(response)
         return data["info"]["version"]
     except Exception as e:
-        raise ValueError(f"Error retrieving version for {package_name}: {e}")
+        raise ValueError(f"Error retrieving version for {package_name}: {e}") from e
 
 
 if __name__ == "__main__":

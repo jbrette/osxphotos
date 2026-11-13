@@ -1,6 +1,9 @@
 """persons command for osxphotos CLI"""
 
+from __future__ import annotations
+
 import json
+from typing import TYPE_CHECKING
 
 import click
 import yaml
@@ -8,9 +11,12 @@ import yaml
 import osxphotos
 from osxphotos.iphoto import is_iphoto_library
 
-from .cli_params import DB_ARGUMENT, DB_OPTION, JSON_OPTION
+from .cli_params import DB_OPTION, JSON_OPTION
 from .common import get_photos_db
 from .list import _list_libraries
+
+if TYPE_CHECKING:
+    from .cli import CLI_Obj
 
 
 @click.command()
@@ -18,7 +24,9 @@ from .list import _list_libraries
 @JSON_OPTION
 @click.pass_obj
 @click.pass_context
-def persons(ctx, cli_obj, db, json_):
+def persons(
+    ctx: click.Context, cli_obj: CLI_Obj | None, db: str | None, json_: bool
+) -> None:
     """Print out persons (faces) found in the Photos library."""
 
     # below needed for to make CliRunner work for testing

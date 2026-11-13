@@ -5,10 +5,12 @@ from __future__ import annotations
 import dataclasses
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from bpylist2 import archiver
-from bpylist2.archive_types import DataclassArchiver
+from bpylist2.archive_types import (
+    DataclassArchiver,
+)
 
 from .unicode import normalize_unicode
 
@@ -69,15 +71,16 @@ class ShareParticipant:
     _name_components: bytes
     name_components: PersonNameComponents = dataclasses.field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.name_components = PersonNameComponents.init_from_bplist(
             self._name_components
         )
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Return share participant as a dict"""
         dict_data = dataclasses.asdict(self)
         dict_data["name_components"] = self.name_components.asdict()
+        return dict_data
 
 
 # @dataclasses.dataclass
@@ -88,7 +91,7 @@ class ShareParticipant:
 
 
 @dataclasses.dataclass
-class NSPersonNameComponents(DataclassArchiver):
+class NSPersonNameComponents(DataclassArchiver):  # type: ignore[misc]  # untyped base
     """Python implementation of NSPersonNameComponents.
 
     Note: see https://developer.apple.com/documentation/foundation/nspersonnamecomponents?language=objc
@@ -98,14 +101,14 @@ class NSPersonNameComponents(DataclassArchiver):
 
 
 @dataclasses.dataclass
-class NSnameComponentsPrivate(DataclassArchiver):
+class NSnameComponentsPrivate(DataclassArchiver):  # type: ignore[misc]  # untyped base
     """Python implementation of NSnameComponentsPrivate."""
 
     _NSPersonNameComponentsData: _NSPersonNameComponentsData
 
 
 @dataclasses.dataclass
-class _NSPersonNameComponentsData(DataclassArchiver):
+class _NSPersonNameComponentsData(DataclassArchiver):  # type: ignore[misc]  # untyped base
     """Python implementation of _NSPersonNameComponentsData."""
 
     NSgivenName: str

@@ -6,7 +6,6 @@ import os
 import pathlib
 import sqlite3
 
-import pytest
 from click.testing import CliRunner
 
 from osxphotos.cli import export
@@ -261,9 +260,7 @@ def test_export_sidecar_template_update_no():
         sidecar_file = pathlib.Path(SIDECAR_FILENAME)
         assert sidecar_file.exists()
         sidecar_data = sidecar_file.read_text()
-        sidecar_expected = "\n".join(
-            line.strip() for line in SIDECAR_DATA.splitlines() if line.strip()
-        )
+        "\n".join(line.strip() for line in SIDECAR_DATA.splitlines() if line.strip())
         assert sidecar_data == SIDECAR_DATA
         assert "Skipping existing sidecar file" in result.output
         assert "Deleted: 0 files, 0 directories" in result.output
@@ -313,9 +310,7 @@ def test_export_sidecar_template_update_ues():
         sidecar_file = pathlib.Path(SIDECAR_FILENAME)
         assert sidecar_file.exists()
         sidecar_data = sidecar_file.read_text()
-        sidecar_expected = "\n".join(
-            line.strip() for line in SIDECAR_DATA.splitlines() if line.strip()
-        )
+        "\n".join(line.strip() for line in SIDECAR_DATA.splitlines() if line.strip())
         assert sidecar_data == SIDECAR_DATA
         assert "Skipping existing sidecar file" not in result.output
         assert "Writing sidecar file" in result.output

@@ -5,6 +5,7 @@
 __version__ = "2024.10.07"
 
 import datetime
+from typing import cast
 from zoneinfo import ZoneInfo
 
 # TODO: probably shouldn't use replace here, see this:
@@ -38,7 +39,8 @@ def get_local_tz(dt: datetime.datetime) -> datetime.tzinfo:
         ValueError if dt is not timezone naive
     """
     if not datetime_has_tz(dt):
-        return dt.astimezone().tzinfo
+        # astimezone() always returns an aware datetime, so tzinfo is never None
+        return cast(datetime.tzinfo, dt.astimezone().tzinfo)
     else:
         raise ValueError("dt must be naive datetime.datetime object")
 
@@ -56,7 +58,7 @@ def datetime_has_tz(dt: datetime.datetime) -> bool:
         TypeError if dt is not a datetime.datetime object
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     return dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None
@@ -76,7 +78,7 @@ def datetime_tz_to_utc(dt: datetime.datetime) -> datetime.datetime:
         ValueError if dt does not have timeone information
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
@@ -98,7 +100,7 @@ def datetime_remove_tz(dt: datetime.datetime) -> datetime.datetime:
         TypeError if dt is not a datetime.datetime object
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     return dt.replace(tzinfo=None)
@@ -119,7 +121,7 @@ def datetime_naive_to_utc(dt: datetime.datetime) -> datetime.datetime:
         ValueError if dt is not a naive/timezone unaware object
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
@@ -147,7 +149,7 @@ def datetime_naive_to_local(dt: datetime.datetime) -> datetime.datetime:
         ValueError if dt is not a naive/timezone unaware object
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
@@ -174,7 +176,7 @@ def datetime_utc_to_local(dt: datetime.datetime) -> datetime.datetime:
         ValueError if dt is not in UTC timezone
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not datetime.UTC:
@@ -183,7 +185,7 @@ def datetime_utc_to_local(dt: datetime.datetime) -> datetime.datetime:
     return dt.replace(tzinfo=datetime.UTC).astimezone(tz=None)
 
 
-def datetime_to_new_tz(dt: datetime.datetime, offset) -> datetime.datetime:
+def datetime_to_new_tz(dt: datetime.datetime, offset: float) -> datetime.datetime:
     """Convert datetime.datetime object from current timezone to new timezone with offset of seconds from UTC"""
     if not datetime_has_tz(dt):
         raise ValueError("dt must be timezone aware")
@@ -193,7 +195,7 @@ def datetime_to_new_tz(dt: datetime.datetime, offset) -> datetime.datetime:
     return dt.astimezone(tz=tz)
 
 
-def utc_offset_seconds(dt: datetime.datetime) -> int:
+def utc_offset_seconds(dt: datetime.datetime) -> float:
     """Return offset in seconds from UTC for timezone aware datetime.datetime object
 
     Args:
@@ -206,8 +208,8 @@ def utc_offset_seconds(dt: datetime.datetime) -> int:
         ValueError if dt does not have timezone information
     """
 
-    if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
-        return dt.tzinfo.utcoffset(dt).total_seconds()
+    if dt.tzinfo is not None and (utcoffset := dt.tzinfo.utcoffset(dt)) is not None:
+        return utcoffset.total_seconds()
     else:
         raise ValueError("dt does not have timezone info")
 
@@ -239,7 +241,7 @@ def datetime_add_tz(
     tzoffset = tzoffset or 0
     if tzname:
         try:
-            tz = ZoneInfo(tzname)
+            tz: datetime.tzinfo = ZoneInfo(tzname)
             return dt.astimezone(tz)
         except Exception:
             # If tzname fails, fall back to tzoffset

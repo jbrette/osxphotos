@@ -30,10 +30,10 @@ from osxphotos.touch_files import touch_files
 class CPLResourceIdentity:
     """Dummy class to keep editor happy; will be replaced by objc.loadBundle()"""
 
-    def fingerPrintForFileAtURL_error_(self, url: NSURL, error: Any) -> str:
+    def fingerPrintForFileAtURL_error_(self, url: NSURL, error: Any) -> str:  # noqa: N802  (ObjC selector)
         pass
 
-    def fingerPrintForFileAtURL_typeIdentifier_error_(
+    def fingerPrintForFileAtURL_typeIdentifier_error_(  # noqa: N802  (ObjC selector)
         self, url: NSURL, type_identifier: Any, error: Any
     ) -> str:
         pass

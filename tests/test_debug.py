@@ -4,8 +4,6 @@ import importlib
 import logging
 import sys
 
-import pytest
-
 import osxphotos
 from osxphotos.debug import is_debug, relocate_debug_options, set_debug
 
@@ -58,7 +56,7 @@ def test_import_does_not_affect_root_logger():
     )
 
 
-def test_import_does_not_call_basicConfig():
+def test_import_does_not_call_basicconfig():
     """Test that importing osxphotos doesn't call logging.basicConfig"""
     # Get root logger
     root_logger = logging.getLogger()

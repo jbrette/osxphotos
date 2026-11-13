@@ -18,8 +18,8 @@ UTI_DICT = {"public.heic": "heic", "public.jpeg": "jpeg"}
 
 def test_get_preferred_uti_extension():
     """test get_preferred_uti_extension"""
-    for uti in UTI_DICT:
-        assert get_preferred_uti_extension(uti) == UTI_DICT[uti]
+    for uti, value in UTI_DICT.items():
+        assert get_preferred_uti_extension(uti) == value
 
 
 def test_get_preferred_uti_extension_unknown(caplog):
@@ -31,52 +31,52 @@ def test_get_preferred_uti_extension_unknown(caplog):
 
 def test_get_uti_for_extension():
     """get get_uti_for_extension"""
-    for ext in EXT_DICT:
-        assert get_uti_for_extension(ext) == EXT_DICT[ext]
+    for ext, value in EXT_DICT.items():
+        assert get_uti_for_extension(ext) == value
 
 
 def test_get_preferred_uti_extension_no_objc():
     """test get_preferred_uti_extension when running on macOS >= 12"""
-    OLD_VER = osxphotos.uti.OS_VER
+    old_ver = osxphotos.uti.OS_VER
     osxphotos.uti.OS_VER = 12
-    for uti in UTI_DICT:
-        assert get_preferred_uti_extension(uti) == UTI_DICT[uti]
-    osxphotos.uti.OS_VER = OLD_VER
+    for uti, value in UTI_DICT.items():
+        assert get_preferred_uti_extension(uti) == value
+    osxphotos.uti.OS_VER = old_ver
 
 
 def test_get_uti_for_extension_no_objc():
     """get get_uti_for_extension when running on macOS >= 12"""
-    OLD_VER = osxphotos.uti.OS_VER
+    old_ver = osxphotos.uti.OS_VER
     osxphotos.uti.OS_VER = 12
-    for ext in EXT_DICT:
-        assert get_uti_for_extension(ext) == EXT_DICT[ext]
-    osxphotos.uti.OS_VER = OLD_VER
+    for ext, value in EXT_DICT.items():
+        assert get_uti_for_extension(ext) == value
+    osxphotos.uti.OS_VER = old_ver
 
 
 def test_get_uti_for_path():
     """test get_uti_for_path"""
-    for ext in EXT_DICT:
-        assert osxphotos.uti.get_uti_for_path(f"test.{ext}") == EXT_DICT[ext]
+    for ext, value in EXT_DICT.items():
+        assert osxphotos.uti.get_uti_for_path(f"test.{ext}") == value
 
 
 @pytest.mark.skipif(not is_macos, reason="Only works on macOS")
 def test_get_uti_from_mdls():
     """get _get_uti_from_mdls"""
-    for ext in EXT_DICT:
-        assert _get_uti_from_mdls(ext) == EXT_DICT[ext]
+    for ext, value in EXT_DICT.items():
+        assert _get_uti_from_mdls(ext) == value
 
 
 @pytest.mark.skipif(not is_macos, reason="Only works on macOS")
 def test_get_uti_not_in_dict():
     """get UTI when objc is not available and it's not in the EXT_UTI_DICT"""
     # monkey patch the EXT_UTI_DICT
-    OLD_VER = osxphotos.uti.OS_VER
+    old_ver = osxphotos.uti.OS_VER
     osxphotos.uti.OS_VER = 12
     osxphotos.uti.EXT_UTI_DICT = {}
     osxphotos.uti.UTI_EXT_DICT = {}
-    for ext in EXT_DICT:
-        assert get_uti_for_extension(ext) == EXT_DICT[ext]
-    osxphotos.uti.OS_VER = OLD_VER
+    for ext, value in EXT_DICT.items():
+        assert get_uti_for_extension(ext) == value
+    osxphotos.uti.OS_VER = old_ver
 
     # re-initialize the cached dicts
     osxphotos.uti._load_uti_dict()

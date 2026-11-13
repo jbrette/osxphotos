@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import unicodedata
-from collections.abc import Callable, Iterable
-from typing import Any
+from collections.abc import Callable, Collection
+from typing import Any, Literal, cast
 
 from more_itertools import chunked
 
@@ -23,7 +23,8 @@ __all__ = ["PhotosAlbum", "PhotosAlbumPhotoScript"]
 def get_unicode_variants(s: str) -> list[str]:
     """Get all unicode variants of string"""
     variants = []
-    for form in ["NFC", "NFD", "NFKC", "NFKD"]:
+    forms: list[Literal["NFC", "NFD", "NFKC", "NFKD"]] = ["NFC", "NFD", "NFKC", "NFKD"]
+    for form in forms:
         normalized = unicodedata.normalize(form, s)
         variants.append(normalized)
     return variants
@@ -102,7 +103,7 @@ class PhotosAlbum:
         verbose: Callable[..., Any] | None = None,
         split_folder: str | None = None,
         rich: bool = False,
-    ):
+    ) -> None:
         """Return a PhotosAlbum object, creating the album if necessary
 
         Args:
@@ -124,7 +125,7 @@ class PhotosAlbum:
         self.name = name
         self.rich = rich
 
-    def add(self, photo: PhotoInfo):
+    def add(self, photo: PhotoInfo) -> None:
         if photo.shared or (photo.syndicated and not photo.saved_to_library):
             # shared / unsaved syndicated photos cannot be added to albums
             return
@@ -134,7 +135,7 @@ class PhotosAlbum:
             f"Added {self._format_name(photo.original_filename)} ({self._format_uuid(photo.uuid)}) to album {self._format_album(self.name)}"
         )
 
-    def update(self, photos: Iterable[PhotoInfo]):
+    def update(self, photos: Collection[PhotoInfo]) -> None:
         photoscript_photos = []
         for p in photos:
             if p.shared or (p.syndicated and not p.saved_to_library):
@@ -153,16 +154,17 @@ class PhotosAlbum:
             f"Added {self._format_num(photo_len)} {pluralize(photo_len, 'photo', 'photos')} to album {self._format_album(self.name)}"
         )
 
-    def append(self, photo: PhotoInfo):
+    def append(self, photo: PhotoInfo) -> None:
         """Add photo to album"""
         self.add(photo)
 
-    def extend(self, photos: Iterable[PhotoInfo]):
+    def extend(self, photos: Collection[PhotoInfo]) -> None:
         """Add list of photos to album"""
         self.update(photos)
 
-    def photos(self):
-        return self.album.photos()
+    def photos(self) -> list[Photo]:
+        # photoscript is untyped; Album.photos() returns a list of photoscript.Photo
+        return cast(list[Photo], self.album.photos())
 
     def _format_uuid(self, uuid: str) -> str:
         """ "Format uuid for verbose output"""
@@ -184,13 +186,13 @@ class PhotosAlbum:
 class PhotosAlbumPhotoScript(PhotosAlbum):
     """Add photoscript.Photo objects to album"""
 
-    def add(self, photo: Photo):
+    def add(self, photo: Photo) -> None:
         self.album.add([photo])
         self.verbose(
             f"Added {self._format_name(photo.filename)} ({self._format_uuid(photo.uuid)}) to album {self._format_album(self.name)}"
         )
 
-    def update(self, photos: Iterable[Photo]):
+    def update(self, photos: Collection[Photo]) -> None:
         for photolist in chunked(photos, 10):
             self.album.add(photolist)
         photo_len = len(photos)
@@ -198,11 +200,11 @@ class PhotosAlbumPhotoScript(PhotosAlbum):
             f"Added {self._format_num(photo_len)} {pluralize(photo_len, 'photo', 'photos')} to album {self._format_album(self.name)}"
         )
 
-    def append(self, photo: Photo):
+    def append(self, photo: Photo) -> None:
         """Add photo to album"""
         self.add(photo)
 
-    def extend(self, photos: Iterable[Photo]):
+    def extend(self, photos: Collection[Photo]) -> None:
         """Add list of photos to album"""
         self.update(photos)
 
@@ -213,9 +215,9 @@ class PhotosAlbumPhotoScriptByPath(PhotosAlbumPhotoScript):
     def __init__(
         self,
         album_path: list[str],
-        verbose: callable | None = None,
+        verbose: Callable[..., Any] | None = None,
         rich: bool = False,
-    ):
+    ) -> None:
         """Return a PhotosAlbum object, creating the album if necessary
 
         Args:

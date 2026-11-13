@@ -1,6 +1,5 @@
 """Test unicode names in PhotoAlbum PhotoAlbumPhotoScript (#1085)"""
 
-import pathlib
 from unicodedata import normalize
 
 import pytest
@@ -11,8 +10,7 @@ if not is_macos:
     pytest.skip("requires macOS", allow_module_level=True)
 
 import osxphotos
-from osxphotos.photosalbum import PhotosAlbum, PhotosAlbumPhotoScript
-from osxphotos.unicode import *
+from osxphotos.photosalbum import PhotosAlbum
 
 UNICODE_FOLDER_NFC = normalize("NFC", "FolderUnicode/føldêr2")
 UNICODE_FOLDER_NFD = normalize("NFD", UNICODE_FOLDER_NFC)

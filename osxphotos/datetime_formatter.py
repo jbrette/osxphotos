@@ -12,61 +12,61 @@ class DateTimeFormatter:
         self.dt = dt
 
     @property
-    def date(self):
+    def date(self) -> str:
         """ISO date in form 2020-03-22"""
         return self.dt.date().isoformat()
 
     @property
-    def year(self):
+    def year(self) -> str:
         """4 digit year"""
         return f"{self.dt.year}"
 
     @property
-    def yy(self):
+    def yy(self) -> str:
         """2 digit year"""
         return f"{self.dt.strftime('%y')}"
 
     @property
-    def mm(self):
+    def mm(self) -> str:
         """2 digit month"""
         return f"{self.dt.strftime('%m')}"
 
     @property
-    def month(self):
+    def month(self) -> str:
         """Month as locale's full name"""
         return f"{self.dt.strftime('%B')}"
 
     @property
-    def mon(self):
+    def mon(self) -> str:
         """Month as locale's abbreviated name"""
         return f"{self.dt.strftime('%b')}"
 
     @property
-    def dd(self):
+    def dd(self) -> str:
         """2-digit day of the month"""
         return f"{self.dt.strftime('%d')}"
 
     @property
-    def dow(self):
+    def dow(self) -> str:
         """Day of week as locale's name"""
         return f"{self.dt.strftime('%A')}"
 
     @property
-    def doy(self):
+    def doy(self) -> str:
         """Julian day of year starting from 001"""
         return f"{self.dt.strftime('%j')}"
 
     @property
-    def hour(self):
+    def hour(self) -> str:
         """2-digit hour"""
         return f"{self.dt.strftime('%H')}"
 
     @property
-    def min(self):
+    def min(self) -> str:
         """2-digit minute"""
         return f"{self.dt.strftime('%M')}"
 
     @property
-    def sec(self):
+    def sec(self) -> str:
         """2-digit second"""
         return f"{self.dt.strftime('%S')}"

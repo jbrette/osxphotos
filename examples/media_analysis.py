@@ -15,7 +15,7 @@ import click
 
 import osxphotos
 from osxphotos import PhotoInfo
-from osxphotos.cli import query_command, verbose
+from osxphotos.cli import query_command
 from osxphotos.photos_datetime import photos_datetime_local
 from osxphotos.phototemplate import RenderOptions
 

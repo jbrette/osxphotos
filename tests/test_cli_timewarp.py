@@ -1,6 +1,5 @@
 """Tests which require user interaction to run for osxphotos timewarp command"""
 
-import datetime
 import os
 import time
 
@@ -44,8 +43,10 @@ OS_VER = get_os_version()
 if int(OS_VER[0]) < 13:
     pytest.skip("These tests not implemented for macOS < 13", allow_module_level=True)
 
-from tests.config_timewarp_ventura import UUID_DICT
-from tests.config_timewarp_ventura import VENTURA_PHOTOS_5 as TEST_DATA
+from tests.config_timewarp_ventura import UUID_DICT  # noqa: E402  (after the skip)
+from tests.config_timewarp_ventura import (  # noqa: E402  (after the skip)
+    VENTURA_PHOTOS_5 as TEST_DATA,
+)
 
 
 def say(msg: str) -> None:

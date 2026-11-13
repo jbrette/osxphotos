@@ -79,7 +79,7 @@ def get_comments(photosdb, uuid):
 
     results = conn.execute(
         """
-        SELECT 
+        SELECT
         ZGENERICASSET.ZUUID, --0: UUID of the photo
         ZCLOUDSHAREDCOMMENT.ZISLIKE, --1: comment is actually a "like"
         ZCLOUDSHAREDCOMMENT.Z_FOK_COMMENTEDASSET, --2: sort order for comments on a photo
@@ -107,7 +107,7 @@ def get_comments(photosdb, uuid):
         user_info = get_shared_person_info(photosdb, row[5])
         try:
             dt = datetime.datetime.fromtimestamp(row[3] + TIME_DELTA)
-        except:
+        except Exception:
             dt = datetime.datetime(1970, 1, 1)
         ismine = bool(row[6])
         if is_like:

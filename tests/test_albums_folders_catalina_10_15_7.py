@@ -1,7 +1,7 @@
 import pytest
 
 import osxphotos
-from osxphotos._constants import _UNKNOWN_PERSON, AlbumSortOrder
+from osxphotos._constants import AlbumSortOrder
 
 PHOTOS_DB = "./tests/Test-10.15.7.photoslibrary/database/photos.db"
 
@@ -274,7 +274,7 @@ def test_album_dates(photosdb):
     """Test album date methods"""
     import datetime
 
-    album = [a for a in photosdb.album_info if a.uuid == UUID_DICT["album_dates"]][0]
+    album = next(a for a in photosdb.album_info if a.uuid == UUID_DICT["album_dates"])
     assert album.creation_date == datetime.datetime(
         2019,
         7,

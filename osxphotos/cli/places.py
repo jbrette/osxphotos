@@ -1,16 +1,22 @@
 """places command for osxphotos CLI"""
 
+from __future__ import annotations
+
 import json
+from typing import TYPE_CHECKING
 
 import click
 import yaml
 
 import osxphotos
-from osxphotos._constants import _PHOTOS_4_VERSION, _UNKNOWN_PLACE
+from osxphotos._constants import _UNKNOWN_PLACE
 
-from .cli_params import DB_ARGUMENT, DB_OPTION, JSON_OPTION
+from .cli_params import DB_OPTION, JSON_OPTION
 from .common import get_photos_db
 from .list import _list_libraries
+
+if TYPE_CHECKING:
+    from .cli import CLI_Obj
 
 
 @click.command()
@@ -18,7 +24,9 @@ from .list import _list_libraries
 @JSON_OPTION
 @click.pass_obj
 @click.pass_context
-def places(ctx, cli_obj, db, json_):
+def places(
+    ctx: click.Context, cli_obj: CLI_Obj | None, db: str | None, json_: bool
+) -> None:
     """Print out places found in the Photos library."""
 
     # below needed for to make CliRunner work for testing
@@ -31,7 +39,7 @@ def places(ctx, cli_obj, db, json_):
         return
 
     photosdb = osxphotos.PhotosDB(dbfile=db)
-    place_names = {}
+    place_names: dict[str | None, int] = {}  # a place may have no name
     for photo in photosdb.photos(movies=True):
         if photo.place:
             try:

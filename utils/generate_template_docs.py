@@ -1,8 +1,5 @@
 """Automatically generate template system docs"""
 
-from click.testing import CliRunner
-
-from osxphotos.cli import cli_main
 from osxphotos.cli.help import strip_html_comments
 from osxphotos.phototemplate import get_template_field_table, get_template_help
 

@@ -25,5 +25,5 @@ def test_load_uuid_from_file_filenotfound():
     """Test load_uuid_from_file function raises error if file not found"""
 
     with pytest.raises(FileNotFoundError) as err:
-        uuid_got = load_uuid_from_file(MISSING_UUID_FILE)
+        load_uuid_from_file(MISSING_UUID_FILE)
         assert "Could not find" in str(err.value)

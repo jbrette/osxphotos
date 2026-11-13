@@ -101,7 +101,7 @@ def validate_date(photo: photoscript.Photo) -> datetime.datetime:
     """Verify a datetime is valid and if not return today's date."""
     try:
         return photo.date
-    except Exception as e:
+    except Exception:
         return datetime.datetime.now()
 
 

@@ -11,7 +11,6 @@ run `osxphotos run import_shared.py`
 from __future__ import annotations
 
 import tempfile
-from collections.abc import Callable
 
 import click
 import photoscript
@@ -21,7 +20,6 @@ from rich.progress import Progress
 import osxphotos
 from osxphotos import AlbumInfo, PhotoInfo
 from osxphotos.cli import echo, echo_error
-from osxphotos.cli.verbose import verbose_print
 from osxphotos.photoquery import QueryOptions
 from osxphotos.photosalbum import PhotosAlbumPhotoScript
 from osxphotos.utils import pluralize

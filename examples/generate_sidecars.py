@@ -196,7 +196,7 @@ def collect_files_to_import(
                     files_to_import.extend(dir_files)
                     progress.advance(task)
                 else:
-                    for root, dirs, filenames in os.walk(file):
+                    for root, _dirs, filenames in os.walk(file):
                         for file in filenames:
                             files_to_import.append(os.path.join(root, file))
                             progress.advance(task)

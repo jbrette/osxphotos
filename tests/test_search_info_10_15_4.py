@@ -2,8 +2,6 @@
 
 import pytest
 
-from osxphotos._constants import _UNKNOWN_PERSON
-
 PHOTOS_DB = "./tests/Test-10.15.4.photoslibrary/database/photos.db"
 PHOTOS_DB_PATH = "/Test-10.15.4.photoslibrary/database/photos.db"
 PHOTOS_LIBRARY_PATH = "/Test-10.15.4.photoslibrary"
@@ -196,10 +194,10 @@ def photosdb():
 
 
 def test_search_info(photosdb):
-    for uuid in SEARCH_INFO_DICT:
+    for uuid, value in SEARCH_INFO_DICT.items():
         photo = photosdb.photos(uuid=[uuid])[0]
 
-        if SEARCH_INFO_DICT[uuid]:
+        if value:
             assert photo.search_info
         else:
             # still have a search info object but should have no data
@@ -207,19 +205,17 @@ def test_search_info(photosdb):
 
 
 def test_labels_normalized(photosdb):
-    for uuid in LABELS_NORMALIZED_DICT:
+    for uuid, value in LABELS_NORMALIZED_DICT.items():
         photo = photosdb.photos(uuid=[uuid])[0]
-        assert sorted(photo.search_info_normalized.labels) == sorted(
-            LABELS_NORMALIZED_DICT[uuid]
-        )
-        assert sorted(photo.labels_normalized) == sorted(LABELS_NORMALIZED_DICT[uuid])
+        assert sorted(photo.search_info_normalized.labels) == sorted(value)
+        assert sorted(photo.labels_normalized) == sorted(value)
 
 
 def test_labels(photosdb):
-    for uuid in LABELS_DICT:
+    for uuid, value in LABELS_DICT.items():
         photo = photosdb.photos(uuid=[uuid])[0]
-        assert sorted(photo.search_info.labels) == sorted(LABELS_DICT[uuid])
-        assert sorted(photo.labels) == sorted(LABELS_DICT[uuid])
+        assert sorted(photo.search_info.labels) == sorted(value)
+        assert sorted(photo.labels) == sorted(value)
 
 
 def test_photosdb_labels(photosdb):

@@ -9,7 +9,6 @@ import pathlib
 import shutil
 import sqlite3
 import subprocess
-import sys
 
 import pytest
 from click.testing import CliRunner
@@ -243,7 +242,7 @@ def test_cli_push_exif_exiftool_merge_keywords(monkeypatch):
         )
 
         # verify keywords and persons were pushed and merged appropriately
-        assert sorted(photo.keywords + ["Foo", "Bar"]) == get_exiftool_keywords(photo)
+        assert sorted([*photo.keywords, "Foo", "Bar"]) == get_exiftool_keywords(photo)
         assert sorted(photo.persons) == get_exiftool_persons(photo)
 
 
@@ -282,7 +281,7 @@ def test_cli_push_exif_exiftool_merge_persons(monkeypatch):
 
         # verify keywords and persons were pushed and merged appropriately
         assert sorted(photo.keywords) == get_exiftool_keywords(photo)
-        assert sorted(photo.persons + ["JaneDoe"]) == get_exiftool_persons(photo)
+        assert sorted([*photo.persons, "JaneDoe"]) == get_exiftool_persons(photo)
 
 
 def test_cli_push_exif_report_csv(monkeypatch):
@@ -310,7 +309,7 @@ def test_cli_push_exif_report_csv(monkeypatch):
         with open("report.csv", newline="") as fp:
             report_data = list(csv.DictReader(fp))
         assert len(report_data) == 17
-        missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]
+        missing = next(row for row in report_data if row["uuid"] == UUID_MISSING)
         assert missing["missing"] == "original"
 
 
@@ -340,7 +339,7 @@ def test_cli_push_exif_report_csv_append(monkeypatch):
         with open("report.csv", newline="") as fp:
             report_data = list(csv.DictReader(fp))
         assert len(report_data) == 17
-        missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]
+        missing = next(row for row in report_data if row["uuid"] == UUID_MISSING)
         assert missing["missing"] == "original"
 
 
@@ -366,10 +365,10 @@ def test_cli_push_exif_report_json(monkeypatch):
             ],
         )
         assert result.exit_code == 0
-        with open("report.json", "r") as fp:
+        with open("report.json") as fp:
             report_data = json.load(fp)
         assert len(report_data) == 14
-        missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]
+        missing = next(row for row in report_data if row["uuid"] == UUID_MISSING)
         assert missing["missing"] == ["original"]
 
 
@@ -399,7 +398,7 @@ def test_cli_push_exif_report_sqlite(monkeypatch):
         conn.row_factory = sqlite3.Row
         report_data = list(conn.execute("SELECT * FROM report").fetchall())
         assert len(report_data) == 17
-        missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]
+        missing = next(row for row in report_data if row["uuid"] == UUID_MISSING)
         assert missing["missing"] == "original"
 
 
@@ -528,7 +527,7 @@ def test_cli_push_exif_keyword_description_template(monkeypatch):
 
         photo = PhotosDB(test_library).get_photo(UUID_KEYWORDS_PERSONS)
         keywords = get_exiftool_keywords(photo)
-        assert keywords == sorted(photo.keywords + [photo.title] + ["FOO"])
+        assert keywords == sorted([*photo.keywords, photo.title, "FOO"])
         assert get_exiftool_description(photo) == f"{photo.description} - {photo.title}"
 
 
@@ -562,7 +561,7 @@ def test_cli_push_exif_replace_keywords(monkeypatch):
 
         photo = PhotosDB(test_library).get_photo(UUID_KEYWORDS_PERSONS)
         keywords = get_exiftool_keywords(photo)
-        assert keywords == sorted([photo.title] + ["FOO"])
+        assert keywords == sorted([photo.title, "FOO"])
 
 
 def test_cli_push_exif_metadata_arg(monkeypatch):

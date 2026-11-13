@@ -2,6 +2,7 @@
 
 import io
 import pathlib
+from typing import Any
 
 import click
 from rich.console import Console
@@ -18,13 +19,12 @@ from .help import strip_html_comments, strip_md_links
 )
 @click.pass_obj
 @click.pass_context
-def tutorial(ctx, cli_obj, width):
+def tutorial(ctx: click.Context, cli_obj: Any, width: tuple[int, ...]) -> None:
     """Display osxphotos tutorial."""
-    width = width[0] if width else 100
-    click.echo_via_pager(tutorial_help(width=width))
+    click.echo_via_pager(tutorial_help(width=width[0] if width else 100))
 
 
-def tutorial_help(width=78):
+def tutorial_help(width: int = 78) -> str:
     """Return formatted string for tutorial"""
     sio = io.StringIO()
     console = Console(file=sio, force_terminal=True, width=width)
@@ -37,10 +37,10 @@ def tutorial_help(width=78):
     return help_str
 
 
-def get_tutorial_text():
+def get_tutorial_text() -> str:
     """Load tutorial text from file"""
     # TODO: would be better to use importlib.abc.ResourceReader but I can't find a single example of how to do this
     help_file = pathlib.Path(__file__).parent / "../tutorial.md"
-    with open(help_file, "r") as fd:
+    with open(help_file) as fd:
         md = fd.read()
     return md

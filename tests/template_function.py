@@ -1,7 +1,5 @@
 """Example showing how to use a custom function for osxphotos {function} template"""
 
-import pathlib
-
 import osxphotos
 
 

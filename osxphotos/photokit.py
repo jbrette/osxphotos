@@ -24,13 +24,14 @@ import pathlib
 import sys
 import threading
 import time
+from collections.abc import Callable
+from typing import Any, cast
 
 from .platform import get_macos_version
 
 assert sys.platform == "darwin"
 
 import AVFoundation
-import CoreServices
 import Foundation
 import objc
 import Photos
@@ -95,17 +96,17 @@ MIN_SLEEP = 0.015
 
 
 ### utility functions
-def NSURL_to_path(url):
+def NSURL_to_path(url: Any) -> str:
     """Convert URL string as represented by NSURL to a path string"""
     nsurl = Foundation.NSURL.alloc().initWithString_(
         Foundation.NSString.alloc().initWithString_(str(url))
     )
-    path = nsurl.fileSystemRepresentation().decode("utf-8")
+    path: str = nsurl.fileSystemRepresentation().decode("utf-8")
     nsurl.dealloc()
     return path
 
 
-def path_to_NSURL(path):
+def path_to_NSURL(path: str | os.PathLike[str]) -> Any:
     """Convert path string to NSURL"""
     pathstr = Foundation.NSString.alloc().initWithString_(str(path))
     url = Foundation.NSURL.fileURLWithPath_(pathstr)
@@ -113,7 +114,7 @@ def path_to_NSURL(path):
     return url
 
 
-def check_photokit_authorization():
+def check_photokit_authorization() -> bool:
     """Check authorization to use user's Photos Library
 
     Returns:
@@ -121,10 +122,11 @@ def check_photokit_authorization():
     """
 
     auth_status = Photos.PHPhotoLibrary.authorizationStatus()
-    return auth_status == Photos.PHAuthorizationStatusAuthorized
+    authorized: bool = auth_status == Photos.PHAuthorizationStatusAuthorized
+    return authorized
 
 
-def request_photokit_authorization():
+def request_photokit_authorization() -> int:
     """Request authorization to user's Photos Library
 
     Returns:
@@ -136,10 +138,10 @@ def request_photokit_authorization():
 
     (_, major, _) = get_macos_version()
 
-    def handler(status):
+    def handler(status: Any) -> None:
         pass
 
-    auth_status = 0
+    auth_status: int = 0
     if int(major) < 16:
         auth_status = Photos.PHPhotoLibrary.authorizationStatus()
         if auth_status != Photos.PHAuthorizationStatusAuthorized:
@@ -206,7 +208,7 @@ class PhotoKitMediaTypeError(PhotoKitError):
 PHOTOKIT_REQUEST_TIMEOUT = float(os.environ.get("OSXPHOTOS_PHOTOKIT_TIMEOUT") or 300)
 
 
-def _wait_for_event_or_timeout(event, asset_id):
+def _wait_for_event_or_timeout(event: threading.Event, asset_id: str) -> None:
     """Block on a PhotoKit completion event, bounded by PHOTOKIT_REQUEST_TIMEOUT.
 
     PhotoKit image/resource/video requests are asynchronous; the result/completion handler
@@ -221,7 +223,7 @@ def _wait_for_event_or_timeout(event, asset_id):
         )
 
 
-def _run_event_loop_with_timeout(timeout):
+def _run_event_loop_with_timeout(timeout: float) -> bool:
     """Run the console event loop until something calls AppHelper.stopEventLoop() or
     `timeout` seconds pass, whichever comes first. Returns True if the timeout fired.
 
@@ -234,7 +236,7 @@ def _run_event_loop_with_timeout(timeout):
     """
     state = {"timed_out": False}
 
-    def _on_timeout(_timer):
+    def _on_timeout(_timer: Any) -> None:
         state["timed_out"] = True
         AppHelper.stopEventLoop()
 
@@ -258,8 +260,13 @@ class ImageData:
     """
 
     def __init__(
-        self, metadata=None, uti=None, image_data=None, info=None, orientation=None
-    ):
+        self,
+        metadata: Any = None,
+        uti: Any = None,
+        image_data: Any = None,
+        info: Any = None,
+        orientation: Any = None,
+    ) -> None:
         self.metadata = metadata
         self.uti = uti
         self.image_data = image_data
@@ -270,11 +277,11 @@ class ImageData:
 class AVAssetData:
     """Simple class to hold the data passed to the handler for"""
 
-    def __init__(self):
-        self.asset = None
-        self.export_session = None
-        self.info = None
-        self.audiomix = None
+    def __init__(self) -> None:
+        self.asset: Any = None
+        self.export_session: Any = None
+        self.info: Any = None
+        self.audiomix: Any = None
 
 
 class PHAssetResourceData:
@@ -282,20 +289,20 @@ class PHAssetResourceData:
     requestDataForAssetResource:options:dataReceivedHandler:completionHandler:
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.data = b""
 
 
-class PhotoKitNotificationDelegate(NSObject):
+class PhotoKitNotificationDelegate(NSObject):  # type: ignore[misc]  # pyobjc NSObject is untyped
     """Handles notifications from NotificationCenter;
     used with asynchronous PhotoKit requests to stop event loop when complete
     """
 
-    def liveNotification_(self, note):
+    def liveNotification_(self, note: Any) -> None:
         if note.name() == PHOTOKIT_NOTIFICATION_FINISHED_REQUEST:
             AppHelper.stopEventLoop()
 
-    def __del__(self):
+    def __del__(self) -> None:
         pass
         # super(NSObject, self).dealloc()
 
@@ -304,7 +311,7 @@ class PhotoKitNotificationDelegate(NSObject):
 class PhotoAsset:
     """PhotoKit PHAsset representation"""
 
-    def __init__(self, manager, phasset):
+    def __init__(self, manager: Any, phasset: Any) -> None:
         """Return a PhotoAsset object
 
         Args:
@@ -316,46 +323,45 @@ class PhotoAsset:
         self._phasset = phasset
 
     @property
-    def phasset(self):
+    def phasset(self) -> Any:
         """Return PHAsset instance"""
         return self._phasset
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         """Return local identifier (UUID) of PHAsset"""
-        return self._phasset.localIdentifier()
+        return cast(str, self._phasset.localIdentifier())
 
     @property
-    def isphoto(self):
+    def isphoto(self) -> bool:
         """Return True if asset is photo (image), otherwise False"""
-        return self.media_type == Photos.PHAssetMediaTypeImage
+        return bool(self.media_type == Photos.PHAssetMediaTypeImage)
 
     @property
-    def ismovie(self):
+    def ismovie(self) -> bool:
         """Return True if asset is movie (video), otherwise False"""
-        return self.media_type == Photos.PHAssetMediaTypeVideo
+        return bool(self.media_type == Photos.PHAssetMediaTypeVideo)
 
     @property
-    def isaudio(self):
+    def isaudio(self) -> bool:
         """Return True if asset is audio, otherwise False"""
-        return self.media_type == Photos.PHAssetMediaTypeAudio
+        return bool(self.media_type == Photos.PHAssetMediaTypeAudio)
 
     @property
-    def original_filename(self):
+    def original_filename(self) -> Any:
         """Return original filename asset was imported with"""
         resources = self._resources()
         for resource in resources:
             if (
-                self.isphoto
-                and resource.type() == Photos.PHAssetResourceTypePhoto
-                or not self.isphoto
-                and resource.type() == Photos.PHAssetResourceTypeVideo
+                self.isphoto and resource.type() == Photos.PHAssetResourceTypePhoto
+            ) or (
+                not self.isphoto and resource.type() == Photos.PHAssetResourceTypeVideo
             ):
                 return resource.originalFilename()
         return None
 
     @property
-    def raw_filename(self):
+    def raw_filename(self) -> Any:
         """Return RAW filename for RAW+JPEG photos or None if no RAW asset"""
         resources = self._resources()
         for resource in resources:
@@ -367,7 +373,7 @@ class PhotoAsset:
         return None
 
     @property
-    def hasadjustments(self):
+    def hasadjustments(self) -> bool:
         """Check to see if a PHAsset has adjustment data associated with it
         Returns False if no adjustments, True if any adjustments"""
 
@@ -385,118 +391,118 @@ class PhotoAsset:
         )
 
     @property
-    def media_type(self):
+    def media_type(self) -> Any:
         """media type such as image or video"""
         return self.phasset.mediaType()
 
     @property
-    def media_subtypes(self):
+    def media_subtypes(self) -> Any:
         """media subtype"""
         return self.phasset.mediaSubtypes()
 
     @property
-    def panorama(self):
+    def panorama(self) -> bool:
         """return True if asset is panorama, otherwise False"""
         return bool(self.media_subtypes & Photos.PHAssetMediaSubtypePhotoPanorama)
 
     @property
-    def hdr(self):
+    def hdr(self) -> bool:
         """return True if asset is HDR, otherwise False"""
         return bool(self.media_subtypes & Photos.PHAssetMediaSubtypePhotoHDR)
 
     @property
-    def screenshot(self):
+    def screenshot(self) -> bool:
         """return True if asset is screenshot, otherwise False"""
         return bool(self.media_subtypes & Photos.PHAssetMediaSubtypePhotoScreenshot)
 
     @property
-    def screen_recording(self):
+    def screen_recording(self) -> bool:
         """return True if asset is screen recordings, otherwise False"""
         return bool(
             self.media_subtypes & Photos.PHAssetMediaSubtypePhotoScreenRecording
         )
 
     @property
-    def live(self):
+    def live(self) -> bool:
         """return True if asset is live, otherwise False"""
         return bool(self.media_subtypes & Photos.PHAssetMediaSubtypePhotoLive)
 
     @property
-    def streamed(self):
+    def streamed(self) -> bool:
         """return True if asset is streamed video, otherwise False"""
         return bool(self.media_subtypes & Photos.PHAssetMediaSubtypeVideoStreamed)
 
     @property
-    def slow_mo(self):
+    def slow_mo(self) -> bool:
         """return True if asset is slow motion (high frame rate) video, otherwise False"""
         return bool(self.media_subtypes & Photos.PHAssetMediaSubtypeVideoHighFrameRate)
 
     @property
-    def time_lapse(self):
+    def time_lapse(self) -> bool:
         """return True if asset is time lapse video, otherwise False"""
         return bool(self.media_subtypes & Photos.PHAssetMediaSubtypeVideoTimelapse)
 
     @property
-    def portrait(self):
+    def portrait(self) -> bool:
         """return True if asset is portrait (depth effect), otherwise False"""
         return bool(self.media_subtypes & Photos.PHAssetMediaSubtypePhotoDepthEffect)
 
     @property
-    def burstid(self):
+    def burstid(self) -> Any:
         """return burstIdentifier of image if image is burst photo otherwise None"""
         return self.phasset.burstIdentifier()
 
     @property
-    def burst(self):
+    def burst(self) -> bool:
         """return True if image is burst otherwise False"""
         return bool(self.burstid)
 
     @property
-    def source_type(self):
+    def source_type(self) -> Any:
         """the means by which the asset entered the user's library"""
         return self.phasset.sourceType()
 
     @property
-    def pixel_width(self):
+    def pixel_width(self) -> Any:
         """width in pixels"""
         return self.phasset.pixelWidth()
 
     @property
-    def pixel_height(self):
+    def pixel_height(self) -> Any:
         """height in pixels"""
         return self.phasset.pixelHeight()
 
     @property
-    def date(self):
+    def date(self) -> Any:
         """date asset was created"""
         return self.phasset.creationDate()
 
     @property
-    def date_modified(self):
+    def date_modified(self) -> Any:
         """date asset was modified"""
         return self.phasset.modificationDate()
 
     @property
-    def location(self):
+    def location(self) -> Any:
         """location of the asset"""
         return self.phasset.location()
 
     @property
-    def duration(self):
+    def duration(self) -> Any:
         """duration of the asset"""
         return self.phasset.duration()
 
     @property
-    def favorite(self):
+    def favorite(self) -> Any:
         """True if asset is favorite, otherwise False"""
         return self.phasset.isFavorite()
 
     @property
-    def hidden(self):
+    def hidden(self) -> Any:
         """True if asset is hidden, otherwise False"""
         return self.phasset.isHidden()
 
-    def metadata(self, version=PHOTOS_VERSION_CURRENT):
+    def metadata(self, version: int = PHOTOS_VERSION_CURRENT) -> Any:
         """Return dict of asset metadata
 
         Args:
@@ -505,7 +511,7 @@ class PhotoAsset:
         imagedata = self._request_image_data(version=version)
         return imagedata.metadata
 
-    def uti(self, version=PHOTOS_VERSION_CURRENT):
+    def uti(self, version: int = PHOTOS_VERSION_CURRENT) -> Any:
         """Return UTI of asset
 
         Args:
@@ -514,7 +520,7 @@ class PhotoAsset:
         imagedata = self._request_image_data(version=version)
         return imagedata.uti
 
-    def uti_raw(self):
+    def uti_raw(self) -> Any:
         """Return UTI of RAW component of RAW+JPEG pair"""
         resources = self._resources()
         for resource in resources:
@@ -525,7 +531,7 @@ class PhotoAsset:
                 return resource.uniformTypeIdentifier()
         return None
 
-    def url(self, version=PHOTOS_VERSION_CURRENT):
+    def url(self, version: int = PHOTOS_VERSION_CURRENT) -> str:
         """Return URL of asset
 
         Args:
@@ -534,7 +540,7 @@ class PhotoAsset:
         imagedata = self._request_image_data(version=version)
         return str(imagedata.info["PHImageFileURLKey"])
 
-    def path(self, version=PHOTOS_VERSION_CURRENT):
+    def path(self, version: int = PHOTOS_VERSION_CURRENT) -> str:
         """Return path of asset
 
         Args:
@@ -542,9 +548,10 @@ class PhotoAsset:
         """
         imagedata = self._request_image_data(version=version)
         url = imagedata.info["PHImageFileURLKey"]
-        return url.fileSystemRepresentation().decode("utf-8")
+        path: str = url.fileSystemRepresentation().decode("utf-8")
+        return path
 
-    def orientation(self, version=PHOTOS_VERSION_CURRENT):
+    def orientation(self, version: int = PHOTOS_VERSION_CURRENT) -> Any:
         """Return orientation of asset
 
         Args:
@@ -554,20 +561,20 @@ class PhotoAsset:
         return imagedata.orientation
 
     @property
-    def degraded(self):
+    def degraded(self) -> Any:
         """Return True if asset is degraded version (current version of image)"""
         imagedata = self._request_image_data(version=PHOTOS_VERSION_CURRENT)
         return imagedata.info["PHImageResultIsDegradedKey"]
 
     def export(
         self,
-        dest,
-        filename=None,
-        version=PHOTOS_VERSION_CURRENT,
-        overwrite=False,
-        raw=False,
-        **kwargs,
-    ):
+        dest: str | os.PathLike[str],
+        filename: str | os.PathLike[str] | None = None,
+        version: int = PHOTOS_VERSION_CURRENT,
+        overwrite: bool = False,
+        raw: bool = False,
+        **kwargs: Any,
+    ) -> list[str]:
         """Export image to path
 
         Args:
@@ -585,77 +592,78 @@ class PhotoAsset:
             ValueError if dest is not a valid directory
         """
 
-        with objc.autorelease_pool():
-            with pipes() as (out, err):
-                filename = (
-                    pathlib.Path(filename)
-                    if filename
-                    else pathlib.Path(self.original_filename)
-                )
+        with objc.autorelease_pool(), pipes() as (_out, _err):
+            filename = (
+                pathlib.Path(filename)
+                if filename
+                else pathlib.Path(self.original_filename)
+            )
 
-                dest = pathlib.Path(dest)
-                if not dest.is_dir():
-                    raise ValueError("dest must be a valid directory: {dest}")
+            dest = pathlib.Path(dest)
+            if not dest.is_dir():
+                raise ValueError("dest must be a valid directory: {dest}")
 
-                output_file = None
-                if self.isphoto:
-                    # will hold exported image data and needs to be cleaned up at end
-                    imagedata = None
-                    if raw:
-                        # export the raw component
-                        resources = self._resources()
-                        for resource in resources:
-                            if (
-                                resource.type()
-                                == Photos.PHAssetResourceTypeAlternatePhoto
-                            ):
-                                data = self._request_resource_data(resource)
-                                suffix = pathlib.Path(self.raw_filename).suffix
-                                ext = suffix[1:] if suffix else ""
-                                break
-                        else:
-                            raise PhotoKitExportError(
-                                "Could not get image data for RAW photo"
-                            )
+            output_file: pathlib.Path | None = None
+            if self.isphoto:
+                # will hold exported image data and needs to be cleaned up at end
+                imagedata: ImageData | None = None
+                data: Any
+                if raw:
+                    # export the raw component
+                    resources = self._resources()
+                    for resource in resources:
+                        if resource.type() == Photos.PHAssetResourceTypeAlternatePhoto:
+                            data = self._request_resource_data(resource)
+                            suffix = pathlib.Path(self.raw_filename).suffix
+                            ext = suffix[1:] if suffix else ""
+                            break
                     else:
-                        # TODO: if user has selected use RAW as original, this returns the RAW
-                        # can get the jpeg with resource.type() == Photos.PHAssetResourceTypePhoto
-                        imagedata = self._request_image_data(version=version)
-                        if not imagedata.image_data:
-                            raise PhotoKitExportError("Could not get image data")
-                        ext = get_preferred_uti_extension(imagedata.uti)
-                        data = imagedata.image_data
+                        raise PhotoKitExportError(
+                            "Could not get image data for RAW photo"
+                        )
+                else:
+                    # TODO: if user has selected use RAW as original, this returns the RAW
+                    # can get the jpeg with resource.type() == Photos.PHAssetResourceTypePhoto
+                    imagedata = self._request_image_data(version=version)
+                    if not imagedata.image_data:
+                        raise PhotoKitExportError("Could not get image data")
+                    ext = get_preferred_uti_extension(imagedata.uti)
+                    data = imagedata.image_data
 
-                    output_file = dest / f"{filename.stem}.{ext}"
+                output_file = dest / f"{filename.stem}.{ext}"
 
-                    if not overwrite:
-                        output_file = pathlib.Path(increment_filename(output_file))
+                if not overwrite:
+                    output_file = pathlib.Path(increment_filename(output_file))
 
-                    with open(output_file, "wb") as fd:
-                        fd.write(data)
+                with open(output_file, "wb") as fd:
+                    fd.write(data)
 
-                    if imagedata:
-                        del imagedata
-                elif self.ismovie:
-                    videodata = self._request_video_data(version=version)
-                    if videodata.asset is None:
-                        raise PhotoKitExportError("Could not get video for asset")
+                if imagedata:
+                    del imagedata
+            elif self.ismovie:
+                # movies are VideoAsset instances (see PhotoLibrary._asset_factory),
+                # which define _request_video_data
+                videodata = cast("VideoAsset", self)._request_video_data(
+                    version=version
+                )
+                if videodata.asset is None:
+                    raise PhotoKitExportError("Could not get video for asset")
 
-                    url = videodata.asset.URL()
-                    path = pathlib.Path(NSURL_to_path(url))
-                    if not path.is_file():
-                        raise FileNotFoundError("Could not get path to video file")
-                    ext = path.suffix
-                    output_file = dest / f"{filename.stem}{ext}"
+                url = videodata.asset.URL()
+                path = pathlib.Path(NSURL_to_path(url))
+                if not path.is_file():
+                    raise FileNotFoundError("Could not get path to video file")
+                ext = path.suffix
+                output_file = dest / f"{filename.stem}{ext}"
 
-                    if not overwrite:
-                        output_file = pathlib.Path(increment_filename(output_file))
+                if not overwrite:
+                    output_file = pathlib.Path(increment_filename(output_file))
 
-                    FileUtil.copy(path, output_file)
+                FileUtil.copy(path, output_file)
 
-                return [str(output_file)]
+            return [str(output_file)]
 
-    def _request_image_data(self, version=PHOTOS_VERSION_ORIGINAL):
+    def _request_image_data(self, version: int = PHOTOS_VERSION_ORIGINAL) -> ImageData:
         """Request image data and metadata for self._phasset
 
         Args:
@@ -692,7 +700,9 @@ class PhotoAsset:
             requestdata = ImageData()
             event = threading.Event()
 
-            def handler(imageData, dataUTI, orientation, info):
+            def handler(
+                imageData: Any, dataUTI: Any, orientation: Any, info: Any
+            ) -> None:
                 """result handler for requestImageDataAndOrientationForAsset_options_resultHandler_
                 all returned by the request is set as properties of nonlocal data (Fetchdata object)
                 """
@@ -723,7 +733,7 @@ class PhotoAsset:
             del requestdata
             return data
 
-    def _request_resource_data(self, resource):
+    def _request_resource_data(self, resource: Any) -> bytes:
         """Request asset resource data (either photo or video component)
 
         Args:
@@ -739,9 +749,9 @@ class PhotoAsset:
 
             requestdata = PHAssetResourceData()
             event = threading.Event()
-            request_error = None
+            request_error: Any = None
 
-            def handler(data):
+            def handler(data: Any) -> None:
                 """result handler for requestImageDataAndOrientationForAsset_options_resultHandler_
                 all returned by the request is set as properties of nonlocal data (Fetchdata object)
                 """
@@ -750,7 +760,7 @@ class PhotoAsset:
 
                 requestdata.data += data
 
-            def completion_handler(error):
+            def completion_handler(error: Any) -> None:
                 # Runs on a PhotoKit dispatch queue: an exception raised here becomes an
                 # uncaught NSException and aborts the process (#2253), so only record the
                 # error and let the calling thread raise it.
@@ -776,7 +786,9 @@ class PhotoAsset:
             del requestdata
             return data
 
-    def _make_result_handle_(self, data):
+    def _make_result_handle_(
+        self, data: ImageData
+    ) -> tuple[Callable[[Any, Any, Any, Any], None], threading.Event]:
         """Make handler function and threading event to use with
         requestImageDataAndOrientationForAsset_options_resultHandler_
         data: Fetchdata class to hold resulting metadata
@@ -786,7 +798,7 @@ class PhotoAsset:
 
         event = threading.Event()
 
-        def handler(imageData, dataUTI, orientation, info):
+        def handler(imageData: Any, dataUTI: Any, orientation: Any, info: Any) -> None:
             """result handler for requestImageDataAndOrientationForAsset_options_resultHandler_
             all returned by the request is set as properties of nonlocal data (Fetchdata object)
             """
@@ -807,14 +819,16 @@ class PhotoAsset:
 
         return handler, event
 
-    def _resources(self):
+    def _resources(self) -> list[Any]:
         """Return list of PHAssetResource for object"""
         resources = Photos.PHAssetResource.assetResourcesForAsset_(self.phasset)
         return [resources.objectAtIndex_(idx) for idx in range(resources.count())]
 
 
-class SlowMoVideoExporter(NSObject):
-    def initWithAVAsset_path_(self, avasset, path):
+class SlowMoVideoExporter(NSObject):  # type: ignore[misc]  # pyobjc NSObject is untyped
+    def initWithAVAsset_path_(
+        self, avasset: Any, path: str | os.PathLike[str]
+    ) -> "SlowMoVideoExporter | None":  # noqa: UP037 pyobjc evaluates annotations at class creation
         """init helper class for exporting slow-mo video
 
         Args:
@@ -829,7 +843,7 @@ class SlowMoVideoExporter(NSObject):
         self.nc = NSNotificationCenter.defaultCenter()
         return self
 
-    def exportSlowMoVideo(self):
+    def exportSlowMoVideo(self) -> str:
         """export slow-mo video with AVAssetExportSession
 
         Returns:
@@ -846,9 +860,9 @@ class SlowMoVideoExporter(NSObject):
             exporter.setOutputFileType_(AVFoundation.AVFileTypeQuickTimeMovie)
             exporter.setShouldOptimizeForNetworkUse_(True)
 
-            self.done = False
+            self.done: bool | None = False
 
-            def handler():
+            def handler() -> None:
                 """result handler for exportAsynchronouslyWithCompletionHandler"""
                 self.done = True
 
@@ -873,7 +887,7 @@ class SlowMoVideoExporter(NSObject):
             # exporter.dealloc()
             return exported_path
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.avasset = None
         self.url.dealloc()
         self.url = None
@@ -889,14 +903,14 @@ class VideoAsset(PhotoAsset):
     # https://developer.apple.com/documentation/photokit/phimagemanager/1616935-requestavassetforvideo?language=objc
     # https://developer.apple.com/documentation/photokit/phimagemanager/1616981-requestexportsessionforvideo?language=objc
     # above 10.15 only
-    def export(
+    def export(  # type: ignore[override]  # export options differ per asset type by design; others go through **kwargs
         self,
-        dest,
-        filename=None,
-        version=PHOTOS_VERSION_CURRENT,
-        overwrite=False,
-        **kwargs,
-    ):
+        dest: str | os.PathLike[str],
+        filename: str | os.PathLike[str] | None = None,
+        version: int = PHOTOS_VERSION_CURRENT,
+        overwrite: bool = False,
+        **kwargs: Any,
+    ) -> list[str]:
         """Export video to path
 
         Args:
@@ -913,7 +927,7 @@ class VideoAsset(PhotoAsset):
             ValueError if dest is not a valid directory
         """
 
-        with objc.autorelease_pool(), pipes() as (out, err):
+        with objc.autorelease_pool(), pipes() as (_out, _err):
             if self.slow_mo and version == PHOTOS_VERSION_CURRENT:
                 return [
                     self._export_slow_mo(
@@ -934,7 +948,6 @@ class VideoAsset(PhotoAsset):
             if not dest.is_dir():
                 raise ValueError("dest must be a valid directory: {dest}")
 
-            output_file = None
             videodata = self._request_video_data(version=version)
             if videodata.asset is None:
                 raise PhotoKitExportError("Could not get video for asset")
@@ -955,8 +968,12 @@ class VideoAsset(PhotoAsset):
             return [str(output_file)]
 
     def _export_slow_mo(
-        self, dest, filename=None, version=PHOTOS_VERSION_CURRENT, overwrite=False
-    ):
+        self,
+        dest: str | os.PathLike[str],
+        filename: str | os.PathLike[str] | None = None,
+        version: int = PHOTOS_VERSION_CURRENT,
+        overwrite: bool = False,
+    ) -> str:
         """Export slow-motion video to path
 
         Args:
@@ -1000,12 +1017,14 @@ class VideoAsset(PhotoAsset):
             exporter = SlowMoVideoExporter.alloc().initWithAVAsset_path_(
                 videodata.asset, output_file
             )
-            video = exporter.exportSlowMoVideo()
+            video: str = exporter.exportSlowMoVideo()
             # exporter.dealloc()
             return video
 
     # todo: rewrite this with NotificationCenter and App event loop?
-    def _request_video_data(self, version=PHOTOS_VERSION_ORIGINAL):
+    def _request_video_data(
+        self, version: int = PHOTOS_VERSION_ORIGINAL
+    ) -> AVAssetData:
         """Request video data for self._phasset
 
         Args:
@@ -1039,7 +1058,7 @@ class VideoAsset(PhotoAsset):
             requestdata = AVAssetData()
             event = threading.Event()
 
-            def handler(asset, audiomix, info):
+            def handler(asset: Any, audiomix: Any, info: Any) -> None:
                 """result handler for requestAVAssetForVideo:asset options:options resultHandler"""
                 nonlocal requestdata
 
@@ -1061,12 +1080,14 @@ class VideoAsset(PhotoAsset):
             return data
 
 
-class LivePhotoRequest(NSObject):
+class LivePhotoRequest(NSObject):  # type: ignore[misc]  # pyobjc NSObject is untyped
     """Manage requests for live photo assets
     See: https://developer.apple.com/documentation/photokit/phimagemanager/1616984-requestlivephotoforasset?language=objc
     """
 
-    def initWithManager_Asset_(self, manager, asset):
+    def initWithManager_Asset_(
+        self, manager: Any, asset: Any
+    ) -> "LivePhotoRequest | None":  # noqa: UP037 pyobjc evaluates annotations at class creation
         self = objc.super(LivePhotoRequest, self).init()  # noqa: PLW0642 PyObjC init idiom
         if self is None:
             return None
@@ -1075,7 +1096,7 @@ class LivePhotoRequest(NSObject):
         self.nc = NSNotificationCenter.defaultCenter()
         return self
 
-    def requestLivePhotoResources(self, version=PHOTOS_VERSION_CURRENT):
+    def requestLivePhotoResources(self, version: int = PHOTOS_VERSION_CURRENT) -> Any:
         """return the photos and video components of a live video as [PHAssetResource]"""
 
         with objc.autorelease_pool():
@@ -1094,7 +1115,7 @@ class LivePhotoRequest(NSObject):
             self.live_photo = None
             request_state = {"abandoned": False}
 
-            def handler(result, info):
+            def handler(result: Any, info: Any) -> None:
                 """result handler for requestLivePhotoForAsset:targetSize:contentMode:options:resultHandler:"""
                 if request_state["abandoned"]:
                     # late callback for a request that already timed out: posting the
@@ -1143,7 +1164,7 @@ class LivePhotoRequest(NSObject):
             del asset_resources
             return data
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.manager = None
         self.asset = None
         self.nc = None
@@ -1155,16 +1176,16 @@ class LivePhotoRequest(NSObject):
 class LivePhotoAsset(PhotoAsset):
     """Represents a live photo"""
 
-    def export(
+    def export(  # type: ignore[override]  # export options differ per asset type by design; others go through **kwargs
         self,
-        dest,
-        filename=None,
-        version=PHOTOS_VERSION_CURRENT,
-        overwrite=False,
-        photo=True,
-        video=True,
-        **kwargs,
-    ):
+        dest: str | os.PathLike[str],
+        filename: str | os.PathLike[str] | None = None,
+        version: int = PHOTOS_VERSION_CURRENT,
+        overwrite: bool = False,
+        photo: bool = True,
+        video: bool = True,
+        **kwargs: Any,
+    ) -> list[str]:
         """Export image to path
 
         Args:
@@ -1184,7 +1205,7 @@ class LivePhotoAsset(PhotoAsset):
             PhotoKitExportError if error during export
         """
 
-        with objc.autorelease_pool(), pipes() as (out, err):
+        with objc.autorelease_pool(), pipes() as (_out, _err):
             filename = (
                 pathlib.Path(filename)
                 if filename
@@ -1226,7 +1247,7 @@ class LivePhotoAsset(PhotoAsset):
                 photo_output_file = pathlib.Path(increment_filename(photo_output_file))
                 video_output_file = pathlib.Path(increment_filename(video_output_file))
 
-            exported = []
+            exported: list[str] = []
             if photo:
                 data = self._request_resource_data(photo_resource)
                 # image_data = self.request_image_data(version=version)
@@ -1248,7 +1269,7 @@ class LivePhotoAsset(PhotoAsset):
 class PhotoLibrary:
     """Interface to PhotoKit PHImageManager and PHPhotoLibrary"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize ImageManager instance.  Requests authorization to use the
         Photos library if authorization has not already been granted.
 
@@ -1269,7 +1290,7 @@ class PhotoLibrary:
         # get image manager and request options
         self._phimagemanager = Photos.PHCachingImageManager.defaultManager()
 
-    def request_authorization(self):
+    def request_authorization(self) -> int:
         """Request authorization to user's Photos Library
 
         Returns:
@@ -1279,7 +1300,7 @@ class PhotoLibrary:
         self.auth_status = request_photokit_authorization()
         return self.auth_status
 
-    def fetch_uuid_list(self, uuid_list):
+    def fetch_uuid_list(self, uuid_list: list[str]) -> list[PhotoAsset]:
         """fetch PHAssets with uuids in uuid_list
 
         Args:
@@ -1308,7 +1329,7 @@ class PhotoLibrary:
                     f"Fetch did not return result for uuid_list {uuid_list}"
                 )
 
-    def fetch_uuid(self, uuid):
+    def fetch_uuid(self, uuid: str) -> PhotoAsset:
         """fetch PHAsset with uuid = uuid
 
         Args:
@@ -1323,10 +1344,12 @@ class PhotoLibrary:
         try:
             result = self.fetch_uuid_list([uuid])
             return result[0]
-        except:
-            raise PhotoKitFetchFailed(f"Fetch did not return result for uuid {uuid}")
+        except Exception as err:
+            raise PhotoKitFetchFailed(
+                f"Fetch did not return result for uuid {uuid}"
+            ) from err
 
-    def fetch_burst_uuid(self, burstid, all=False):
+    def fetch_burst_uuid(self, burstid: str, all: bool = False) -> list[PhotoAsset]:
         """fetch PhotoAssets with burst ID = burstid
 
         Args:
@@ -1356,7 +1379,7 @@ class PhotoLibrary:
                 f"Fetch did not return result for burstid {burstid}"
             )
 
-    def _asset_factory(self, phasset):
+    def _asset_factory(self, phasset: Any) -> PhotoAsset:
         """creates a PhotoAsset, VideoAsset, or LivePhotoAsset
 
         Args:

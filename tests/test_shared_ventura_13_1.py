@@ -1,7 +1,5 @@
 """Test shared iCloud photos on macOS 13.1"""
 
-import pytest
-
 import osxphotos
 
 PHOTOS_DB = "./tests/Test-Cloud-13.1.photoslibrary//database/photos.db"

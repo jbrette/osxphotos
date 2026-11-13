@@ -3,7 +3,6 @@ Example use:  osxphotos query --quiet --print "{function:date_delta.py::months_s
 """
 
 import datetime
-import pathlib
 
 from osxphotos import PhotoInfo
 from osxphotos.datetime_utils import datetime_naive_to_local
@@ -22,10 +21,10 @@ def years_since(
     # if args doesn't match the expected format, raise an error
     try:
         date_arg = datetime_naive_to_local(datetime.datetime.strptime(args, "%Y-%m-%d"))
-    except ValueError:
+    except ValueError as err:
         raise ValueError(
             "months_since function requires an argument in the form of a date string in the format YYYY-MM-DD"
-        )
+        ) from err
 
     return str(_years_since(photo.date, date_arg))
 
@@ -42,10 +41,10 @@ def months_since(
     # if args doesn't match the expected format, raise an error
     try:
         date_arg = datetime_naive_to_local(datetime.datetime.strptime(args, "%Y-%m-%d"))
-    except ValueError:
+    except ValueError as err:
         raise ValueError(
             "months_since function requires an argument in the form of a date string in the format YYYY-MM-DD"
-        )
+        ) from err
 
     return str(_months_since(photo.date, date_arg))
 
@@ -62,10 +61,10 @@ def days_since(
     # if args doesn't match the expected format, raise an error
     try:
         date_arg = datetime_naive_to_local(datetime.datetime.strptime(args, "%Y-%m-%d"))
-    except ValueError:
+    except ValueError as err:
         raise ValueError(
             "months_since function requires an argument in the form of a date string in the format YYYY-MM-DD"
-        )
+        ) from err
 
     return str(_days_since(photo.date, date_arg))
 

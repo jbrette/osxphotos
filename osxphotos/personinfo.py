@@ -1,12 +1,18 @@
 """PhotoInfo and FaceInfo classes to expose info about persons and faces in the Photos library"""
 
+from __future__ import annotations
+
 import json
 import logging
 import math
 from collections import namedtuple
 from functools import cached_property
+from typing import TYPE_CHECKING, Any, cast
 
 import osxphotos
+
+if TYPE_CHECKING:
+    from .photoinfo import PhotoInfo
 
 logger = logging.getLogger("osxphotos")
 
@@ -19,7 +25,10 @@ MPRI_Reg_Rect = namedtuple("MPRI_Reg_Rect", ["x", "y", "h", "w"])
 class PersonInfo:
     """Info about a person in the Photos library"""
 
-    def __init__(self, db: osxphotos.PhotosDB, pk: int):
+    # set lazily by keyphoto; absent until first access
+    _keyphoto: PhotoInfo | None
+
+    def __init__(self, db: osxphotos.PhotosDB, pk: int) -> None:
         """Creates a new PersonInfo instance
 
         Arguments:
@@ -33,21 +42,23 @@ class PersonInfo:
         self._pk: int = pk
 
         person = self._db._dbpersons_pk[pk]
-        self.uuid = person["uuid"]
-        self.name = person["fullname"]
-        self.display_name = person["displayname"]
+        self.uuid: str = person["uuid"]
+        self.name: str = person["fullname"]
+        self.display_name: str | None = person["displayname"]
         self.keyface = person["keyface"]
         self.facecount = person["facecount"]
 
     @property
-    def keyphoto(self):
+    def keyphoto(self) -> PhotoInfo | None:
         try:
             return self._keyphoto
         except AttributeError:
             person = self._db._dbpersons_pk[self._pk]
             if person["photo_uuid"]:
                 try:
-                    key_photo = self._db.get_photo(person["photo_uuid"])
+                    key_photo: PhotoInfo | None = self._db.get_photo(
+                        person["photo_uuid"]
+                    )
                 except IndexError:
                     key_photo = None
             else:
@@ -56,7 +67,7 @@ class PersonInfo:
             return self._keyphoto
 
     @property
-    def photos(self):
+    def photos(self) -> list[PhotoInfo]:
         """Returns list of PhotoInfo objects associated with this person"""
         try:
             return self._db.photos_by_uuid(self._db._dbfaces_pk[self._pk])
@@ -65,7 +76,7 @@ class PersonInfo:
             return []
 
     @property
-    def face_info(self):
+    def face_info(self) -> list[FaceInfo]:
         """Returns a list of FaceInfo objects associated with this person sorted by quality score
         Highest quality face is result[0] and lowest quality face is result[n]
         """
@@ -81,17 +92,17 @@ class PersonInfo:
             return []
 
     @property
-    def favorite(self):
+    def favorite(self) -> bool:
         """Returns True if person is a favorite, False otherwise; Photos 5+ only; returns False on Photos <= 4"""
-        return self._db._dbpersons_pk[self._pk]["type"] == 1
+        return bool(self._db._dbpersons_pk[self._pk]["type"] == 1)
 
     @property
-    def sort_order(self):
+    def sort_order(self) -> int:
         """Returns sort order of person; favorite persons are sorted before non-favorite persons"; Photos 5+ only; returns 0 on Photos <= 4"""
-        return self._db._dbpersons_pk[self._pk]["manualorder"]
+        return cast(int, self._db._dbpersons_pk[self._pk]["manualorder"])
 
     @cached_property
-    def feature_less(self):
+    def feature_less(self) -> bool:
         """Returns True if person has been marked as "Feature This Person Less" in Photos, False otherwise; Photos 8+ only; returns False on Photos <= 7"""
         if self._db.photos_version < 8:
             return False
@@ -107,7 +118,7 @@ class PersonInfo:
             return bool(results[0])
         return False
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Returns dictionary representation of class instance"""
         keyphoto = self.keyphoto.uuid if self.keyphoto is not None else None
         return {
@@ -122,14 +133,14 @@ class PersonInfo:
             "feature_less": self.feature_less,
         }
 
-    def json(self):
+    def json(self) -> str:
         """Returns JSON representation of class instance"""
         return json.dumps(self.asdict())
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"PersonInfo(name={self.name}, display_name={self.display_name}, uuid={self.uuid}, facecount={self.facecount})"
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             all(
                 getattr(self, field) == getattr(other, field)
@@ -139,14 +150,20 @@ class PersonInfo:
             else False
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
 
 class FaceInfo:
     """Info about a face in the Photos library"""
 
-    def __init__(self, db=None, pk=None):
+    # set lazily by person_info and photo; absent until first access
+    _person: PersonInfo
+    _photo: PhotoInfo | None
+
+    def __init__(
+        self, db: osxphotos.PhotosDB | None = None, pk: int | None = None
+    ) -> None:
         """Creates a new FaceInfo instance
 
         Arguments:
@@ -156,18 +173,19 @@ class FaceInfo:
         Returns:
             FaceInfo instance
         """
-        self._db = db
-        self._pk = pk
+        # db and pk default to None only for signature compatibility; both are required
+        self._db: osxphotos.PhotosDB = cast("osxphotos.PhotosDB", db)
+        self._pk: int = cast(int, pk)
 
-        face = self._db._db_faceinfo_pk[pk]
+        face = self._db._db_faceinfo_pk[self._pk]
         self._info = face
-        self.uuid = face["uuid"]
-        self.name = face["fullname"]
-        self.asset_uuid = face["asset_uuid"]
-        self._person_pk = face["person"]
-        self.center_x = face["centerx"]
-        self.center_y = face["centery"]
-        self.size = face["size"]
+        self.uuid: str = face["uuid"]
+        self.name: str | None = face["fullname"]
+        self.asset_uuid: str = face["asset_uuid"]
+        self._person_pk: int = face["person"]
+        self.center_x: float = face["centerx"]
+        self.center_y: float = face["centery"]
+        self.size: float = face["size"]
         self.quality = face["quality"]
         self.source_width = face["sourcewidth"]
         self.source_height = face["sourceheight"]
@@ -186,7 +204,7 @@ class FaceInfo:
         self.smile_type = face["smiletype"]
 
     @property
-    def center(self):
+    def center(self) -> tuple[int, int]:
         """Coordinates, in PIL format, for center of face
 
         Returns:
@@ -195,18 +213,18 @@ class FaceInfo:
         return self._make_point((self.center_x, self.center_y))
 
     @property
-    def size_pixels(self):
+    def size_pixels(self) -> float:
         """Size of face in pixels (centered around center_x, center_y)
 
         Returns:
             size, in int pixels, of a circle drawn around the center of the face
         """
-        photo = self.photo
+        photo = self._photo_info
         size_reference = max(photo.height, photo.width)
         return self.size * size_reference
 
     @property
-    def person_info(self):
+    def person_info(self) -> PersonInfo:
         """PersonInfo instance for person associated with this face"""
         try:
             return self._person
@@ -215,7 +233,7 @@ class FaceInfo:
             return self._person
 
     @property
-    def photo(self):
+    def photo(self) -> PhotoInfo | None:
         """PhotoInfo instance associated with this face"""
         try:
             return self._photo
@@ -226,7 +244,12 @@ class FaceInfo:
             return self._photo
 
     @property
-    def mwg_rs_area(self):
+    def _photo_info(self) -> PhotoInfo:
+        """photo, for the internal geometry code which needs the photo to exist"""
+        return cast("PhotoInfo", self.photo)
+
+    @property
+    def mwg_rs_area(self) -> MWG_RS_Area:
         """Get coordinates for Metadata Working Group Region Area.
 
         Returns:
@@ -244,20 +267,20 @@ class FaceInfo:
 
         # there are some rare cases where width or height is zero (#1810)
         # in this case return a zero rectangle which doesn't make sense but neither does a zero width or height
-        if self.photo.width == 0 or self.photo.height == 0:
+        if self._photo_info.width == 0 or self._photo_info.height == 0:
             return MWG_RS_Area(0, 0, 0, 0)
 
-        if self.photo.orientation in [5, 6, 7, 8]:
-            w = self.size_pixels / self.photo.height
-            h = self.size_pixels / self.photo.width
+        if self._photo_info.orientation in [5, 6, 7, 8]:
+            w = self.size_pixels / self._photo_info.height
+            h = self.size_pixels / self._photo_info.width
         else:
-            h = self.size_pixels / self.photo.height
-            w = self.size_pixels / self.photo.width
+            h = self.size_pixels / self._photo_info.height
+            w = self.size_pixels / self._photo_info.width
 
         return MWG_RS_Area(x, y, h, w)
 
     @property
-    def mpri_reg_rect(self):
+    def mpri_reg_rect(self) -> MPRI_Reg_Rect:
         """Get coordinates for Microsoft Photo Region Rectangle.
 
         Returns:
@@ -275,23 +298,23 @@ class FaceInfo:
 
         # there are some rare cases where width or height is zero (#1810)
         # in this case return a zero rectangle which doesn't make sense but neither does a zero width or height
-        if self.photo.width == 0 or self.photo.height == 0:
+        if self._photo_info.width == 0 or self._photo_info.height == 0:
             return MPRI_Reg_Rect(0, 0, 0, 0)
 
-        if self.photo.orientation in [5, 6, 7, 8]:
-            w = self.size_pixels / self.photo.width
-            h = self.size_pixels / self.photo.height
-            x = x - self.size_pixels / self.photo.height / 2
-            y = y - self.size_pixels / self.photo.width / 2
+        if self._photo_info.orientation in [5, 6, 7, 8]:
+            w = self.size_pixels / self._photo_info.width
+            h = self.size_pixels / self._photo_info.height
+            x = x - self.size_pixels / self._photo_info.height / 2
+            y = y - self.size_pixels / self._photo_info.width / 2
         else:
-            h = self.size_pixels / self.photo.width
-            w = self.size_pixels / self.photo.height
-            x = x - self.size_pixels / self.photo.width / 2
-            y = y - self.size_pixels / self.photo.height / 2
+            h = self.size_pixels / self._photo_info.width
+            w = self.size_pixels / self._photo_info.height
+            x = x - self.size_pixels / self._photo_info.width / 2
+            y = y - self.size_pixels / self._photo_info.height / 2
 
         return MPRI_Reg_Rect(x, y, h, w)
 
-    def face_rect(self):
+    def face_rect(self) -> list[tuple[float, float]]:
         """Get face rectangle coordinates for current version of the associated image
             If image has been edited, rectangle applies to edited version, otherwise original version
             Coordinates in format and reference frame used by PIL
@@ -299,7 +322,7 @@ class FaceInfo:
         Returns:
             list [(x0, x1), (y0, y1)] of coordinates in reference frame used by PIL
         """
-        photo = self.photo
+        photo = self._photo_info
         size_reference = max(photo.height, photo.width)
         radius = (self.size / 2) * size_reference
         x, y = self._make_point((self.center_x, self.center_y))
@@ -307,7 +330,7 @@ class FaceInfo:
         x1, y1 = x + radius, y + radius
         return [(x0, y0), (x1, y1)]
 
-    def roll_pitch_yaw(self):
+    def roll_pitch_yaw(self) -> tuple[float, float, float]:
         """Roll, pitch, yaw of face in radians as tuple"""
         info = self._info
         roll = 0 if info["roll"] is None else info["roll"]
@@ -317,24 +340,24 @@ class FaceInfo:
         return (roll, pitch, yaw)
 
     @property
-    def roll(self):
+    def roll(self) -> float:
         """Return roll angle in radians of the face region"""
         roll, _, _ = self.roll_pitch_yaw()
         return roll
 
     @property
-    def pitch(self):
+    def pitch(self) -> float:
         """Return pitch angle in radians of the face region"""
         _, pitch, _ = self.roll_pitch_yaw()
         return pitch
 
     @property
-    def yaw(self):
+    def yaw(self) -> float:
         """Return yaw angle in radians of the face region"""
         _, _, yaw = self.roll_pitch_yaw()
         return yaw
 
-    def _fix_orientation(self, xy):
+    def _fix_orientation(self, xy: tuple[float, float]) -> tuple[float, float]:
         """Translate an (x, y) tuple based on image orientation
 
         Arguments:
@@ -346,7 +369,7 @@ class FaceInfo:
         """
         # Reference: https://github.com/neilpa/phace/blob/7594776480505d0c389688a42099c94ac5d34f3f/cmd/phace/draw.go#L79-L94
 
-        orientation = self.photo.orientation
+        orientation = self._photo_info.orientation
         x, y = xy
         if orientation == 1:
             y = 1.0 - y
@@ -374,7 +397,7 @@ class FaceInfo:
 
         return (x, y)
 
-    def _make_point(self, xy):
+    def _make_point(self, xy: tuple[float, float]) -> tuple[int, int]:
         """Translate an (x, y) tuple based on image orientation
             and convert to image coordinates
 
@@ -387,15 +410,16 @@ class FaceInfo:
         """
         # Reference: https://github.com/neilpa/phace/blob/7594776480505d0c389688a42099c94ac5d34f3f/cmd/phace/draw.go#L79-L94
 
-        orientation = self.photo.orientation
+        photo = self._photo_info
+        orientation = photo.orientation
         x, y = self._fix_orientation(xy)
-        dx = self.photo.width
-        dy = self.photo.height
+        dx = photo.width
+        dy = photo.height
         if orientation in [5, 6, 7, 8]:
             dx, dy = dy, dx
         return (int(x * dx), int(y * dy))
 
-    def _make_point_with_rotation(self, xy):
+    def _make_point_with_rotation(self, xy: tuple[float, float]) -> tuple[int, int]:
         """Translate an (x, y) tuple based on image orientation and rotation
             and convert to image coordinates
 
@@ -417,7 +441,7 @@ class FaceInfo:
 
         return (int(xr), int(yr))
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Returns dict representation of class instance"""
         roll, pitch, yaw = self.roll_pitch_yaw()
         return {
@@ -454,17 +478,17 @@ class FaceInfo:
             "smile_type": self.smile_type,
         }
 
-    def json(self):
+    def json(self) -> str:
         """Return JSON representation of FaceInfo instance"""
         return json.dumps(self.asdict())
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"FaceInfo(uuid={self.uuid}, center_x={self.center_x}, center_y = {self.center_y}, size={self.size}, person={self.name}, asset_uuid={self.asset_uuid})"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"FaceInfo(db={self._db}, pk={self._pk})"
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return False
 
@@ -472,11 +496,13 @@ class FaceInfo:
             getattr(self, field) == getattr(other, field) for field in ["_db", "_pk"]
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
 
-def rotate_image_point(x, y, xmid, ymid, angle):
+def rotate_image_point(
+    x: float, y: float, xmid: float, ymid: float, angle: float
+) -> tuple[float, float]:
     """rotate image point about xm, ym by angle in radians
 
     Arguments:

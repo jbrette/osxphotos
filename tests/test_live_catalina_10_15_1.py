@@ -80,7 +80,6 @@ def test_export_live_2(photosdb):
 def test_export_live_3(photosdb):
     # export a live photo and associated .mov,
     # check list return of export
-    import glob
     import os.path
     import pathlib
     import tempfile

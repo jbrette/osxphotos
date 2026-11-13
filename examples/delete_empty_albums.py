@@ -11,7 +11,7 @@ import sys
 import click
 import photoscript
 
-from osxphotos.cli.cli_commands import echo, echo_error
+from osxphotos.cli.cli_commands import echo
 from osxphotos.utils import pluralize
 
 
