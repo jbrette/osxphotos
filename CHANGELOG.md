@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased](https://github.com/RhetTbull/osxphotos/compare/v0.77.2...HEAD)
+## [Unreleased](https://github.com/jbrette/osxphotos/compare/v26.11.13...HEAD)
 
 #### Added
 
@@ -11,6 +11,28 @@ All notable changes to this project will be documented in this file.
 #### Removed
 
 #### Fixed
+
+#### Contributors
+
+## [v26.11.13](https://github.com/jbrette/osxphotos/compare/v0.77.2...v26.11.13)
+
+First release of the jbrette/osxphotos fork, versioned by date (YY.MM.DD): Python 3.14 with uv, ruff fleet rules and mypy --strict across the package (jbrette/osxphotos#1).
+
+### 2026-11-13
+
+#### Added
+
+- The package is fully typed: all 156 modules pass `mypy --strict`, and `py.typed` ships (PEP 561). The lint workflow runs mypy.
+
+#### Changed
+
+- Requires Python 3.14; dependencies and dev tools are managed with uv (`pyproject.toml` + `uv.lock`).
+- ruff enforces the rule families E F W I N UP B C4 SIM RUF; unused imports and variables, star imports and bare `except:` are removed.
+- `prompt-toolkit` is a declared dependency.
+
+#### Fixed
+
+- About 50 runtime bugs found while typing, among them: `ShareParticipant.asdict()` returned `None`; `osxphotos compare --output` and `osxphotos exiftool --exportdb` crashed; `iPhotoFaceInfo.photos` raised; `gitignorefile.parse_pattern_list()` raised with no base path; export reports lost a missing preview's uuid and truncated AAE errors; `export --cleanup-command` ran `None` when the template rendered nothing; `SyncResults.__add__` raised `KeyError`. See the commit messages of jbrette/osxphotos#1 for the full list.
 
 - Fixed `{created.strftime,%s}` (and other date fields using `%s`) returning an epoch value offset by the exporting machine's UTC offset, e.g. one hour off for photos taken during Daylight Saving Time. `%s` is now computed from the photo's own timezone. **Note:** this changes `%s` output for anyone exporting from a timezone different from the photo's, so `--update` runs that use `%s` in a filename or directory template may rename previously exported files (#2157, #2246, thanks @mishra-prince for the fix).
 - Fixed `--use-photokit` exporting the wrong version as the original of edited videos not cached locally (#2269).
