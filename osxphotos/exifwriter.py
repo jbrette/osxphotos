@@ -152,7 +152,7 @@ class _ExifMixin:
         for field in fields:
             with contextlib.suppress(KeyError):
                 kw = exifdict[field]
-                if kw and type(kw) != list:
+                if kw and type(kw) is not list:
                     kw = [kw]
                 kw = [str(k) for k in kw]
                 values.extend(kw)

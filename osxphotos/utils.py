@@ -489,7 +489,7 @@ def load_function(pyfile: str, function_name: str) -> Callable:
 
     # store old sys.path and ensure module_dir at beginning of path
     syspath = sys.path
-    sys.path = [str(module_dir)] + syspath
+    sys.path = [str(module_dir), *syspath]
     module = importlib.import_module(module_name)
 
     try:

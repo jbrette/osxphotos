@@ -54,7 +54,7 @@ class ConfigOptions:
                 arg = args[attr]
                 # don't test 'not arg'; need to handle empty strings as valid values
                 if arg is None or arg is False:
-                    if type(self._attrs[attr]) == tuple:
+                    if type(self._attrs[attr]) is tuple:
                         setattr(self, attr, ())
                     else:
                         setattr(self, attr, self._attrs[attr])
@@ -186,7 +186,7 @@ class ConfigOptions:
             if not override:
                 # use value from self if set
                 val = getattr(self, attr) or val
-            if type(self._attrs[attr]) == tuple:
+            if type(self._attrs[attr]) is tuple:
                 val = tuple(val)
             # TOML parser converts date strings to datetime.date objects
             # but osxphotos expects datetime.datetime objects, so convert them
@@ -212,7 +212,7 @@ class ConfigOptions:
             if val in [False, ()]:
                 val = None
             else:
-                val = list(val) if type(val) == tuple else val
+                val = list(val) if type(val) is tuple else val
 
             data[attr] = val
 

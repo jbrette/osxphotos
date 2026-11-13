@@ -206,7 +206,7 @@ def test_export_7(photosdb):
     with pytest.raises(Exception) as e:
         # try to export again with increment = False
         assert photos[0].export(dest, increment=False)[0]
-    assert e.type == type(FileExistsError())
+    assert e.type is type(FileExistsError())
 
 
 def test_export_8(photosdb):
@@ -236,7 +236,7 @@ def test_export_9(photosdb):
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, edited=True)
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_export_10(photosdb):
@@ -257,7 +257,7 @@ def test_export_10(photosdb):
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, filename, edited=True)[0]
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_export_11(photosdb):
@@ -322,7 +322,7 @@ def test_export_13(photosdb):
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest)[0]
-    assert e.type == type(FileNotFoundError())
+    assert e.type is type(FileNotFoundError())
 
 
 def test_exiftool_json_sidecar(photosdb):

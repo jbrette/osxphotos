@@ -20,7 +20,7 @@ def test_init():
     assert isinstance(cfg, ConfigOptions)
     assert cfg.foo == "bar"
     assert not cfg.bar
-    assert type(cfg.test1) == tuple
+    assert type(cfg.test1) is tuple
 
 
 def test_init_with_ignore():

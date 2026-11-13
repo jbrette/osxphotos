@@ -131,7 +131,7 @@ class ExifDateTimeUpdater:
         )
         with ExifTool(filepath=_photo.path, exiftool=self.exiftool_path) as exiftool:
             for tag, val in exif.items():
-                if type(val) == list:
+                if type(val) is list:
                     for v in val:
                         exiftool.setvalue(tag, v)
                 else:

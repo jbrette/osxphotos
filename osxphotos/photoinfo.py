@@ -1670,7 +1670,7 @@ class PhotoInfo:
         """Returns list of CommentInfo objects for any comments on the photo (sorted by date)"""
         try:
             return self._db._db_comments_uuid[self.uuid]["comments"]
-        except:
+        except Exception:
             return []
 
     @property
@@ -1678,7 +1678,7 @@ class PhotoInfo:
         """Returns list of LikeInfo objects for any likes on the photo (sorted by date)"""
         try:
             return self._db._db_comments_uuid[self.uuid]["likes"]
-        except:
+        except Exception:
             return []
 
     @cached_property

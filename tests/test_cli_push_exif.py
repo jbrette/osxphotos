@@ -242,7 +242,7 @@ def test_cli_push_exif_exiftool_merge_keywords(monkeypatch):
         )
 
         # verify keywords and persons were pushed and merged appropriately
-        assert sorted(photo.keywords + ["Foo", "Bar"]) == get_exiftool_keywords(photo)
+        assert sorted([*photo.keywords, "Foo", "Bar"]) == get_exiftool_keywords(photo)
         assert sorted(photo.persons) == get_exiftool_persons(photo)
 
 
@@ -281,7 +281,7 @@ def test_cli_push_exif_exiftool_merge_persons(monkeypatch):
 
         # verify keywords and persons were pushed and merged appropriately
         assert sorted(photo.keywords) == get_exiftool_keywords(photo)
-        assert sorted(photo.persons + ["JaneDoe"]) == get_exiftool_persons(photo)
+        assert sorted([*photo.persons, "JaneDoe"]) == get_exiftool_persons(photo)
 
 
 def test_cli_push_exif_report_csv(monkeypatch):
@@ -527,7 +527,7 @@ def test_cli_push_exif_keyword_description_template(monkeypatch):
 
         photo = PhotosDB(test_library).get_photo(UUID_KEYWORDS_PERSONS)
         keywords = get_exiftool_keywords(photo)
-        assert keywords == sorted(photo.keywords + [photo.title] + ["FOO"])
+        assert keywords == sorted([*photo.keywords, photo.title, "FOO"])
         assert get_exiftool_description(photo) == f"{photo.description} - {photo.title}"
 
 
@@ -561,7 +561,7 @@ def test_cli_push_exif_replace_keywords(monkeypatch):
 
         photo = PhotosDB(test_library).get_photo(UUID_KEYWORDS_PERSONS)
         keywords = get_exiftool_keywords(photo)
-        assert keywords == sorted([photo.title] + ["FOO"])
+        assert keywords == sorted([photo.title, "FOO"])
 
 
 def test_cli_push_exif_metadata_arg(monkeypatch):

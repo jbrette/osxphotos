@@ -26,7 +26,7 @@ XMP_TEST_CASES = {
 # determine if exiftool installed so exiftool tests can be skipped
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 

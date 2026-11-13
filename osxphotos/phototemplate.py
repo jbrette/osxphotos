@@ -1149,10 +1149,10 @@ class PhotoTemplate:
             value = [delim.join(values)]
         elif filter_ == "append":
             # append value to list
-            value = values + [args]
+            value = [*values, args]
         elif filter_ == "prepend":
             # prepend value to list
-            value = [args] + values
+            value = [args, *values]
         elif filter_ == "appends":
             # append value to each item in list
             value = [f"{v}{args}" for v in values]

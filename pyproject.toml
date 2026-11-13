@@ -254,9 +254,6 @@ lint.extend-select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
 # Added to make ruff pass with code in its current state.
 lint.ignore = [
     "E402",   # module-level import not at top of file
-    "E721",   # type comparison (use isinstance())
-    "E722",   # bare except
-    "E741",   # ambiguous variable name
     "F403",   # from module import *
     "F405",   # may be undefined or from star imports
     "F822",   # undefined name in __all__
@@ -278,8 +275,7 @@ lint.ignore = [
     "RUF001", "RUF002", "RUF003", # ambiguous unicode: intentional in test data and messages
     # TODO: cleanup candidates, need manual edits (no safe autofix)
     "W291", "W293", # trailing whitespace, mostly inside multi-line strings
-    "B007", "B024", "B027", "B904", "B905",
-    "C416", "E731", "RUF005", "SIM105", "SIM108",
+    "B904", "B905", "SIM105",
 ]
 
 exclude = [

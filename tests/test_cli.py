@@ -1215,7 +1215,7 @@ def reset_globals():
 # determine if exiftool installed so exiftool tests can be skipped
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 
@@ -1773,7 +1773,7 @@ def test_export_alt_db():
         )
         assert result.exit_code == 0
         files = glob.glob("*")
-        assert sorted(files) == sorted(CLI_EXPORT_FILENAMES + ["database"])
+        assert sorted(files) == sorted([*CLI_EXPORT_FILENAMES, "database"])
 
 
 def test_export_no_exportdb():
@@ -2419,7 +2419,7 @@ def test_export_exiftool():
 
             exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
             for key in CLI_EXIFTOOL[uuid]:
-                if type(exif[key]) == list:
+                if type(exif[key]) is list:
                     assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
                 else:
                     assert exif[key] == CLI_EXIFTOOL[uuid][key]
@@ -2509,7 +2509,7 @@ def test_export_exiftool_tmpdir():
 
             exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
             for key in CLI_EXIFTOOL[uuid]:
-                if type(exif[key]) == list:
+                if type(exif[key]) is list:
                     assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
                 else:
                     assert exif[key] == CLI_EXIFTOOL[uuid][key]
@@ -2626,7 +2626,7 @@ def test_export_exiftool_path():
 
             exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
             for key in CLI_EXIFTOOL[uuid]:
-                if type(exif[key]) == list:
+                if type(exif[key]) is list:
                     assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
                 else:
                     assert exif[key] == CLI_EXIFTOOL[uuid][key]
@@ -2694,7 +2694,7 @@ def test_export_exiftool_ignore_date_modified():
                 CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid]["File:FileName"]
             ).asdict()
             for key in CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid]:
-                if type(exif[key]) == list:
+                if type(exif[key]) is list:
                     assert sorted(exif[key]) == sorted(
                         CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid][key]
                     )
@@ -2793,7 +2793,7 @@ def test_export_exiftool_error():
 
             exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
             for key in CLI_EXIFTOOL[uuid]:
-                if type(exif[key]) == list:
+                if type(exif[key]) is list:
                     assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
                 else:
                     assert exif[key] == CLI_EXIFTOOL[uuid][key]
@@ -2864,7 +2864,7 @@ def test_export_exiftool_merge():
 
             exif = ExifTool(CLI_EXIFTOOL_MERGE[uuid]["File:FileName"]).asdict()
             for key in CLI_EXIFTOOL_MERGE[uuid]:
-                if type(exif[key]) == list:
+                if type(exif[key]) is list:
                     assert sorted(exif[key]) == sorted(CLI_EXIFTOOL_MERGE[uuid][key])
                 else:
                     assert exif[key] == CLI_EXIFTOOL_MERGE[uuid][key]
@@ -2906,10 +2906,10 @@ def test_export_exiftool_merge_sidecar():
             for key in CLI_EXIFTOOL_MERGE[uuid]:
                 if key == "File:FileName":
                     continue
-                if type(exif[key]) == list:
+                if type(exif[key]) is list:
                     expected = (
                         CLI_EXIFTOOL_MERGE[uuid][key]
-                        if type(CLI_EXIFTOOL_MERGE[uuid][key]) == list
+                        if type(CLI_EXIFTOOL_MERGE[uuid][key]) is list
                         else [CLI_EXIFTOOL_MERGE[uuid][key]]
                     )
                     assert sorted(exif[key]) == sorted(expected)
@@ -8923,7 +8923,7 @@ def test_export_finder_tag_keywords():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -8946,7 +8946,7 @@ def test_export_finder_tag_keywords():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -8971,7 +8971,7 @@ def test_export_finder_tag_keywords():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9003,7 +9003,7 @@ def test_export_finder_tag_template():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9027,7 +9027,7 @@ def test_export_finder_tag_template():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9053,7 +9053,7 @@ def test_export_finder_tag_template():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             expected = [Tag(x, 0) for x in keywords]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9087,9 +9087,9 @@ def test_export_finder_tag_template_multiple():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             persons = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            persons = [persons] if type(persons) != list else persons
+            persons = [persons] if type(persons) is not list else persons
             expected = [Tag(x, 0) for x in set(keywords + persons)]
             assert sorted(md.tags) == sorted(expected)
 
@@ -9122,9 +9122,9 @@ def test_export_finder_tag_template_keywords():
 
             md = OSXMetaData(CLI_FINDER_TAGS[uuid]["File:FileName"])
             keywords = CLI_FINDER_TAGS[uuid]["IPTC:Keywords"]
-            keywords = [keywords] if type(keywords) != list else keywords
+            keywords = [keywords] if type(keywords) is not list else keywords
             persons = CLI_FINDER_TAGS[uuid]["XMP:PersonInImage"]
-            persons = [persons] if type(persons) != list else persons
+            persons = [persons] if type(persons) is not list else persons
             expected = [Tag(x, 0) for x in set(keywords + persons)]
             assert sorted(md.tags) == sorted(expected)
 

@@ -190,7 +190,7 @@ class _Path:
         return self.__parts
 
     def join(self, name):
-        return _Path(self.__parts + (name,))
+        return _Path((*self.__parts, name))
 
     def relpath(self, base_path):
         if self.__parts[: len(base_path.__parts)] == base_path.__parts:
@@ -351,10 +351,14 @@ class _IgnoreRule:
 
 if os.altsep is not None:
     _all_seps_expr = f"[{re.escape(os.sep)}{re.escape(os.altsep)}]"
-    _path_split = lambda path: re.split(_all_seps_expr, path)
+
+    def _path_split(path):
+        return re.split(_all_seps_expr, path)
 
 else:
-    _path_split = lambda path: path.split(os.sep)
+
+    def _path_split(path):
+        return path.split(os.sep)
 
 
 def _fnmatch_pathname_to_regexp(pattern, anchored, directory_only):

@@ -208,7 +208,7 @@ def collect_files(
                 ]
                 files_list.extend(dir_files)
             else:
-                for root, dirs, filenames in os.walk(file):
+                for root, _dirs, filenames in os.walk(file):
                     for file in filenames:
                         files_list.append(os.path.join(root, file))
         else:

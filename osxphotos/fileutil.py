@@ -343,10 +343,10 @@ def utime_no_cache(path: os.PathLike, times: tuple[int, int]) -> bool:
                 # Clear F_NOCACHE flag before closing
                 fcntl.fcntl(fd, fcntl.F_NOCACHE, 0)
                 os.close(fd)
-            except:
+            except Exception:
                 try:
                     os.close(fd)
-                except:
+                except Exception:
                     pass
 
 

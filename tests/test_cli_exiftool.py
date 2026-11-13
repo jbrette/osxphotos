@@ -57,7 +57,7 @@ def test_export_exiftool():
 
         exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
         for key in CLI_EXIFTOOL[uuid]:
-            if type(exif[key]) == list:
+            if type(exif[key]) is list:
                 assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
             else:
                 assert exif[key] == CLI_EXIFTOOL[uuid][key]
@@ -246,7 +246,7 @@ def test_export_exiftool_load_config():
 
         exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
         for key in CLI_EXIFTOOL[uuid]:
-            if type(exif[key]) == list:
+            if type(exif[key]) is list:
                 assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
             else:
                 assert exif[key] == CLI_EXIFTOOL[uuid][key]

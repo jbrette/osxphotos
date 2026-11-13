@@ -236,7 +236,7 @@ def test_export_edited_no_edit(photosdb):
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, use_photos_export=True, edited=True)
-    assert e.type == ValueError
+    assert e.type is ValueError
 
 
 def test_burst_albums(photosdb):

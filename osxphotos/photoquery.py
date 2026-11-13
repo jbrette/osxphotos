@@ -943,7 +943,7 @@ def filter_photos_by_folder_album_path(
             else:
                 # Original exact path matching logic
                 # Construct full path: folder_names + album_title
-                full_path_parts = folder_names + [album_title]
+                full_path_parts = [*folder_names, album_title]
 
                 if ignore_case:
                     full_path_parts_compare = [part.lower() for part in full_path_parts]

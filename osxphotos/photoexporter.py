@@ -1029,10 +1029,7 @@ class PhotoExporter:
         ext = get_preferred_uti_extension(uti) or "jpeg"
 
         # Determine the base filename
-        if filestem:
-            stem = filestem
-        else:
-            stem = pathlib.Path(self.photo.original_filename).stem
+        stem = filestem or pathlib.Path(self.photo.original_filename).stem
 
         predicted_files = []
 
@@ -1383,7 +1380,7 @@ class PhotoExporter:
         # Compute src_sig before any modifications by convert_to_jpeg or exiftool
         # but defer writing to database until the context manager block to batch commits
         src_sig = fileutil.file_sig(src)
-        for export_dest in export_files:
+        for _export_dest in export_files:
             if dest_exists and any(
                 [options.overwrite, options.update, options.force_update]
             ):

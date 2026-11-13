@@ -647,7 +647,7 @@ class PlaceInfo5(PlaceInfo):
                         for p in sorted(places_dict[field], key=lambda place: place[1])
                     ]
                 )
-            except:
+            except Exception:
                 place_info.append([])
 
         # fill in body_of_water for compatibility with Photos <= 4

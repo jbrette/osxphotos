@@ -116,7 +116,7 @@ QUOTED_JSON_LOADED = [
 
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 if exiftool is None:

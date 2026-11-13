@@ -147,7 +147,7 @@ def scan_for_files(directory: str, uuid_dict: dict):
     Note: modifies uuid_dict
     """
     uuid_regex = re.compile(UUID_PATTERN)
-    for dirpath, dirname, filenames in os.walk(directory):
+    for dirpath, _dirname, filenames in os.walk(directory):
         for filename in filenames:
             if match := uuid_regex.match(filename):
                 _stem, ext = splitext(filename)

@@ -202,7 +202,10 @@ def inspect_photo(
         )
         properties.append(
             bold("Likes: ")
-            + trim(f"{', '.join(l.user or '' for l in photo.likes) or '-'}", "Likes: ")
+            + trim(
+                f"{', '.join(like.user or '' for like in photo.likes) or '-'}",
+                "Likes: ",
+            )
         )
 
     if beta and photo.shared_library:

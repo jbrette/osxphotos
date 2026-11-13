@@ -48,7 +48,7 @@ def verbose(*args, **kwargs):
 
 def error(*args, **kwargs):
     if args:
-        args = (f":warning-emoji: [bold red]{args[0]}",) + args[1:]
+        args = (f":warning-emoji: [bold red]{args[0]}", *args[1:])
     echo(*args, **kwargs, err=True)
 
 

@@ -171,7 +171,7 @@ def detect_qrcodes(keyword, description, verbose_mode, dry_run, selected, reset)
                 # that allows you to modify certain data about the Photo via the Photos app AppleScript interface
                 photo_ = Photo(photo.uuid)
                 if not dry_run:
-                    photo_.keywords = list(set(photo_.keywords + [keyword]))
+                    photo_.keywords = list({*photo_.keywords, keyword})
                     if description:
                         photo_.description = ", ".join(qrcode_text)
                 record["qrcode"] = qrcode_text

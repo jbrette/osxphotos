@@ -32,7 +32,7 @@ TEST_DATA = "tests/iphoto_test_data.json"
 # determine if exiftool installed so exiftool tests can be skipped
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 

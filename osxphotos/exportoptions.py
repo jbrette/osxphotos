@@ -322,7 +322,7 @@ class ExportResults:
         return list(set(files))
 
     def __iadd__(self, other) -> Self:
-        if type(other) != ExportResults:
+        if type(other) is not ExportResults:
             raise TypeError("Can only add ExportResults to ExportResults")
         for attribute in self.attributes:
             if attribute == "uuids":

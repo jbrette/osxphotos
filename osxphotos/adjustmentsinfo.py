@@ -42,7 +42,7 @@ class AdjustmentsInfo:
         self._format_identifier = self._plist.get("adjustmentFormatIdentifier", None)
         self._format_version = self._plist.get("adjustmentFormatVersion")
         self._timestamp = self._plist.get("adjustmentTimestamp", None)
-        if self._timestamp and type(self._timestamp) == datetime.datetime:
+        if self._timestamp and type(self._timestamp) is datetime.datetime:
             self._timestamp = datetime_naive_to_utc(self._timestamp)
 
         try:
@@ -210,7 +210,7 @@ class AdjustmentsInfo:
     def asdict(self):
         """Returns all adjustments info as dictionary"""
         timestamp = self.timestamp
-        if type(timestamp) == datetime.datetime:
+        if type(timestamp) is datetime.datetime:
             timestamp = timestamp.isoformat()
 
         return {

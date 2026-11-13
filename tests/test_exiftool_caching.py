@@ -92,7 +92,7 @@ EXIF_UUID_NONE = ["A1DD1F98-2ECD-431F-9AC9-5AFEFE2D3A5C"]
 
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 if exiftool is None:

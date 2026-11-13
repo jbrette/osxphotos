@@ -24,7 +24,7 @@ from .photoinfo_mock import PhotoInfoMock
 
 try:
     exiftool = get_exiftool_path()
-except:
+except Exception:
     exiftool = None
 
 PHOTOS_DB_PLACES = (

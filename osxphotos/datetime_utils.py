@@ -56,7 +56,7 @@ def datetime_has_tz(dt: datetime.datetime) -> bool:
         TypeError if dt is not a datetime.datetime object
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     return dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None
@@ -76,7 +76,7 @@ def datetime_tz_to_utc(dt: datetime.datetime) -> datetime.datetime:
         ValueError if dt does not have timeone information
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
@@ -98,7 +98,7 @@ def datetime_remove_tz(dt: datetime.datetime) -> datetime.datetime:
         TypeError if dt is not a datetime.datetime object
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     return dt.replace(tzinfo=None)
@@ -119,7 +119,7 @@ def datetime_naive_to_utc(dt: datetime.datetime) -> datetime.datetime:
         ValueError if dt is not a naive/timezone unaware object
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
@@ -147,7 +147,7 @@ def datetime_naive_to_local(dt: datetime.datetime) -> datetime.datetime:
         ValueError if dt is not a naive/timezone unaware object
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
@@ -174,7 +174,7 @@ def datetime_utc_to_local(dt: datetime.datetime) -> datetime.datetime:
         ValueError if dt is not in UTC timezone
     """
 
-    if type(dt) != datetime.datetime:
+    if type(dt) is not datetime.datetime:
         raise TypeError(f"dt must be type datetime.datetime, not {type(dt)}")
 
     if dt.tzinfo is not datetime.UTC:

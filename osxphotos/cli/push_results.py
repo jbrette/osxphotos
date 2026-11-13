@@ -56,7 +56,7 @@ class PushResults:
         return self._datetime
 
     def __iadd__(self, other) -> Self:
-        if type(other) != PushResults:
+        if type(other) is not PushResults:
             raise TypeError("Can only add PushResults to PushResults")
 
         for attribute in self.attributes:

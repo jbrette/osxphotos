@@ -48,7 +48,7 @@ def main(walk: bool, dry_run: bool, paths: tuple[str]):
             continue
         fp = fingerprint(file)
         if matches := fq.photos_by_fingerprint(fp):
-            for uuid, date, filename in matches:
+            for uuid, _date, filename in matches:
                 echo(
                     f"Found match for file [filename]{file}[/] in Photos: [filename]{filename}[/] ([uuid]{uuid}[/])"
                 )
@@ -73,7 +73,7 @@ def scan_files(paths: tuple[str], walk: bool) -> list[str]:
     for path in paths:
         if os.path.isdir(path):
             if walk:
-                for root, dirs, filenames in os.walk(path):
+                for root, _dirs, filenames in os.walk(path):
                     for filename in filenames:
                         files.append(os.path.join(root, filename))
             else:

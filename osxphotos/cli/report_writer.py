@@ -60,7 +60,7 @@ class ReportWriterABC(ABC):
 # Report writer that does nothing, used for --dry-run or when --report not specified
 
 
-class ReportWriterNoOp(ABC):
+class ReportWriterNoOp(ReportWriterABC):
     """Report writer that does nothing"""
 
     def __init__(self):

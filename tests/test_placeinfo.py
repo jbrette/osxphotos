@@ -156,12 +156,12 @@ def test_PLRevGeoLocationInfo_1():
 
     place_1 = PlaceInfo5(REVERSE_GEO_LOC_DATA_1)
     plrevgeoloc_1 = place_1._plrevgeoloc
-    assert type(plrevgeoloc_1) == PLRevGeoLocationInfo
-    assert type(plrevgeoloc_1.postalAddress) == CNPostalAddress
-    assert type(plrevgeoloc_1.mapItem) == PLRevGeoMapItem
+    assert type(plrevgeoloc_1) is PLRevGeoLocationInfo
+    assert type(plrevgeoloc_1.postalAddress) is CNPostalAddress
+    assert type(plrevgeoloc_1.mapItem) is PLRevGeoMapItem
     assert (
         type(plrevgeoloc_1.mapItem.sortedPlaceInfos[0])
-        == PLRevGeoMapItemAdditionalPlaceInfo
+        is PLRevGeoMapItemAdditionalPlaceInfo
     )
 
     assert (

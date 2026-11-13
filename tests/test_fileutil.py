@@ -42,7 +42,7 @@ def test_copy_file_invalid():
     with pytest.raises(Exception) as e:
         src = "tests/test-images/wedding_DOES_NOT_EXIST.jpg"
         assert FileUtil.copy(src, temp_dir.name)
-    assert e.type == OSError
+    assert e.type is OSError
 
 
 def test_copy_file_valid_shutil():
@@ -65,7 +65,7 @@ def test_copy_file_invalid_shutil():
     with pytest.raises(Exception) as e:
         src = "tests/test-images/wedding_DOES_NOT_EXIST.jpg"
         assert FileUtilShUtil.copy(src, temp_dir.name)
-    assert e.type == OSError
+    assert e.type is OSError
 
 
 def test_hardlink_file_valid():
