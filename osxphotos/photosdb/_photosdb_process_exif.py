@@ -53,7 +53,7 @@ def _process_exifinfo_5(photosdb):
     photosdb._db_exifinfo_uuid = {}
     cols = [c[0] for c in result.description]
     for row in result.fetchall():
-        record = dict(zip(cols, row))
+        record = dict(zip(cols, row, strict=True))
         uuid = record["ZUUID"]
         if uuid in photosdb._db_exifinfo_uuid:
             logger.warning(f"duplicate exifinfo record found for uuid {uuid}")

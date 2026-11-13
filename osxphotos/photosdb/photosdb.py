@@ -1968,8 +1968,10 @@ class PhotosDB:
 
             try:
                 parent = self._dbalbums_pk[pk_parent]
-            except KeyError:
-                raise ValueError(f"Did not find uuid for album {album} pk {pk_parent}")
+            except KeyError as err:
+                raise ValueError(
+                    f"Did not find uuid for album {album} pk {pk_parent}"
+                ) from err
 
             try:
                 self._dbalbum_parent_folders[album].append(parent)
@@ -3281,7 +3283,9 @@ class PhotosDB:
                         for album_id in self._dbalbum_titles[album]:
                             try:
                                 # _dbalbums_album value is list of tuples: [(uuid, sort order)]
-                                uuid_in_album, _ = zip(*self._dbalbums_album[album_id])
+                                uuid_in_album, _ = zip(
+                                    *self._dbalbums_album[album_id], strict=True
+                                )
                                 title_set.update(uuid_in_album)
                             except KeyError:
                                 # an empty album will be in _dbalbum_titles but not _dbalbums_album
@@ -3310,11 +3314,8 @@ class PhotosDB:
                     person = normalize_unicode(person)
                     if person in self._dbpersons_fullname:
                         for pk in self._dbpersons_fullname[person]:
-                            try:
-                                person_set.update(self._dbfaces_pk[pk])
-                            except KeyError:
-                                # some persons have zero photos so they won't be in _dbfaces_pk
-                                pass
+                            # some persons have zero photos so they won't be in _dbfaces_pk
+                            person_set.update(self._dbfaces_pk.get(pk, ()))
                 photos_sets.append(person_set)
 
             if from_date or to_date:  # sourcery off

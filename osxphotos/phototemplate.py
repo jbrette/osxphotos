@@ -1791,8 +1791,8 @@ def format_date_field(dt: datetime.datetime, field: str, args: list[str]) -> str
             return _strftime(dt, args[0])
         except ValueError:
             raise
-        except Exception:
-            raise ValueError(f"Invalid strftime template: '{args}'")
+        except Exception as err:
+            raise ValueError(f"Invalid strftime template: '{args}'") from err
     else:
         try:
             return getattr(DateTimeFormatter(dt), subfield)

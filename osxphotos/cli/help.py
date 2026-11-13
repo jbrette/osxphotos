@@ -258,15 +258,15 @@ class ExportCommand(click.Command):
             formatter.write_text(
                 """
     Some options (currently '--finder-tag-template', '--finder-tag-keywords', '-xattr-template') write
-    additional metadata accessible by Spotlight to facilitate searching. 
+    additional metadata accessible by Spotlight to facilitate searching.
     For example, --finder-tag-keyword writes all keywords (including any specified by '--keyword-template'
     or other options) to Finder tags that are searchable in Spotlight using the syntax: 'tag:tagname'.
     For example, if you have images with keyword "Travel" then using '--finder-tag-keywords' you could quickly
     find those images in the Finder by typing 'tag:Travel' in the Spotlight search bar.
     Finder tags are written to the 'com.apple.metadata:_kMDItemUserTags' extended attribute.
     Unlike EXIF metadata, extended attributes do not modify the actual file;
-    the metadata is written to extended attributes associated with the file and the Spotlight metadata database. 
-    Most cloud storage services do not synch extended attributes. 
+    the metadata is written to extended attributes associated with the file and the Spotlight metadata database.
+    Most cloud storage services do not synch extended attributes.
     Dropbox does sync them and any changes to a file's extended attributes
     will cause Dropbox to re-sync the files.
 

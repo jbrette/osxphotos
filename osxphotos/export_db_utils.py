@@ -629,7 +629,9 @@ def export_db_get_photoinfo_for_filepath(
                 try:
                     info_dict = json.loads(info_str)
                 except Exception as e:
-                    raise ValueError(f"Error loading PhotoInfo dict from database: {e}")
+                    raise ValueError(
+                        f"Error loading PhotoInfo dict from database: {e}"
+                    ) from e
                 return photoinfo_from_dict(
                     info_dict, exiftool=str(exiftool) if exiftool else None
                 )

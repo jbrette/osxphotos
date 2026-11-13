@@ -573,7 +573,7 @@ class SyncReportWriterCSV(ReportWriterABC):
             self._csv_writer.writeheader()
 
         for data in sync_results.results_list:
-            self._csv_writer.writerow(dict(zip(report_columns, data)))
+            self._csv_writer.writerow(dict(zip(report_columns, data, strict=False)))
         self._output_fh.flush()
 
     def close(self):

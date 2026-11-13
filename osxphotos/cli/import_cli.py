@@ -1120,7 +1120,7 @@ def import_cli(
             get_exiftool_path()
         except FileNotFoundError as e:
             rich_echo_error(f"[error] {e}")
-            raise click.Abort()
+            raise click.Abort() from e
 
     if sidecar and sidecar_filename_template:
         rich_echo_error(

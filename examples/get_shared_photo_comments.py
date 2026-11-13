@@ -79,7 +79,7 @@ def get_comments(photosdb, uuid):
 
     results = conn.execute(
         """
-        SELECT 
+        SELECT
         ZGENERICASSET.ZUUID, --0: UUID of the photo
         ZCLOUDSHAREDCOMMENT.ZISLIKE, --1: comment is actually a "like"
         ZCLOUDSHAREDCOMMENT.Z_FOK_COMMENTEDASSET, --2: sort order for comments on a photo

@@ -106,11 +106,11 @@ def batch_edit(
         osxphotos run batch_edit.py \\
         --verbose \\
         --title "California vacation 2023 {created.year}-{created.dd}-{created.mm} {counter:03d}" \\
-        --description "{place.name}" \\ 
+        --description "{place.name}" \\
         --keyword "Family" --keyword "Travel" --keyword "{keyword}"
 
     This will set the title to "California vacation 2023 2023-02-20 001", and so on,
-    the description to the reverse geolocation place name, 
+    the description to the reverse geolocation place name,
     and the keywords to "Family", "Travel", and any existing keywords of the photo.
 
     --title, --description, and --keyword may be any valid template string.

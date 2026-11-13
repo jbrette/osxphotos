@@ -73,7 +73,7 @@ def compare_dicts(
                     f"List/tuple lengths do not match for key: {key}, val1: {val1}, val2: {val2}"
                 )
                 return False
-            for v1, v2 in zip(val1, val2):
+            for v1, v2 in zip(val1, val2, strict=True):
                 if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
                     if abs(v1 - v2) >= tolerance:
                         logger.warning(

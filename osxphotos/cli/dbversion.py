@@ -54,7 +54,7 @@ def dbversion(ctx, cli_obj, library_path, schema):
         model_version = get_model_version(db_path)
     except Exception as e:
         click.echo(f"Error reading Photos version: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
     if schema:
         sql_schema = get_schema_sql(db_path)

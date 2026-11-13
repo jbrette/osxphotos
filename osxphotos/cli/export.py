@@ -95,6 +95,8 @@ if is_macos:
     )
     from osxphotos.photosalbum import PhotosAlbum
 
+import contextlib
+
 from osxphotos.iphoto import is_iphoto_library
 
 from .cli_params import (
@@ -1957,9 +1959,9 @@ def export_cli(
             msg = str(e).split(":")[1]
             raise click.BadOptionUsage(
                 "query_eval", f"Invalid query-eval CRITERIA: {msg}"
-            )
+            ) from e
         else:
-            raise ValueError(e)
+            raise ValueError(e) from e
 
     if skip_uuid:
         photos = [p for p in photos if p.uuid not in skip_uuid]
@@ -2235,10 +2237,8 @@ def export_cli(
                         file=sys.stderr,
                     )
             if export_db_callback is not None:
-                try:
+                with contextlib.suppress(ValueError):
                     unregister_crash_callback(export_db_callback)
-                except ValueError:
-                    pass
                 export_db_callback = None
             raise
 
@@ -2352,10 +2352,8 @@ def export_cli(
     # global registry (belt & suspenders alongside the crash reporter). This also
     # covers the case where no photos matched and the export loop never ran.
     if export_db_callback is not None:
-        try:
+        with contextlib.suppress(ValueError):
             unregister_crash_callback(export_db_callback)
-        except ValueError:
-            pass
         export_db_callback = None
 
     # close export_db and write changes if needed
@@ -2840,7 +2838,7 @@ def _render_suffix_template(
         raise click.BadOptionUsage(
             var_name,
             f"Invalid template for {option_name} '{suffix_template}': {e}",
-        )
+        ) from e
     if not rendered_suffix or unmatched:
         raise click.BadOptionUsage(
             var_name,
@@ -3095,7 +3093,7 @@ def get_filenames_from_template(
         except ValueError as e:
             raise click.BadOptionUsage(
                 "filename_template", f"Invalid template '{filename_template}': {e}"
-            )
+            ) from e
         if not filenames or unmatched:
             raise click.BadOptionUsage(
                 "filename_template",
@@ -3160,7 +3158,7 @@ def get_dirnames_from_template(
         except ValueError as e:
             raise click.BadOptionUsage(
                 "directory", f"Invalid template '{directory}': {e}"
-            )
+            ) from e
         if not dirnames or unmatched:
             raise click.BadOptionUsage(
                 "directory",
@@ -3409,7 +3407,7 @@ def write_finder_tags(
                 raise click.BadOptionUsage(
                     "finder_tag_template",
                     f"Invalid template for --finder-tag-template '{template_str}': {e}",
-                )
+                ) from e
 
             if unmatched:
                 rich_echo(
@@ -3473,7 +3471,7 @@ def write_extended_attributes(
             raise click.BadOptionUsage(
                 "xattr_template",
                 f"Invalid template for --xattr-template '{template_str}': {e}",
-            )
+            ) from e
         if unmatched:
             rich_echo(
                 f"[warning]Warning: unmatched template substitution for template: {template_str} unknown field={unmatched}"
@@ -3650,12 +3648,10 @@ def run_cleanup_command(
             # try to reconstitute the PhotoInfo class for this file
             if uuid := exportdb.get_uuid_for_file(f):
                 if photo_info := exportdb.get_photoinfo_for_uuid(uuid):
-                    try:
+                    with contextlib.suppress(Exception):
                         photo = photoinfo_from_dict(
                             json.loads(photo_info), exiftool=exiftool_path
                         )
-                    except Exception:
-                        pass
             for command_template in cleanup_command:
                 if should_return:
                     break

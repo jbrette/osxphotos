@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .stat_cache import DirectoryStatCache
 
+import contextlib
+
 from tenacity import (
     RetryCallState,
     after_log,
@@ -344,10 +346,8 @@ def utime_no_cache(path: os.PathLike, times: tuple[int, int]) -> bool:
                 fcntl.fcntl(fd, fcntl.F_NOCACHE, 0)
                 os.close(fd)
             except Exception:
-                try:
+                with contextlib.suppress(Exception):
                     os.close(fd)
-                except Exception:
-                    pass
 
 
 def utime_macos(path: os.PathLike, times: tuple[int, int]) -> bool:

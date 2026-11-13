@@ -38,8 +38,8 @@ class TestCache(unittest.TestCase):
                 try:
                     return self.__filesystem[normalize_path(path)]
 
-                except KeyError:
-                    raise FileNotFoundError()
+                except KeyError as err:
+                    raise FileNotFoundError() from err
 
         for ignore_file_name in (".gitignore", ".mylovelytoolignore"):
             with self.subTest(ignore_file_name=ignore_file_name):
@@ -81,8 +81,8 @@ class TestCache(unittest.TestCase):
                     try:
                         return io.StringIO("\n".join(data[normalize_path(path)]))
 
-                    except KeyError:
-                        raise FileNotFoundError()
+                    except KeyError as err:
+                        raise FileNotFoundError() from err
 
                 def mock_isdir(path):
                     statistics["isdir"] += 1

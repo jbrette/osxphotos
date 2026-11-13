@@ -49,7 +49,7 @@ def sort_list_by_keys(values, sort_keys):
     """
     if len(values) != len(sort_keys):
         raise ValueError("values and sort_keys must be same length")
-    return [x for _, x in sorted(zip(sort_keys, values))]
+    return [x for _, x in sorted(zip(sort_keys, values, strict=True))]
 
 
 class AlbumInfoBaseClass:
@@ -168,7 +168,9 @@ class AlbumInfo(AlbumInfoBaseClass):
             return self._photos
         except AttributeError:
             if self.uuid in self._db._dbalbums_album:
-                uuid, sort_order = zip(*self._db._dbalbums_album[self.uuid])
+                uuid, sort_order = zip(
+                    *self._db._dbalbums_album[self.uuid], strict=True
+                )
                 sorted_uuid = sort_list_by_keys(uuid, sort_order)
                 photos = self._db.photos_by_uuid(sorted_uuid)
                 sort_order = self.sort_order
@@ -333,7 +335,8 @@ class ImportInfo(AlbumInfoBaseClass):
                         (uuid, self._db._dbphotos[uuid]["fok_import_session"])
                         for uuid in self._db._dbphotos
                         if self._db._dbphotos[uuid]["import_uuid"] == self.uuid
-                    ]
+                    ],
+                    strict=True,
                 )
                 sorted_uuid = sort_list_by_keys(uuid_list, sort_order)
                 self._photos = self._db.photos_by_uuid(sorted_uuid)

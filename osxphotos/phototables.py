@@ -79,7 +79,9 @@ class Table:
     def rows_dict(self) -> list[dict[str, Any]]:
         """Return rows for this photo from the table as a list of dicts."""
         rows = self.rows()
-        return [dict(zip(self.columns, row)) for row in rows] if rows else []
+        return (
+            [dict(zip(self.columns, row, strict=False)) for row in rows] if rows else []
+        )
 
     def _get_column(self, column: str):
         """Get column value for this photo from the table."""

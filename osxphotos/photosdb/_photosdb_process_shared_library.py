@@ -41,7 +41,7 @@ def _process_shared_library_info_8(photosdb: PhotosDB):
     (_conn, cursor) = sqlite_open_ro(db)
 
     result = cursor.execute(
-        f""" 
+        f"""
         SELECT
         {zasset}.ZUUID,
         {zasset}.ZACTIVELIBRARYSCOPEPARTICIPATIONSTATE,

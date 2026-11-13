@@ -8,7 +8,7 @@ from ..unicode import normalize_unicode
     This module should be imported in the class defintion of PhotosDB in photosdb.py
     Do not import this module directly
     This module adds the following method to PhotosDB:
-        _process_faceinfo: process photo face info 
+        _process_faceinfo: process photo face info
 
     The following data structures are added to PhotosDB
         self._db_faceinfo_pk: {pk: {faceinfo}}
@@ -44,31 +44,31 @@ def _process_faceinfo_4(photosdb):
         """
         SELECT
         RKFace.modelId,
-        RKVersion.uuid, 
+        RKVersion.uuid,
         RKFace.uuid,
         RKPerson.name,
         RKFace.isInTrash,
         RKFace.personId,
-        RKFace.imageModelId, 
+        RKFace.imageModelId,
         RKFace.sourceWidth,
-        RKFace.sourceHeight, 
+        RKFace.sourceHeight,
         RKFace.centerX,
         RKFace.centerY,
         RKFace.size,
-        RKFace.leftEyeX, 
+        RKFace.leftEyeX,
         RKFace.leftEyeY,
-        RKFace.rightEyeX, 
-        RKFace.rightEyeY, 
+        RKFace.rightEyeX,
+        RKFace.rightEyeY,
         RKFace.mouthX,
-        RKFace.mouthY, 
-        RKFace.hidden, 
-        RKFace.manual, 
-        RKFace.hasSmile, 
-        RKFace.isLeftEyeClosed, 
-        RKFace.isRightEyeClosed, 
-        RKFace.poseRoll, 
-        RKFace.poseYaw, 
-        RKFace.posePitch, 
+        RKFace.mouthY,
+        RKFace.hidden,
+        RKFace.manual,
+        RKFace.hasSmile,
+        RKFace.isLeftEyeClosed,
+        RKFace.isRightEyeClosed,
+        RKFace.poseRoll,
+        RKFace.poseYaw,
+        RKFace.posePitch,
         RKFace.faceType,
         RKFace.qualityMeasure
         FROM
@@ -183,7 +183,7 @@ def _process_faceinfo_5(photosdb):
     (conn, cursor) = sqlite_open_ro(db)
 
     result = cursor.execute(
-        f""" 
+        f"""
         SELECT
         ZDETECTEDFACE.Z_PK,
         {asset_table}.ZUUID,

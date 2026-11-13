@@ -18,20 +18,20 @@ from ..unicode import normalize_unicode
     This module should be imported in the class defintion of PhotosDB in photosdb.py
     Do not import this module directly
     This module adds the following method to PhotosDB:
-        _process_searchinfo: process search terms from psi.sqlite 
+        _process_searchinfo: process search terms from psi.sqlite
 
-    The following properties are added to PhotosDB    
+    The following properties are added to PhotosDB
         labels: list of all labels in the library
-        labels_normalized: list of all labels normalized in the library  
+        labels_normalized: list of all labels normalized in the library
         labels_as_dict: dict of {label: count of photos} in reverse sorted order (most photos first)
         labels_normalized_as_dict: dict of {normalized label: count of photos} in reverse sorted order (most photos first)
 
     The following data structures are added to PhotosDB
         self._db_searchinfo_categories
         self._db_searchinfo_uuid
-        self._db_searchinfo_labels 
-        self._db_searchinfo_labels_normalized 
-    
+        self._db_searchinfo_labels
+        self._db_searchinfo_labels_normalized
+
     These methods only work on Photos 5 databases.  Will print warning on earlier library versions.
 """
 

@@ -37,7 +37,7 @@ if __name__ == "__main__":
     # make a dictionary of the table data
     supported_filetypes = {}
     for row in table_data:
-        row_dict = dict(zip(table_headers, row))
+        row_dict = dict(zip(table_headers, row, strict=False))
         for key, value in row_dict.items():
             if value == "-":
                 row_dict[key] = None

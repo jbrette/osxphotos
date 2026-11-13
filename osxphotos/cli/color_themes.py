@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import pathlib
 import tempfile
@@ -187,10 +188,8 @@ def _write_theme_file(theme: Theme, path: pathlib.Path):
             fh.write(theme.config)
         os.replace(tmp, path)
     except Exception:
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(tmp)
-        except OSError:
-            pass
         raise
 
 

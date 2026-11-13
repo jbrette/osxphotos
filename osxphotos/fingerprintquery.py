@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import datetime
 import os
 import pathlib
@@ -36,10 +37,8 @@ class FingerprintQuery:
         self.photos_version = get_photos_version_from_model(db_path)
 
     def __del__(self):
-        try:
+        with contextlib.suppress(Exception):
             self.conn.close()
-        except Exception:
-            pass
 
     def photos_by_fingerprint(
         self, fingerprint: str, in_trash: bool = False

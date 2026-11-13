@@ -6529,7 +6529,9 @@ def test_export_touch_files():
 
         assert f"touched date: {touched_files}" in result.output
 
-        for fname, mtime in zip(CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES):
+        for fname, mtime in zip(
+            CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES, strict=True
+        ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
 
@@ -6626,7 +6628,9 @@ def test_export_touch_files_update():
         assert f"touched date: {touched_files}" in result.output
 
         for fname, mtime in zip(
-            CLI_EXPORT_BY_DATE_NEED_TOUCH, CLI_EXPORT_BY_DATE_NEED_TOUCH_TIMES
+            CLI_EXPORT_BY_DATE_NEED_TOUCH,
+            CLI_EXPORT_BY_DATE_NEED_TOUCH_TIMES,
+            strict=True,
         ):
             st = os.stat(fname)
             assert int(st.st_mtime) != int(mtime)
@@ -6651,7 +6655,9 @@ def test_export_touch_files_update():
         assert f"touched date: {touched_files}" in result.output
 
         for fname, mtime in zip(
-            CLI_EXPORT_BY_DATE_NEED_TOUCH, CLI_EXPORT_BY_DATE_NEED_TOUCH_TIMES
+            CLI_EXPORT_BY_DATE_NEED_TOUCH,
+            CLI_EXPORT_BY_DATE_NEED_TOUCH_TIMES,
+            strict=True,
         ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
@@ -6678,7 +6684,9 @@ def test_export_touch_files_update():
         )
         assert "touched date: 1" in result.output
 
-        for fname, mtime in zip(CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES):
+        for fname, mtime in zip(
+            CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES, strict=True
+        ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
 
@@ -6821,7 +6829,9 @@ def test_export_touch_files_exiftool_update():
         assert "skipped: 19" in result.output
         assert "touched date: 18" in result.output
 
-        for fname, mtime in zip(CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES):
+        for fname, mtime in zip(
+            CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES, strict=True
+        ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
 
@@ -6846,7 +6856,9 @@ def test_export_touch_files_exiftool_update():
         assert "updated EXIF data: 1" in result.output
         assert "touched date: 1" in result.output
 
-        for fname, mtime in zip(CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES):
+        for fname, mtime in zip(
+            CLI_EXPORT_BY_DATE, CLI_EXPORT_BY_DATE_TOUCH_TIMES, strict=True
+        ):
             st = os.stat(fname)
             assert int(st.st_mtime) == int(mtime)
 

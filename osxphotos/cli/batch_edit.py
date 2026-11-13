@@ -181,7 +181,7 @@ def batch_edit(
         )
     except ValueError as e:
         echo_error(f"[error] {e} Use --help for more information.")
-        raise click.Abort()
+        raise click.Abort() from e
 
     photos = get_photos_for_processing(db=db, **kwargs)
     if not photos:
@@ -522,7 +522,7 @@ def get_photos_for_processing(
             echo_error(
                 f"[error]Could not get selected photos. Ensure Photos is open and photos to process are selected. {e}[/]",
             )
-        raise click.Abort()
+        raise click.Abort() from e
 
     if not photo_sel:
         return []

@@ -1,6 +1,7 @@
 """Test macOS 14.6 Photos library"""
 
 import collections
+import contextlib
 import datetime
 import json
 import os
@@ -340,10 +341,8 @@ def test_init4():
     with pytest.raises(Exception):
         assert osxphotos.PhotosDB(dbfile=bad_db_name)
 
-    try:
+    with contextlib.suppress(Exception):
         os.remove(bad_db_name)
-    except Exception:
-        pass
 
 
 def test_init5(mocker):

@@ -8,6 +8,7 @@ for additional documentation on reverse geolocation data
 
 from __future__ import annotations
 
+import contextlib
 from collections import namedtuple  # pylint: disable=syntax-error
 
 from bpylist2 import archiver
@@ -509,13 +510,11 @@ class PlaceInfo4(PlaceInfo):
         # hence (3, 4) means PlaceNames[3] = places_dict[4] (sub_administrative_area)
         mapping = [(1, 1), (2, 2), (3, 4), (4, 16), (18, 44), (8, 45)]
         for field5, field4 in mapping:
-            try:
+            with contextlib.suppress(KeyError):
                 place_info[field5] = [
                     p[0]
                     for p in sorted(places_dict[field4], key=lambda place: place[1])
                 ]
-            except KeyError:
-                pass
 
         place_names = PlaceNames(*place_info)
         self._names = place_names

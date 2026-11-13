@@ -119,7 +119,7 @@ def main(ascend: bool, album_path: str):
         )
     except Exception as e:
         echo_error(f"[error]Error: {e}")
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 if __name__ == "__main__":

@@ -58,8 +58,8 @@ def unregister_crash_callback(callback_id: int):
     """
     try:
         del _global_callbacks[callback_id]
-    except KeyError:
-        raise ValueError(f"Invalid callback_id: {callback_id}")
+    except KeyError as err:
+        raise ValueError(f"Invalid callback_id: {callback_id}") from err
 
 
 def crash_reporter(

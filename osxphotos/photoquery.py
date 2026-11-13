@@ -719,7 +719,7 @@ def photo_query(
             try:
                 photos = eval(query_string)
             except Exception as e:
-                raise ValueError(f"Invalid query_eval CRITERIA: {e}")
+                raise ValueError(f"Invalid query_eval CRITERIA: {e}") from e
 
     if options.duplicate:
         sort_options = QueryOptions()

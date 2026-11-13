@@ -372,7 +372,7 @@ def _compare_mappings(
                     break
 
         if b_photos and a_photos:
-            for photo_a, photo_b in zip(a_photos, b_photos):
+            for photo_a, photo_b in zip(a_photos, b_photos, strict=False):
                 if diff_function(photo_a, photo_b):
                     in_a_and_b_diff.append(
                         (photo_a, photo_b, diff_function(photo_a, photo_b))

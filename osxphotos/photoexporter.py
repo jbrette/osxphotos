@@ -1630,7 +1630,7 @@ class PhotoExporter:
             logger.debug(
                 f"AppleScript export error count: {_consecutive_export_errors}"
             )
-            raise ExportError(e)
+            raise ExportError(e) from e
 
         if not exported_files or not filename:
             # nothing got exported

@@ -266,7 +266,7 @@ def metadata_from_sidecar(
             try:
                 metadata = json.load(fp)[0]
             except (json.JSONDecodeError, IndexError) as e:
-                raise ValueError(f"Error reading sidecar file {filepath}: {e}")
+                raise ValueError(f"Error reading sidecar file {filepath}: {e}") from e
         return metadata_from_metadata_dict(metadata)
 
     if sidecar_type == SidecarFileType.GoogleTakeout:
@@ -281,7 +281,7 @@ def metadata_from_google_takeout(filepath: str | pathlib.Path) -> MetaData:
         try:
             metadata = json.load(fp)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Error reading sidecar file {filepath}: {e}")
+            raise ValueError(f"Error reading sidecar file {filepath}: {e}") from e
 
     title = metadata.get("title")
     description = metadata.get("description")

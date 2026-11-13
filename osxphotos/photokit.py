@@ -1321,8 +1321,10 @@ class PhotoLibrary:
         try:
             result = self.fetch_uuid_list([uuid])
             return result[0]
-        except Exception:
-            raise PhotoKitFetchFailed(f"Fetch did not return result for uuid {uuid}")
+        except Exception as err:
+            raise PhotoKitFetchFailed(
+                f"Fetch did not return result for uuid {uuid}"
+            ) from err
 
     def fetch_burst_uuid(self, burstid, all=False):
         """fetch PhotoAssets with burst ID = burstid

@@ -292,10 +292,8 @@ class ExportDB:
             # Parse date_modified
             date_modified_val = None
             if row[9]:
-                try:
+                with suppress(Exception):
                     date_modified_val = datetime.datetime.fromisoformat(row[9])
-                except Exception:
-                    pass
             # Build dest_sig tuple
             mtime = int(row[7]) if row[7] is not None else None
             dest_sig = (row[5], row[6], mtime)

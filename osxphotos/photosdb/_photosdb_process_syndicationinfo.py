@@ -40,14 +40,14 @@ def _process_syndicationinfo_7(photosdb: PhotosDB):
     (_conn, cursor) = sqlite_open_ro(db)
 
     result = cursor.execute(
-        f""" 
+        f"""
         SELECT
         {zasset}.ZUUID,
         {zasset}.ZSYNDICATIONSTATE,
         ZADDITIONALASSETATTRIBUTES.ZSYNDICATIONHISTORY,
         ZADDITIONALASSETATTRIBUTES.ZSYNDICATIONIDENTIFIER
         FROM {zasset}
-        JOIN ZADDITIONALASSETATTRIBUTES ON ZADDITIONALASSETATTRIBUTES.ZASSET = {zasset}.Z_PK 
+        JOIN ZADDITIONALASSETATTRIBUTES ON ZADDITIONALASSETATTRIBUTES.ZASSET = {zasset}.Z_PK
         """
     )
 

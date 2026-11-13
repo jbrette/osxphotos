@@ -1,5 +1,6 @@
 """Basic tests for Photos 7 on macOS 12.0.0 Developer Beta"""
 
+import contextlib
 import datetime
 import os
 import os.path
@@ -280,10 +281,8 @@ def test_init4():
     with pytest.raises(Exception):
         assert osxphotos.PhotosDB(dbfile=bad_db_name)
 
-    try:
+    with contextlib.suppress(Exception):
         os.remove(bad_db_name)
-    except Exception:
-        pass
 
 
 def test_init5(mocker):

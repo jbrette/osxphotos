@@ -273,9 +273,6 @@ lint.ignore = [
     "E501",   # line too long: also ignored in the other projects; the formatter owns width
     "N801", "N802", "N803", "N806", "N818", # names mirror Photos/PhotoKit/ObjC APIs and the public API
     "RUF001", "RUF002", "RUF003", # ambiguous unicode: intentional in test data and messages
-    # TODO: cleanup candidates, need manual edits (no safe autofix)
-    "W291", "W293", # trailing whitespace, mostly inside multi-line strings
-    "B904", "B905", "SIM105",
 ]
 
 exclude = [

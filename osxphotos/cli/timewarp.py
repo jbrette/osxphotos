@@ -826,6 +826,6 @@ def get_photos_for_processing(**kwargs) -> list[Photo]:
             echo_error(
                 f"[error]Could not get selected photos. Ensure Photos is open and photos to process are selected. {e}[/]",
             )
-        raise RuntimeError("Could not get selected photos")
+        raise RuntimeError("Could not get selected photos") from e
 
     return photo_sel
