@@ -32,11 +32,11 @@ if is_macos:
         logger.debug("Could not import Photos framework")
 
 
-def assert_macos():
+def assert_macos() -> None:
     assert is_macos, "This feature only runs on macOS"
 
 
-def get_macos_version():
+def get_macos_version() -> tuple[str, str, str]:
     assert_macos()
     # returns tuple of str containing OS version
     # e.g. 10.13.6 = ("10", "13", "6")
@@ -55,7 +55,7 @@ def get_macos_version():
     return (ver, major, minor)
 
 
-def check_and_warn_macos_version():
+def check_and_warn_macos_version() -> None:
     """Check OS version and warn if not tested"""
     system = platform.system()
     (ver, major, _) = get_macos_version() if is_macos else (None, None, None)
