@@ -188,6 +188,7 @@ osxphotos = [
     "*.json",
     "*.md",
     "phototemplate.tx",
+    "py.typed",  # PEP 561: the package is fully typed (mypy --strict)
     # Data subdirectories (no __init__.py — data only, not Python packages)
     "docs/*",
     "docs/**/*",
@@ -248,9 +249,6 @@ module = [
     "utitools", "Vision", "wurlitzer",
 ]
 ignore_missing_imports = true
-
-# LEGACY_UNTYPED_START
-# LEGACY_UNTYPED_END
 
 [tool.pytest.ini_options]
 addopts = "-p tests.plugins.env_vars"

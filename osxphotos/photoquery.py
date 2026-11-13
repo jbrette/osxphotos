@@ -129,7 +129,7 @@ class QueryOptions:
         title: list of titles to search for
         to_date: search for photos taken before this date
         to_time: search for photos taken before this time of day
-        uti: list of UTIs to search for
+        uti: UTI to search for (matched as a substring of the original UTI)
         uuid: list of uuids to search for
         year: search for photos taken in a given year
         syndicated: search for photos that have been shared via syndication ("Shared with You" album via Messages, etc.)
