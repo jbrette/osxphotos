@@ -161,6 +161,7 @@ def _process_searchinfo(self: PhotosDB) -> None:
             "search info not implemented for this database version"
         )
 
+    assert self._dbfile is not None, "PhotosDB.__init__ sets _dbfile"
     search_dir = pathlib.Path(self._dbfile).parent / "search"
     psi_db_path = search_dir / "psi.sqlite"
     leo_db_path = search_dir / "leo.sqlite"

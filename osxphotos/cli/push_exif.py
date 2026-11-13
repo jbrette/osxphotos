@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from typing import Any
 
 import click
@@ -178,24 +179,24 @@ def push_exif(
     photos: list[PhotoInfo],
     append: bool,
     compare: bool,
-    description_template: str,
+    description_template: str | None,
     dry_run: bool,
-    exiftool_flags: tuple[str],
-    exiftool_path: str,
+    exiftool_flags: tuple[str, ...],
+    exiftool_path: str | None,
     favorite_rating: bool,
     force: bool,
     ignore_date_modified: bool,
-    keyword_template: tuple[str],
+    keyword_template: tuple[str, ...],
     merge_exif_keywords: bool,
     merge_exif_persons: bool,
-    metadata: str,
+    metadata: tuple[str, ...],
     push_edited: bool,
     replace_keywords: bool,
-    report: str,
+    report: str | None,
     use_albums_as_keywords: bool,
     use_persons_as_keywords: bool,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> None:
     """Write photo metadata to original files in the Photos library
 
     METADATA must be one or more of the following, separated by commas:
@@ -306,11 +307,11 @@ def process_photos(
     photos: list[PhotoInfo],
     options: ExifOptions,
     push_edited: bool,
-    report: str,
+    report: str | None,
     append: bool,
     exiftool_path: str,
     dry_run: bool,
-):
+) -> None:
     """Process the photos, pushing metadata to files as needed"""
 
     update_db = kvstore("push_exif")
@@ -321,11 +322,11 @@ def process_photos(
 
     report_writer = (
         push_exif_report_writer_factory(report_name, append)
-        if report and not dry_run
+        if report_name is not None and not dry_run
         else ReportWriterNoOp()
     )
 
-    results = {}
+    results: dict[str, PushResults] = {}
     with Progress(console=get_verbose_console()) as progress:
         num_photos = len(photos)
         task = progress.add_task(
@@ -449,7 +450,7 @@ def write_exif(
     return warnings, error
 
 
-def print_results_summary(results: dict[str, PushResults]):
+def print_results_summary(results: dict[str, PushResults]) -> None:
     """Print results summary"""
     written = 0
     updated = 0
@@ -498,7 +499,9 @@ def render_and_validate_report(report: str, exiftool_path: str) -> str:
     return report
 
 
-def set_options_from_metadata(options: ExifOptions, metadata: list[str]) -> ExifOptions:
+def set_options_from_metadata(
+    options: ExifOptions, metadata: Sequence[str]
+) -> ExifOptions:
     """Set options flags for metadata to export for ExifOptions from a list of metadata named flags
 
     Args:
@@ -532,7 +535,7 @@ def set_options_from_metadata(options: ExifOptions, metadata: list[str]) -> Exif
     return options
 
 
-def _set_exifoptions_metadata_flags(options: ExifOptions, value: bool):
+def _set_exifoptions_metadata_flags(options: ExifOptions, value: bool) -> None:
     """Set or clear all metadata flags on ExifOptions to value"""
     options.datetime = value
     options.description = value
@@ -543,7 +546,7 @@ def _set_exifoptions_metadata_flags(options: ExifOptions, value: bool):
     options.title = value
 
 
-def compare_exif(photos: list[PhotoInfo], options: ExifOptions):
+def compare_exif(photos: list[PhotoInfo], options: ExifOptions) -> None:
     """Compare metadata between Photos and original files"""
     echo(
         f"[num]{len(photos)}[/] {pluralize(len(photos), 'photo', 'photos')} selected for processing"
@@ -553,7 +556,7 @@ def compare_exif(photos: list[PhotoInfo], options: ExifOptions):
         compare_photo(photo, options)
 
 
-def compare_photo(photo: PhotoInfo, options: ExifOptions):
+def compare_photo(photo: PhotoInfo, options: ExifOptions) -> None:
     """Compare metadata between Photos and original file for a single photo"""
     if not photo.path:
         echo(
@@ -561,7 +564,15 @@ def compare_photo(photo: PhotoInfo, options: ExifOptions):
         )
         return
 
-    file_data = photo.exiftool.asdict()
+    exiftool = photo.exiftool
+    if exiftool is None:
+        # exiftool is None when the original file is not on disk
+        echo(
+            f"Cannot compare [filename]{photo.original_filename}[/] ([uuid]{photo.uuid}[/]): missing original file"
+        )
+        return
+
+    file_data = exiftool.asdict()
 
     # all keywords location faces persons datetime title description favorite
     cmp_str = ""
@@ -618,13 +629,13 @@ def compare_keywords(photo: PhotoInfo, file_data: dict[str, Any]) -> str:
     exif_keywords = get_dict_values_as_list(file_data, "IPTC:Keywords")
     exif_keywords += get_dict_values_as_list(file_data, "XMP:Subject")
     exif_keywords += get_dict_values_as_list(file_data, "XMP:TagsList")
-    exif_keywords = set(exif_keywords)
-    if photo_keywords != exif_keywords:
+    exif_keywords_set = set(exif_keywords)
+    if photo_keywords != exif_keywords_set:
         return "\n".join(
             [
                 "  Keywords do not match",
                 f"    Photos: {list(photo_keywords)}",
-                f"      File: {list(exif_keywords)}\n",
+                f"      File: {list(exif_keywords_set)}\n",
             ],
         )
     return ""
@@ -702,8 +713,13 @@ def compare_persons(photo: PhotoInfo, file_data: dict[str, Any]) -> str:
 def compare_datetime(photo: PhotoInfo, file_data: dict[str, Any]) -> str:
     """Compare datetime between Photos and original file for a single photo"""
     photo_datetime = photo.date.strftime("%Y:%m:%d %H:%M:%S")
-    photo_offset = photo.date.tzinfo.utcoffset(photo.date).total_seconds() / 3600
-    photo_offset = f"{photo_offset // 1:+03.0f}{photo_offset % 1 * 60:02.0f}"
+    utcoffset = photo.date.utcoffset()
+    # photo.date is always timezone aware
+    assert utcoffset is not None
+    photo_offset_hours = utcoffset.total_seconds() / 3600
+    photo_offset = (
+        f"{photo_offset_hours // 1:+03.0f}{photo_offset_hours % 1 * 60:02.0f}"
+    )
 
     exif_dt_offset = get_exif_date_time_offset(file_data)
     exif_datetime = (

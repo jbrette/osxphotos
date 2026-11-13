@@ -23,6 +23,14 @@ class PushResults:
 
     # Note: __init__ docs above added in the class docstring so they are picked up by sphinx
 
+    _datetime: str
+    written: list[str]
+    updated: list[str]
+    skipped: list[str]
+    missing: list[str]
+    error: list[tuple[str, str]]
+    warning: list[tuple[str, str]]
+
     __slots__ = [
         "_datetime",
         "error",

@@ -47,13 +47,13 @@ __all__ = [
 ]
 
 
-def isotime_from_ts(ts: int) -> str:
+def isotime_from_ts(ts: float) -> str:
     """Convert timestamp to ISO 8601 time string"""
     return datetime.datetime.fromtimestamp(ts).isoformat()
 
 
 def export_db_get_version(
-    dbfile: str | os.PathLike,
+    dbfile: str | os.PathLike[str],
 ) -> tuple[int | None, int | None]:
     """returns version from export database as tuple of (osxphotos version, export_db version)"""
     conn = sqlite3.connect(str(dbfile), check_same_thread=SQLITE_CHECK_SAME_THREAD)
@@ -65,17 +65,18 @@ def export_db_get_version(
     return (None, None)
 
 
-def export_db_get_about(dbfile: str | os.PathLike) -> str:
+def export_db_get_about(dbfile: str | os.PathLike[str]) -> str:
     """Returns the about string from the export database"""
     # read the last entry in the about table
     conn = sqlite3.connect(str(dbfile), check_same_thread=SQLITE_CHECK_SAME_THREAD)
     c = conn.cursor()
     if row := c.execute("SELECT about FROM about ORDER BY id DESC LIMIT 1;").fetchone():
-        return row[0]
+        about: str = row[0]
+        return about
     return ""
 
 
-def export_db_vacuum(dbfile: str | os.PathLike) -> None:
+def export_db_vacuum(dbfile: str | os.PathLike[str]) -> None:
     """Vacuum export database"""
     conn = sqlite3.connect(str(dbfile), check_same_thread=SQLITE_CHECK_SAME_THREAD)
     c = conn.cursor()
@@ -84,9 +85,9 @@ def export_db_vacuum(dbfile: str | os.PathLike) -> None:
 
 
 def export_db_update_signatures(
-    dbfile: str | os.PathLike,
-    export_dir: str | os.PathLike,
-    verbose_: Callable = noop,
+    dbfile: str | os.PathLike[str],
+    export_dir: str | os.PathLike[str],
+    verbose_: Callable[..., Any] = noop,
     dry_run: bool = False,
 ) -> tuple[int, int]:
     """Update signatures for all files found in the export database to match what's on disk
@@ -127,7 +128,7 @@ def export_db_update_signatures(
 
 
 def export_db_get_runs(
-    export_db: str | os.PathLike,
+    export_db: str | os.PathLike[str],
 ) -> list[tuple[str, str, str]]:
     """Get last run from export database"""
     conn = sqlite3.connect(str(export_db), check_same_thread=SQLITE_CHECK_SAME_THREAD)
@@ -140,7 +141,7 @@ def export_db_get_runs(
 
 
 def export_db_get_last_run(
-    export_db: str | os.PathLike,
+    export_db: str | os.PathLike[str],
 ) -> tuple[str | None, str | None]:
     """Get last run from export database"""
     conn = sqlite3.connect(str(export_db), check_same_thread=SQLITE_CHECK_SAME_THREAD)
@@ -153,23 +154,23 @@ def export_db_get_last_run(
 
 
 def export_db_get_errors(
-    export_db: str | os.PathLike,
-) -> tuple[str | None, str | None]:
+    export_db: str | os.PathLike[str],
+) -> list[str]:
     """Get errors from export database"""
     conn = sqlite3.connect(str(export_db), check_same_thread=SQLITE_CHECK_SAME_THREAD)
     c = conn.cursor()
-    results = c.execute(
+    rows = c.execute(
         "SELECT filepath, uuid, timestamp, error FROM export_data WHERE error is not null ORDER BY timestamp DESC;"
     ).fetchall()
     results = [
         f"[filepath]{row[0]}[/], [uuid]{row[1]}[/], [time]{row[2]}[/], [error]{row[3]}[/]"
-        for row in results
+        for row in rows
     ]
     return results
 
 
 def export_db_save_config_to_file(
-    export_db: str | os.PathLike, config_file: str | os.PathLike
+    export_db: str | os.PathLike[str], config_file: str | os.PathLike[str]
 ) -> None:
     """Save export_db last run config to file"""
     export_db = pathlib.Path(export_db)
@@ -184,7 +185,7 @@ def export_db_save_config_to_file(
 
 
 def export_db_get_config(
-    export_db: str | os.PathLike, config: ConfigOptions, override=False
+    export_db: str | os.PathLike[str], config: ConfigOptions, override: bool = False
 ) -> ConfigOptions:
     """Load last run config to config
 
@@ -195,17 +196,15 @@ def export_db_get_config(
     conn = sqlite3.connect(str(export_db), check_same_thread=SQLITE_CHECK_SAME_THREAD)
     c = conn.cursor()
     row = c.execute("SELECT config FROM config ORDER BY id DESC LIMIT 1;").fetchone()
-    return (
-        config.load_from_str(row[0], override=override)
-        if row
-        else ValueError("No config found in export_db")
-    )
+    if not row:
+        raise ValueError("No config found in export_db")
+    return config.load_from_str(row[0], override=override)
 
 
 def export_db_check_signatures(
-    dbfile: str | os.PathLike,
-    export_dir: str | os.PathLike,
-    verbose_: Callable = noop,
+    dbfile: str | os.PathLike[str],
+    export_dir: str | os.PathLike[str],
+    verbose_: Callable[..., Any] = noop,
 ) -> tuple[int, int, int]:
     """Check signatures for all files found in the export database to verify what matches the on disk files
 
@@ -245,9 +244,9 @@ def export_db_check_signatures(
 
 
 def export_db_touch_files(
-    dbfile: str | os.PathLike,
-    export_dir: str | os.PathLike,
-    verbose_: Callable = noop,
+    dbfile: str | os.PathLike[str],
+    export_dir: str | os.PathLike[str],
+    verbose_: Callable[..., Any] = noop,
     dry_run: bool = False,
 ) -> tuple[int, int, int]:
     """Touch files on disk to match the Photos library created date
@@ -328,18 +327,18 @@ def export_db_touch_files(
         if not dry_run:
             fileutil = FileUtilMacOS if is_macos else FileUtil
             fileutil.utime(filepath, (ts, ts))
-            rec = exportdb.get_file_record(filepath)
-            rec.dest_sig = (dest_mode, dest_size, ts)
+            if (rec := exportdb.get_file_record(filepath)) is not None:
+                rec.dest_sig = (dest_mode, dest_size, ts)
 
     return (touched, not_touched, skipped)
 
 
 def export_db_migrate_photos_library(
-    dbfile: str | os.PathLike,
-    photos_library: str | os.PathLike,
-    verbose: Callable = noop,
+    dbfile: str | os.PathLike[str],
+    photos_library: str | os.PathLike[str],
+    verbose: Callable[..., Any] = noop,
     dry_run: bool = False,
-):
+) -> tuple[int, int]:
     """
     Migrate export database to new Photos library
     This will attempt to match photos in the new library to photos in the old library
@@ -427,7 +426,7 @@ def _export_db_update_uuid_info(
     photoinfo: dict[str, Any],
     photosdb: PhotosDB,
     dry_run: bool = False,
-):
+) -> None:
     """
     Update the UUID and digest in the export database to match a new UUID
 
@@ -441,7 +440,9 @@ def _export_db_update_uuid_info(
     """
     if dry_run:
         return
-    new_digest = compute_photoinfo_digest(photoinfo, photosdb.get_photo(new_uuid))
+    if (new_photo := photosdb.get_photo(new_uuid)) is None:
+        raise ValueError(f"Photo with UUID {new_uuid} not found in Photos library")
+    new_digest = compute_photoinfo_digest(photoinfo, new_photo)
     export_db_update_uuid(conn, uuid, new_uuid)
     export_db_update_digest_for_uuid(conn, new_uuid, new_digest)
 
@@ -475,7 +476,7 @@ def export_db_update_uuid(
         return (False, str(e))
 
 
-def export_db_backup(dbpath: str | os.PathLike) -> str:
+def export_db_backup(dbpath: str | os.PathLike[str]) -> str:
     """Backup export database, returns name of backup file"""
     dbpath = pathlib.Path(dbpath)
     # create backup with .bak extension and datestamp in YYYYMMDDHHMMSS format
@@ -491,7 +492,7 @@ def export_db_backup(dbpath: str | os.PathLike) -> str:
     return backup_file
 
 
-def export_db_get_last_library(dbpath: str | os.PathLike) -> str:
+def export_db_get_last_library(dbpath: str | os.PathLike[str]) -> str:
     """Return the last library used to export from
 
     This isn't stored separately in the database but can be extracted from the
@@ -500,7 +501,7 @@ def export_db_get_last_library(dbpath: str | os.PathLike) -> str:
     library name from the photoinfo table.
 
     Args:
-        dbpath (str | os.PathLike): path to export database
+        dbpath (str | os.PathLike[str]): path to export database
 
     Returns:
         str: name of library used to export from or "" if not found
@@ -520,7 +521,8 @@ def export_db_get_last_library(dbpath: str | os.PathLike) -> str:
                     FROM export_data))
     """
     ).fetchone():
-        return results[0]
+        library: str = results[0]
+        return library
     return ""
 
 
@@ -552,11 +554,11 @@ def compute_photoinfo_digest(photoinfo: dict[str, Any], photo: PhotoInfo) -> str
     return hexdigest(json.dumps(new_dict, sort_keys=True))
 
 
-def find_export_db_for_filepath(filepath: str | os.PathLike) -> str:
+def find_export_db_for_filepath(filepath: str | os.PathLike[str]) -> str:
     """Walk up a directory tree looking for an export database
 
     Args:
-        filepath (str | os.PathLike): path to file or directory
+        filepath (str | os.PathLike[str]): path to file or directory
 
     Returns:
         str: path to export database or "" if not found
@@ -574,11 +576,11 @@ def find_export_db_for_filepath(filepath: str | os.PathLike) -> str:
     return ""
 
 
-def get_uuid_for_filepath(filepath: str | os.PathLike) -> str:
+def get_uuid_for_filepath(filepath: str | os.PathLike[str]) -> str:
     """Find the UUID for a given filepath, traversing the directory tree to find the export database.
 
     Args:
-        filepath (str | os.PathLike): path to file or directory
+        filepath (str | os.PathLike[str]): path to file or directory
 
     Returns:
         str: UUID for file or "" if not found
@@ -591,7 +593,7 @@ def get_uuid_for_filepath(filepath: str | os.PathLike) -> str:
     return ""
 
 
-def export_db_get_last_export_dir(filepath: str | os.PathLike) -> str | None:
+def export_db_get_last_export_dir(filepath: str | os.PathLike[str]) -> str | None:
     """Return path to last export directory from database"""
     filepath = pathlib.Path(filepath)
     if export_db_path := find_export_db_for_filepath(filepath):
@@ -601,10 +603,10 @@ def export_db_get_last_export_dir(filepath: str | os.PathLike) -> str | None:
 
 
 def export_db_get_photoinfo_for_filepath(
-    exportdb_path: str | os.PathLike,
-    filepath: str | os.PathLike,
-    exiftool: str | os.PathLike | None = None,
-    exportdir_path: str | os.PathLike | None = None,
+    exportdb_path: str | os.PathLike[str],
+    filepath: str | os.PathLike[str],
+    exiftool: str | os.PathLike[str] | None = None,
+    exportdir_path: str | os.PathLike[str] | None = None,
 ) -> PhotoInfoFromDict | None:
     """Return photoinfo object for a given filepath
 

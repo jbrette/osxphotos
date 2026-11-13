@@ -7,6 +7,7 @@ import sys
 from collections.abc import Callable
 from functools import partial
 from textwrap import dedent
+from typing import Any, cast
 
 import click
 
@@ -75,7 +76,7 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S%z"
 class TimeWarpCommand(click.Command):
     """Custom click.Command that overrides get_help() to show additional help info for export"""
 
-    def get_help(self, ctx):
+    def get_help(self, ctx: click.Context) -> str:
         help_text = super().get_help(ctx)
         formatter = click.HelpFormatter(width=HELP_WIDTH)
         formatter.write("\n\n")
@@ -408,20 +409,20 @@ def timewarp(
     compare_exif: bool,
     push_exif: bool,
     pull_exif: bool,
-    function: tuple[Callable, str] | None,
+    function: tuple[Callable[..., Any], str] | None,
     match_time: bool,
     use_file_time: bool,
     add_to_album: str | None,
     uuid: tuple[str, ...] | None,
-    uuid_from_file: click.Path | str | None,
-    exiftool_path: click.Path | None,
-    library: click.Path | None,
+    uuid_from_file: str | None,
+    exiftool_path: str | None,
+    library: str | None,
     parse_date: str | None,
     plain: bool,
     force: bool,
     reset: bool,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> None:
     """Adjust date/time/timezone of photos in Apple Photos.
 
     Changes will be applied to: 1) photos specified via --uuid and
@@ -457,20 +458,20 @@ def timewarp_cli(
     compare_exif: bool,
     push_exif: bool,
     pull_exif: bool,
-    function: tuple[Callable, str] | None,
+    function: tuple[Callable[..., Any], str] | None,
     match_time: bool,
     use_file_time: bool,
     add_to_album: str | None,
     uuid: tuple[str, ...] | None,
-    uuid_from_file: click.Path | str | None,
-    exiftool_path: click.Path | None,
-    library: click.Path | None,
+    uuid_from_file: str | None,
+    exiftool_path: str | None,
+    library: str | None,
     parse_date: str | None,
     plain: bool,
     force: bool,
     reset: bool,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> int:
     """Adjust date/time/timezone of photos in Apple Photos.
 
     This is intended to be called by timewarp() which handles command line arguments.
@@ -615,7 +616,8 @@ def timewarp_cli(
         set_photo_date_added,
         library_path=library,
         verbose=verbose,
-        date_added=date_added,
+        # only called when date_added is set
+        date_added=cast(datetime.datetime, date_added),
     )
 
     set_photo_date_added_from_photo_ = partial(
@@ -635,6 +637,7 @@ def timewarp_cli(
         verbose=verbose,
     )
 
+    update_photo_from_function_: Callable[..., Any]
     if function:
         update_photo_from_function_ = partial(
             update_photo_from_function,
@@ -656,9 +659,14 @@ def timewarp_cli(
             tz_seconds, tz_str, tz_name = tzinfo.get_timezone(photo)
             photo_date_local = datetime_naive_to_local(photo.date)
             photo_date_tz = datetime_to_new_tz(photo_date_local, tz_seconds)
-            date_added = get_photo_date_added_(photo)
+            photo_date_added = get_photo_date_added_(photo)
+            date_added_str = (
+                photo_date_added.strftime(DATETIME_FORMAT)
+                if photo_date_added is not None
+                else None
+            )
             echo(
-                f"[filename]{photo.filename}[/filename], [uuid]{photo.uuid}[/uuid], [time]{photo_date_local.strftime(DATETIME_FORMAT)}[/time], [time]{photo_date_tz.strftime(DATETIME_FORMAT)}[/time], [tz]{tz_str}[/tz], [tz]{tz_name}[/tz], [time]{date_added.strftime(DATETIME_FORMAT)}[/time]"
+                f"[filename]{photo.filename}[/filename], [uuid]{photo.uuid}[/uuid], [time]{photo_date_local.strftime(DATETIME_FORMAT)}[/time], [time]{photo_date_tz.strftime(DATETIME_FORMAT)}[/time], [tz]{tz_str}[/tz], [tz]{tz_name}[/tz], [time]{date_added_str}[/time]"
             )
         return 0
 
@@ -687,19 +695,21 @@ def timewarp_cli(
                 )
             else:
                 filename = photo.filename
-            uuid = f"[uuid]{photo.uuid}[/uuid]"
+            uuid_str = f"[uuid]{photo.uuid}[/uuid]"
             if album:
                 if diff_results.diff:
                     different_photos += 1
                     verbose(
-                        f"Photo {filename} ({uuid}) has different date/time/timezone, adding to album '{album.name}'"
+                        f"Photo {filename} ({uuid_str}) has different date/time/timezone, adding to album '{album.name}'"
                     )
                     album.add(photo)
                 else:
-                    verbose(f"Photo {filename} ({uuid}) has same date/time/timezone")
+                    verbose(
+                        f"Photo {filename} ({uuid_str}) has same date/time/timezone"
+                    )
             else:
                 echo(
-                    f"{filename}, {uuid}, {diff_results.photos_date} {diff_results.photos_time}, {diff_results.exif_date} {diff_results.exif_time}, {diff_results.photos_tz}, {diff_results.exif_tz}"
+                    f"{filename}, {uuid_str}, {diff_results.photos_date} {diff_results.photos_time}, {diff_results.exif_date} {diff_results.exif_time}, {diff_results.photos_tz}, {diff_results.exif_tz}"
                 )
         if album:
             echo(
@@ -723,7 +733,8 @@ def timewarp_cli(
         )
 
     num_photos = len(photos)
-    with rich_progress(console=get_verbose_console(), mock=verbose) as progress:
+    # mock was passed the verbose function, which is always truthy: keep it mocked
+    with rich_progress(console=get_verbose_console(), mock=True) as progress:
         task = progress.add_task(
             f"Processing [num]{num_photos}[/] {pluralize(len(photos), 'photo', 'photos')}",
             total=num_photos,
@@ -746,6 +757,7 @@ def timewarp_cli(
                 set_photo_date_added_from_photo_(photo, date_added=photo.date)
             if timezone:
                 previous_photo_date = get_photo_date_created(photo)
+                assert tz_updater is not None  # created above whenever timezone is set
                 tz_updater.update_photo(photo)
                 if match_time:
                     update_photo_date_time(
@@ -787,7 +799,7 @@ def unique_photos(photos: list[Photo]) -> list[Photo]:
     return unique
 
 
-def get_photos_for_processing(**kwargs) -> list[Photo]:
+def get_photos_for_processing(**kwargs: Any) -> list[Photo]:
     """Get photos for processing from query options or selection.
 
     Args:

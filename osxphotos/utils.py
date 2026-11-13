@@ -17,10 +17,10 @@ import subprocess
 import sys
 import urllib.parse
 import uuid
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Collection, Hashable, Iterable
 from functools import cache
 from plistlib import load as plistload
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 from uuid import UUID
 
 if TYPE_CHECKING:
@@ -66,26 +66,31 @@ if is_macos:
     import CoreFoundation
 
 
-def noop(*args, **kwargs):
+def noop(*args: Any, **kwargs: Any) -> None:
     """do nothing (no operation)"""
 
 
-def lineno(filename):
+def lineno(filename: str | os.PathLike[str]) -> str:
     """Returns string with filename and current line number in caller as '(filename): line_num'
     Will trim filename to just the name, dropping path, if any."""
-    line = inspect.currentframe().f_back.f_lineno
-    filename = pathlib.Path(filename).name
-    return f"{filename}: {line}"
+    # currentframe() is None only on Python implementations without stack frames
+    frame = inspect.currentframe()
+    assert frame is not None
+    caller = frame.f_back
+    assert caller is not None
+    line = caller.f_lineno
+    name = pathlib.Path(filename).name
+    return f"{name}: {line}"
 
 
-def _check_file_exists(filename):
+def _check_file_exists(filename: str | os.PathLike[str]) -> bool:
     """returns true if file exists and is not a directory
     otherwise returns false"""
-    filename = os.path.abspath(filename)
-    return os.path.exists(filename) and not os.path.isdir(filename)
+    abspath = os.path.abspath(filename)
+    return os.path.exists(abspath) and not os.path.isdir(abspath)
 
 
-def _get_resource_loc(model_id) -> tuple[str, str, str]:
+def _get_resource_loc(model_id: int) -> tuple[str, str, str]:
     """returns folder_id and file_id needed to find location of edited photo
     and live photos for version <= Photos 4.0
     modified version of code in utils to debug #859
@@ -108,13 +113,13 @@ def _get_resource_loc(model_id) -> tuple[str, str, str]:
     return folder_id, file_id, nn_id
 
 
-def _dd_to_dms(dd):
+def _dd_to_dms(dd: float | str) -> tuple[int, int, float]:
     """convert lat or lon in decimal degrees (dd) to degrees, minutes, seconds"""
     """ return tuple of int(deg), int(min), float(sec) """
-    dd = float(dd)
-    negative = dd < 0
-    dd = abs(dd)
-    min_, sec_ = divmod(dd * 3600, 60)
+    dd_float = float(dd)
+    negative = dd_float < 0
+    dd_float = abs(dd_float)
+    min_, sec_ = divmod(dd_float * 3600, 60)
     deg_, min_ = divmod(min_, 60)
     if negative:
         if deg_ > 0:
@@ -127,7 +132,7 @@ def _dd_to_dms(dd):
     return int(deg_), int(min_), sec_
 
 
-def dd_to_dms_str(lat, lon):
+def dd_to_dms_str(lat: float | str, lon: float | str) -> tuple[str, str]:
     """convert latitude, longitude in degrees to degrees, minutes, seconds as string"""
     """ lat: latitude in degrees  """
     """ lon: longitude in degrees """
@@ -198,7 +203,8 @@ def get_system_library_path() -> str | None:
         ):
             logger.debug(f"SystemLibraryPath not found in plist file: {plist_file!s}")
             continue
-        return library_path
+        # plist values are untyped; SystemLibraryPath is a string path
+        return cast(str, library_path)
 
     return _get_system_library_path_from_photokit()
 
@@ -321,6 +327,31 @@ def list_photo_libraries() -> list[str]:
 #     return [name for name in files if rule.match(name)]
 
 
+@overload
+def list_directory(
+    directory: str,
+    startswith: str | None = None,
+    endswith: str | None = None,
+    contains: str | None = None,
+    glob: str | None = None,
+    include_path: bool = False,
+    case_sensitive: bool = False,
+) -> list[str]: ...
+
+
+@overload
+def list_directory(
+    directory: pathlib.Path,
+    startswith: str | None = None,
+    endswith: str | None = None,
+    contains: str | None = None,
+    glob: str | None = None,
+    include_path: bool = False,
+    case_sensitive: bool = False,
+) -> list[pathlib.Path]: ...
+
+
+@overload
 def list_directory(
     directory: str | pathlib.Path,
     startswith: str | None = None,
@@ -329,7 +360,18 @@ def list_directory(
     glob: str | None = None,
     include_path: bool = False,
     case_sensitive: bool = False,
-) -> list[str | pathlib.Path]:
+) -> list[str] | list[pathlib.Path]: ...
+
+
+def list_directory(
+    directory: str | pathlib.Path,
+    startswith: str | None = None,
+    endswith: str | None = None,
+    contains: str | None = None,
+    glob: str | None = None,
+    include_path: bool = False,
+    case_sensitive: bool = False,
+) -> list[str] | list[pathlib.Path]:
     """List directory contents and return list of files or directories matching search criteria.
     Accounts for case-insensitive filesystems, unicode filenames. directory can be a str or a pathlib.Path object.
 
@@ -347,8 +389,7 @@ def list_directory(
 
     """
     is_pathlib = isinstance(directory, pathlib.Path)
-    if is_pathlib:
-        directory = str(directory)
+    directory = os.fspath(directory)
 
     if not os.path.isdir(directory):
         return []
@@ -388,7 +429,7 @@ def list_directory(
     if include_path:
         files = [os.path.join(directory, f) for f in files]
     if is_pathlib:
-        files = [pathlib.Path(f) for f in files]
+        return [pathlib.Path(f) for f in files]
 
     return files
 
@@ -421,8 +462,9 @@ def increment_filename_with_count(
         # list_directory from stat_cache returns just filenames, need to extract stems
         dest_files = [pathlib.Path(f).stem.lower() for f in dest_files]
     else:
-        dest_files = list_directory(dest.parent, startswith=dest.stem)
-        dest_files = [f.stem.lower() for f in dest_files]
+        dest_files = [
+            f.stem.lower() for f in list_directory(dest.parent, startswith=dest.stem)
+        ]
 
     dest_new = f"{dest.stem} ({count})" if count else dest.stem
     dest_new = normalize_fs_path(dest_new)
@@ -464,7 +506,7 @@ def extract_increment_count_from_filename(filepath: str | pathlib.Path) -> int:
     return int(match[1]) if match else 0
 
 
-def expand_and_validate_filepath(path: str) -> str:
+def expand_and_validate_filepath(path: str) -> str | None:
     """validate and expand ~ in filepath, also un-escapes spaces
 
     Returns:
@@ -472,13 +514,13 @@ def expand_and_validate_filepath(path: str) -> str:
     """
 
     path = re.sub(r"\\ ", " ", path)
-    path = pathlib.Path(path).expanduser()
-    if path.is_file():
-        return str(path)
+    expanded = pathlib.Path(path).expanduser()
+    if expanded.is_file():
+        return str(expanded)
     return None
 
 
-def load_function(pyfile: str, function_name: str) -> Callable:
+def load_function(pyfile: str, function_name: str) -> Callable[..., Any]:
     """Load function_name from python file pyfile"""
     module_file = pathlib.Path(pyfile)
     if not module_file.is_file():
@@ -493,7 +535,7 @@ def load_function(pyfile: str, function_name: str) -> Callable:
     module = importlib.import_module(module_name)
 
     try:
-        func = getattr(module, function_name)
+        func: Callable[..., Any] = getattr(module, function_name)
     except AttributeError as e:
         raise ValueError(
             f"'{function_name}' not found in module '{module_name}'"
@@ -512,18 +554,19 @@ def format_sec_to_hhmmss(sec: float) -> str:
     return str(delta).split(".")[0]
 
 
-def get_latest_version() -> tuple[str | None, str]:
+def get_latest_version() -> tuple[str | None, str | Exception]:
     """Get latest version of osxphotos or None if version can't be retrieved"""
     try:
         url = VERSION_INFO_URL
         response = requests.get(url)
         data = response.json()
-        return data["info"]["version"], ""
+        version: str = data["info"]["version"]
+        return version, ""
     except Exception as e:
         return None, e
 
 
-def pluralize(count: int | Iterable | None, singular: str, plural: str) -> str:
+def pluralize(count: int | Collection[Any] | None, singular: str, plural: str) -> str:
     """Return singular or plural based on count"""
     if isinstance(count, Iterable):
         return singular if len(count) == 1 else plural
@@ -552,7 +595,7 @@ def under_test() -> bool:
     return "pytest" in sys.modules
 
 
-def is_mounted_volume(path: str | pathlib.Path | os.PathLike) -> bool:
+def is_mounted_volume(path: str | pathlib.Path | os.PathLike[str]) -> bool:
     """Return True if path is on a mounted volume, else False"""
     path = path if isinstance(path, pathlib.Path) else pathlib.Path(path)
     if path.is_dir():
@@ -567,7 +610,7 @@ def is_mounted_volume(path: str | pathlib.Path | os.PathLike) -> bool:
     return False
 
 
-def path_exists(path: str | pathlib.Path | os.PathLike) -> bool:
+def path_exists(path: str | pathlib.Path | os.PathLike[str]) -> bool:
     """Return True if path exists and can be accessed, else False
 
     Args:
@@ -584,7 +627,7 @@ def path_exists(path: str | pathlib.Path | os.PathLike) -> bool:
         return False
 
 
-def is_photoslibrary_path(path: str | pathlib.Path | os.PathLike) -> bool:
+def is_photoslibrary_path(path: str | pathlib.Path | os.PathLike[str]) -> bool:
     """Return True if path is a Photos library or contained in a Photos library, else False
 
     Args:
@@ -655,7 +698,9 @@ def get_filename_from_url(url: str) -> str:
     return os.path.basename(urllib.parse.urlparse(url).path)
 
 
-def download_url_to_dir(url: str, dir_path: str, unique=False) -> str:
+def download_url_to_dir(
+    url: str, dir_path: str | os.PathLike[str], unique: bool = False
+) -> str:
     """Download file from url to a directory path and return path to downloaded file
 
     Args:
@@ -671,19 +716,20 @@ def download_url_to_dir(url: str, dir_path: str, unique=False) -> str:
     if not os.path.isdir(dir_path):
         raise ValueError(f"dir_path {dir_path} must be a valid directory")
 
-    filename = pathlib.Path(get_filename_from_url(url))
+    filename: str | pathlib.Path = pathlib.Path(get_filename_from_url(url))
     if unique:
         # append a unique uuid to filename to ensure uniqueness
         # this is necessary when downloading a python module intended for import
         # as if user has two modules with the same name, python will only import the first one
+        url_path = pathlib.Path(get_filename_from_url(url))
         filename = (
-            filename.stem + f"_{uuid_to_shortuuid(str(uuid.uuid4()))}" + filename.suffix
+            url_path.stem + f"_{uuid_to_shortuuid(str(uuid.uuid4()))}" + url_path.suffix
         )
         while (pathlib.Path(dir_path) / filename).exists():
             filename = (
-                filename.stem
+                url_path.stem
                 + f"_{uuid_to_shortuuid(str(uuid.uuid4()))}"
-                + filename.suffix
+                + url_path.suffix
             )
     filename = pathlib.Path(dir_path) / filename
     try:
@@ -729,10 +775,10 @@ def terminal() -> str:
 
 
 def find_files_by_prefix(
-    filepath: str | os.PathLike,
+    filepath: str | os.PathLike[str],
     start_str: str,
     ignore_ext: str | None = None,
-    cache_results=True,
+    cache_results: bool = True,
 ) -> list[str]:
     """
     Find all files starting with start_str in directory filepath,
@@ -754,9 +800,14 @@ def find_files_by_prefix(
     if ignore_ext is not None:
         ignore_ext = ignore_ext.lower()
 
-    matching_files = []
+    matching_files: list[tuple[str, int]] = []
 
-    contents = _listdir_cache(filepath) if cache_results else os.listdir(filepath)
+    # PathLike does not declare __hash__, but every path object (and str) is hashable
+    contents = (
+        _listdir_cache(cast(Hashable, filepath))
+        if cache_results
+        else os.listdir(filepath)
+    )
     for name in contents:
         if name.startswith(start_str):
             if ignore_ext is not None:
@@ -777,12 +828,12 @@ def find_files_by_prefix(
 
 
 @cache
-def _listdir_cache(filepath: str | os.PathLike) -> list[str]:
+def _listdir_cache(filepath: str | os.PathLike[str]) -> list[str]:
     """Cached listdir"""
     return os.listdir(filepath)
 
 
 @cache
-def isdir_cache(path: str | os.PathLike) -> bool:
+def isdir_cache(path: str | os.PathLike[str]) -> bool:
     """Cached os.path.isdir"""
     return os.path.isdir(str(path))

@@ -54,7 +54,7 @@ from .albuminfo import AlbumInfo, ImportInfo, ProjectInfo
 from .bookmark import resolve_bookmark_path
 from .commentinfo import CommentInfo, LikeInfo
 from .exifinfo import ExifInfo, exifinfo_factory
-from .exiftool import ExifToolCaching, get_exiftool_path
+from .exiftool import ExifTool, ExifToolCaching, get_exiftool_path
 from .exportoptions import ExportOptions
 from .media_analysis import get_caption, get_media_analysis_results
 from .momentinfo import MomentInfo
@@ -1701,7 +1701,7 @@ class PhotoInfo:
             return exifinfo_factory(None)
 
     @property
-    def exiftool(self) -> ExifToolCaching | None:
+    def exiftool(self) -> ExifTool | None:
         """Returns a ExifToolCaching (read-only instance of ExifTool) object for the photo.
         Requires that exiftool (https://exiftool.org/) be installed
         If exiftool not installed, logs warning and returns None
@@ -2340,10 +2340,10 @@ class PhotoInfo:
 class PhotoInfoNone:
     """Mock class that returns None for all attributes"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def __getattribute__(self, name):
+    def __getattribute__(self, name: str) -> None:
         return None
 
 

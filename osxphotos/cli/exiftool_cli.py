@@ -1,9 +1,12 @@
 """exiftool command for osxphotos CLI to update an previous export with exiftool metadata"""
 
+from __future__ import annotations
+
 import os
 import pathlib
 import sys
 from collections.abc import Callable
+from typing import TYPE_CHECKING, cast
 
 import click
 
@@ -27,6 +30,9 @@ from .param_types import ExportDBType, TemplateString
 from .report_writer import ReportWriterNoOp, export_report_writer_factory
 from .rich_progress import rich_progress
 from .verbose import get_verbose_console, verbose_print
+
+if TYPE_CHECKING:
+    from osxphotos.photoinfo import PhotoInfo
 
 
 @click.command(name="exiftool")
@@ -178,29 +184,29 @@ from .verbose import get_verbose_console, verbose_print
     type=click.Path(exists=True, file_okay=False),
 )
 def exiftool(
-    album_keyword,
-    append,
-    db_config,
-    db,
-    description_template,
-    dry_run,
-    exiftool_merge_keywords,
-    exiftool_merge_persons,
-    exiftool_option,
-    exiftool_path,
-    export_dir,
-    exportdb,
-    ignore_date_modified,
-    keyword_template,
-    load_config,
-    person_keyword,
-    replace_keywords,
-    report,
-    save_config,
-    theme,
-    timestamp,
-    verbose_flag,
-):
+    album_keyword: bool,
+    append: bool,
+    db_config: bool,
+    db: str | None,
+    description_template: str | None,
+    dry_run: bool,
+    exiftool_merge_keywords: bool,
+    exiftool_merge_persons: bool,
+    exiftool_option: tuple[str, ...],
+    exiftool_path: str | None,
+    export_dir: str,
+    exportdb: str | None,
+    ignore_date_modified: bool,
+    keyword_template: tuple[str, ...],
+    load_config: str | None,
+    person_keyword: bool,
+    replace_keywords: bool,
+    report: str | None,
+    save_config: str | None,
+    theme: str | None,
+    timestamp: bool,
+    verbose_flag: int,
+) -> None:
     """Run exiftool on previously exported files to update metadata.
 
     If you previously exported photos with 'osxphotos export' but did not include the
@@ -219,9 +225,14 @@ def exiftool(
     if load_config and db_config:
         raise click.UsageError("Cannot specify both --load-config and --db-config")
 
-    exportdb = exportdb or pathlib.Path(export_dir) / OSXPHOTOS_EXPORT_DB
-    if not exportdb.exists():
-        raise click.UsageError(f"Export database {exportdb} does not exist")
+    # ExportDBType returns a str, so convert it before calling .exists()
+    exportdb_path = (
+        pathlib.Path(exportdb)
+        if exportdb
+        else pathlib.Path(export_dir) / OSXPHOTOS_EXPORT_DB
+    )
+    if not exportdb_path.exists():
+        raise click.UsageError(f"Export database {exportdb_path} does not exist")
 
     # grab all the variables we need from the export command
     # export is a click Command so can walk through it's params to get the option names
@@ -261,7 +272,7 @@ def exiftool(
             sys.exit(1)
         verbose(f"Loaded options from file [filepath]{load_config}")
     elif db_config:
-        config = export_db_get_config(exportdb, config)
+        config = export_db_get_config(exportdb_path, config)
         verbose("Loaded options from export database")
 
     # from here on out, use config.param_name instead of using the params passed into the function
@@ -281,12 +292,15 @@ def exiftool(
         verbose(f"Saving options to config file '[filepath]{save_config}'")
         config.write_to_file(save_config)
 
-    process_files(exportdb, export_dir, verbose=verbose, options=config)
+    process_files(exportdb_path, export_dir, verbose=verbose, options=config)
 
 
 def process_files(
-    exportdb: str, export_dir: str, verbose: Callable[..., None], options: ConfigOptions
-):
+    exportdb: str | os.PathLike[str],
+    export_dir: str,
+    verbose: Callable[..., None],
+    options: ConfigOptions,
+) -> None:
     """Process files in the export database.
 
     Args:
@@ -309,6 +323,8 @@ def process_files(
         if is_iphoto_library(options.db)
         else PhotosDB(options.db, verbose=verbose)
     )
+    export_db: ExportDB
+    fileutil: type[FileUtil]
     if options.dry_run:
         export_db = ExportDBInMemory(exportdb, export_dir)
         fileutil = FileUtilNoOp
@@ -367,7 +383,9 @@ def process_files(
                 use_persons_as_keywords=options.person_keyword,
                 verbose=verbose,
             )
-            exporter = PhotoExporter(photo)
+            # iPhotoPhotoInfo implements the PhotoInfo interface PhotoExporter uses
+            photo_ = cast("PhotoInfo", photo)
+            exporter = PhotoExporter(photo_)
             results = exporter.write_exiftool_metadata_to_file(
                 src=file, dest=file, options=export_options
             )
@@ -385,10 +403,13 @@ def process_files(
                 verbose(f"Updated EXIF metadata for [filepath]{result}")
 
             # update the database
-            with export_db.get_file_record(file) as rec:
+            record = export_db.get_file_record(file)
+            # file came from get_exported_files so its record exists
+            assert record is not None
+            with record as rec:
                 rec.dest_sig = fileutil.file_sig(file)
                 rec.export_options = export_options.bit_flags
-                rec.exifdata = exiftool_json_sidecar(photo, export_options)
+                rec.exifdata = exiftool_json_sidecar(photo_, export_options)
 
             report_writer.write(results)
             count += 1

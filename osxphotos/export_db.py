@@ -15,6 +15,7 @@ import sqlite3
 import sys
 import threading
 import time
+from collections.abc import Iterator
 from contextlib import suppress
 from io import StringIO
 from sqlite3 import Error
@@ -579,7 +580,7 @@ class ExportDB:
             return results
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def get_exported_files(self):
+    def get_exported_files(self) -> Iterator[tuple[str, str]]:
         """Returns tuple of (uuid, filepath) for all paths of all exported files tracked in the database"""
         with self.lock:
             conn = self.connection
@@ -746,7 +747,7 @@ class ExportDB:
             return results[0]
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def close(self):
+    def close(self) -> None:
         """Flush any buffered data and close the database connection"""
         if self._conn:
             self.flush_history()
@@ -1520,7 +1521,7 @@ class ExportDBInMemory(ExportDB):
         stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
         retry_error_callback=retry_log_error_no_raise,  # #999
     )
-    def close(self):
+    def close(self) -> None:
         """close the database connection"""
         if self._conn:
             self._conn.close()

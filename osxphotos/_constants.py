@@ -407,12 +407,12 @@ class SearchCategory:
     STREET = 2
     NEIGHBORHOOD = 3
     LOCALITY_4 = 4
-    SUB_LOCALITY_5 = 5
+    SUB_LOCALITY_5: int | None = 5
     SUB_LOCALITY_6 = 6
     CITY = 7
     LOCALITY_8 = 8
     NAMED_AREA = 9
-    ALL_LOCALITY: ClassVar[list[int]] = [
+    ALL_LOCALITY: ClassVar[list[int | None]] = [
         LOCALITY_4,
         SUB_LOCALITY_5,
         SUB_LOCALITY_6,
@@ -446,7 +446,7 @@ class SearchCategory:
     PHOTO_TYPE_PORTRAIT = 2053
     PHOTO_TYPE_SELFIES = 2054
     PHOTO_TYPE_FAVORITES = 2055
-    PHOTO_TYPE_ANIMATED = None  # Photos 8+ only
+    PHOTO_TYPE_ANIMATED: int | None = None  # Photos 8+ only
     MEDIA_TYPES: ClassVar[list[int]] = [
         PHOTO_TYPE_VIDEO,
         PHOTO_TYPE_SLOMO,
@@ -460,33 +460,33 @@ class SearchCategory:
         PHOTO_TYPE_FAVORITES,
     ]
     PHOTO_NAME = 2056
-    CAMERA = None  # Photos 8+ only
-    TEXT_FOUND = None  # Photos 8+ only
-    DETECTED_TEXT = None  # Photos 8+ only
-    SOURCE = None  # Photos 8+ only
-    TIME_OF_DAY = None  # Photos 8+ only
-    WEEKPART = None  # Photos 8+ only
-    AREA_OF_INTEREST = None  # Photos 8+ only
-    COUNTRY_CODE = None  # Photos 8+ only
-    CONTINENT = None  # Photos 8+ only
-    REGION = None  # Photos 8+ only
-    EVENT = None  # Photos 8+ only
-    EVENT_PERFORMER = None  # Photos 8+ only
-    EVENT_TYPE = None  # Photos 8+ only
-    PET = None  # Photos 8+ only
-    LANDMARK = None  # Photos 8+ only
-    TRIP = None  # Photos 8+ only
-    SOUND = None  # Photos 8+ only
-    HUMAN_ACTION = None  # Photos 8+ only
-    DOCUMENT_TYPE = None  # Photos 8+ only
-    DAY_OF_WEEK = None  # macOS 27+ only
-    AGE_GROUP = None  # macOS 27+ only
-    PHOTOGRAPHIC_STYLE = None  # macOS 27+ only
-    FILE_TYPE = None  # macOS 27+ only
-    CAPTURED_BY_ME = None  # macOS 27+ only
-    ID_DOCUMENT_TYPE = None  # macOS 27+ only
-    ID_DOCUMENT_CARD_TYPE = None  # macOS 27+ only
-    ID_DOCUMENT_NAME = None  # macOS 27+ only
+    CAMERA: int | None = None  # Photos 8+ only
+    TEXT_FOUND: int | None = None  # Photos 8+ only
+    DETECTED_TEXT: int | None = None  # Photos 8+ only
+    SOURCE: int | None = None  # Photos 8+ only
+    TIME_OF_DAY: int | None = None  # Photos 8+ only
+    WEEKPART: int | None = None  # Photos 8+ only
+    AREA_OF_INTEREST: int | None = None  # Photos 8+ only
+    COUNTRY_CODE: int | None = None  # Photos 8+ only
+    CONTINENT: int | None = None  # Photos 8+ only
+    REGION: int | None = None  # Photos 8+ only
+    EVENT: int | None = None  # Photos 8+ only
+    EVENT_PERFORMER: int | None = None  # Photos 8+ only
+    EVENT_TYPE: int | None = None  # Photos 8+ only
+    PET: int | None = None  # Photos 8+ only
+    LANDMARK: int | None = None  # Photos 8+ only
+    TRIP: int | None = None  # Photos 8+ only
+    SOUND: int | None = None  # Photos 8+ only
+    HUMAN_ACTION: int | None = None  # Photos 8+ only
+    DOCUMENT_TYPE: int | None = None  # Photos 8+ only
+    DAY_OF_WEEK: int | None = None  # macOS 27+ only
+    AGE_GROUP: int | None = None  # macOS 27+ only
+    PHOTOGRAPHIC_STYLE: int | None = None  # macOS 27+ only
+    FILE_TYPE: int | None = None  # macOS 27+ only
+    CAPTURED_BY_ME: int | None = None  # macOS 27+ only
+    ID_DOCUMENT_TYPE: int | None = None  # macOS 27+ only
+    ID_DOCUMENT_CARD_TYPE: int | None = None  # macOS 27+ only
+    ID_DOCUMENT_NAME: int | None = None  # macOS 27+ only
 
     @classmethod
     def categories(cls) -> dict[int, str]:
@@ -514,7 +514,7 @@ class SearchCategory_Photos8(SearchCategory):  # noqa: N801  (public name)
     SUB_LOCALITY_6 = 6
     LOCALITY_8 = 8
     NAMED_AREA = 7
-    ALL_LOCALITY: ClassVar[list[int]] = [
+    ALL_LOCALITY: ClassVar[list[int | None]] = [
         LOCALITY_4,
         SUB_LOCALITY_6,
         LOCALITY_8,
@@ -621,7 +621,7 @@ class SearchCategory_Photos8(SearchCategory):  # noqa: N801  (public name)
         }
 
 
-def search_category_factory(version: int) -> SearchCategory:
+def search_category_factory(version: int) -> type[SearchCategory]:
     """Return SearchCategory class for Photos version"""
     return SearchCategory_Photos8 if version >= 8 else SearchCategory
 

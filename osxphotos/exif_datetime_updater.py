@@ -55,7 +55,7 @@ class ExifDateTimeUpdater:
         """Colorize uuid for display in verbose output"""
         return uuid if self.plain else f"[uuid]{uuid}[/uuid]"
 
-    def update_exif_from_photos(self, photo: Photo) -> tuple[str, str]:
+    def update_exif_from_photos(self, photo: Photo) -> tuple[str | None, str | None]:
         """Update EXIF data in photo to match the date/time/timezone in Photos library
 
         Args:

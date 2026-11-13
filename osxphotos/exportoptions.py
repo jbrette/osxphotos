@@ -126,7 +126,7 @@ class ExportOptions:
     use_persons_as_keywords: bool = False
     use_photokit: bool = False
     use_photos_export: bool = False
-    verbose: Callable[[Any], Any] | None = None
+    verbose: Callable[..., None] | None = None
     tmpdir: str | None = None
     favorite_rating: bool = False
     fix_orientation: bool = False
@@ -135,11 +135,11 @@ class ExportOptions:
     same_filesystem: bool | None = None
     claim_only: bool = False
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
     @property
-    def bit_flags(self):
+    def bit_flags(self) -> int:
         """Return bit flags representing options that affect export"""
         # currently only exiftool makes a difference
         return self.exiftool << 1
@@ -232,12 +232,50 @@ class ExportResults:
         "xattr_written",
     ]
 
+    # instance attributes stored in the slots above, set in __init__
+    _datetime: str
+    aae_skipped: list[str]
+    aae_written: list[str]
+    converted_to_jpeg: list[str]
+    deleted_directories: list[str]
+    deleted_files: list[str]
+    error: list[tuple[str, str]]
+    exif_updated: list[str]
+    exiftool_error: list[tuple[str, str]]
+    exiftool_warning: list[tuple[str, str]]
+    exported: list[str]
+    exported_album: list[tuple[str, str]]
+    metadata_changed: list[str]
+    missing: list[str]
+    missing_album: list[tuple[str, str]]
+    new: list[str]
+    sidecar_exiftool_skipped: list[str]
+    sidecar_exiftool_written: list[str]
+    sidecar_json_skipped: list[str]
+    sidecar_json_written: list[str]
+    sidecar_user_error: list[tuple[str, str]]
+    sidecar_user_skipped: list[str]
+    sidecar_user_written: list[str]
+    sidecar_xmp_skipped: list[str]
+    sidecar_xmp_written: list[str]
+    skipped: list[str]
+    skipped_album: list[tuple[str, str]]
+    to_touch: list[str]
+    touched: list[str]
+    updated: list[str]
+    user_error: list[tuple[str, str]]
+    user_skipped: list[str]
+    user_written: list[str]
+    uuids: dict[str, str]
+    xattr_skipped: list[str]
+    xattr_written: list[str]
+
     def __init__(
         self,
         converted_to_jpeg: list[str] | None = None,
         deleted_directories: list[str] | None = None,
         deleted_files: list[str] | None = None,
-        error: list[str] | None = None,
+        error: list[tuple[str, str]] | None = None,
         exif_updated: list[str] | None = None,
         exiftool_error: list[tuple[str, str]] | None = None,
         exiftool_warning: list[tuple[str, str]] | None = None,
@@ -269,7 +307,7 @@ class ExportResults:
         user_skipped: list[str] | None = None,
         user_error: list[tuple[str, str]] | None = None,
         uuids: dict[str, str] | None = None,
-    ):
+    ) -> None:
         """ExportResults data class to hold results of export.
 
         See class docstring for details.
@@ -321,7 +359,7 @@ class ExportResults:
 
         return list(set(files))
 
-    def __iadd__(self, other) -> Self:
+    def __iadd__(self, other: object) -> Self:
         if type(other) is not ExportResults:
             raise TypeError("Can only add ExportResults to ExportResults")
         for attribute in self.attributes:

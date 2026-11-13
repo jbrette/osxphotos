@@ -55,7 +55,7 @@ from ._constants import (
     SIDECAR_XMP,
 )
 from .datetime_utils import datetime_has_tz, datetime_naive_to_local
-from .exiftool import ExifToolCaching, get_exiftool_path
+from .exiftool import ExifTool, ExifToolCaching, get_exiftool_path
 from .exifutils import angle_to_exif_orientation
 from .exportoptions import ExportOptions
 from .personinfo import MPRI_Reg_Rect, MWG_RS_Area
@@ -1594,7 +1594,7 @@ class iPhotoPhotoInfo:
         return template.render(template_str, options)
 
     @cached_property
-    def exiftool(self) -> ExifToolCaching | None:
+    def exiftool(self) -> ExifTool | None:
         """Returns a ExifToolCaching (read-only instance of ExifTool) object for the photo.
         Requires that exiftool (https://exiftool.org/) be installed
         If exiftool not installed, logs warning and returns None

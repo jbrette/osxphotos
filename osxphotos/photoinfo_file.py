@@ -10,7 +10,7 @@ import uuid
 
 from ._constants import _OSXPHOTOS_NONE_SENTINEL
 from .datetime_utils import datetime_naive_to_local
-from .exiftool import ExifToolCaching, get_exiftool_path
+from .exiftool import ExifTool, ExifToolCaching, get_exiftool_path
 from .metadata_reader import MetaData, metadata_from_exiftool, metadata_from_sidecar
 from .phototemplate import PhotoTemplate, RenderOptions
 from .platform import is_macos
@@ -19,6 +19,7 @@ if is_macos:
     from .fingerprint import fingerprint
     from .image_file_utils import is_image_file, is_video_file
 
+EXIFTOOL_PATH: str | None
 try:
     EXIFTOOL_PATH = get_exiftool_path()
 except FileNotFoundError:
@@ -36,7 +37,7 @@ class PhotoInfoFromFile:
     """
 
     # memoized by the exiftool property; deliberately not set in __init__
-    _exiftool: ExifToolCaching | None
+    _exiftool: ExifTool | None
 
     def __init__(
         self,
@@ -150,7 +151,7 @@ class PhotoInfoFromFile:
         return self._metadata.width
 
     @property
-    def exiftool(self) -> ExifToolCaching | None:
+    def exiftool(self) -> ExifTool | None:
         """Returns a ExifToolCaching (read-only instance of ExifTool) object for the photo.
         Requires that exiftool (https://exiftool.org/) be installed
         If exiftool not installed, logs warning and returns None
@@ -163,7 +164,7 @@ class PhotoInfoFromFile:
             try:
                 exiftool_path = self._exiftool_path or get_exiftool_path()
                 if self._path is not None and os.path.isfile(self._path):
-                    exiftool: ExifToolCaching | None = ExifToolCaching(
+                    exiftool: ExifTool | None = ExifToolCaching(
                         self._path, exiftool=exiftool_path
                     )
                 else:

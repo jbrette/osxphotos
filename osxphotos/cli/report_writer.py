@@ -63,13 +63,13 @@ class ReportWriterABC(ABC):
 class ReportWriterNoOp(ReportWriterABC):
     """Report writer that does nothing"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def write(self, *args, **kwargs):
+    def write(self, *args: Any, **kwargs: Any) -> None:
         """Write results to the output file"""
 
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
 
 

@@ -2974,7 +2974,7 @@ class PhotosDB:
         folders = self._build_album_folder_hierarchy_5(parent_uuid, folders=folders)
         return folders
 
-    def _album_folder_hierarchy_list(self, album_uuid):
+    def _album_folder_hierarchy_list(self, album_uuid: str) -> list[str]:
         """Return appropriate album_folder_hierarchy_list for the _db_version"""
         if self._db_version <= _PHOTOS_4_VERSION:
             return self._album_folder_hierarchy_list_4(album_uuid)
@@ -3059,7 +3059,7 @@ class PhotosDB:
         hierarchy = _recurse_folder_hierarchy(folders)
         return hierarchy
 
-    def _album_folder_hierarchy_folderinfo(self, album_uuid):
+    def _album_folder_hierarchy_folderinfo(self, album_uuid: str) -> list[FolderInfo]:
         if self._db_version <= _PHOTOS_4_VERSION:
             return self._album_folder_hierarchy_folderinfo_4(album_uuid)
         else:

@@ -2,7 +2,7 @@
 
 import datetime
 from collections.abc import Iterable, Mapping
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 import bitmath
 import toml
@@ -33,6 +33,10 @@ class ConfigOptionsLoadError(ConfigOptionsException):
 
 class ConfigOptions:
     """data class to store and load options for osxphotos commands"""
+
+    if TYPE_CHECKING:
+        # option attributes are set dynamically from the command's parameters
+        def __getattr__(self, name: str) -> Any: ...
 
     def __init__(
         self,

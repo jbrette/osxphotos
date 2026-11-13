@@ -5,11 +5,12 @@ from __future__ import annotations
 import functools
 import pathlib
 import re
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from fractions import Fraction
 from multiprocessing import Process, Queue
 from queue import Empty
 from time import gmtime, sleep, strftime
+from typing import Any
 
 import bitmath
 import click
@@ -36,7 +37,7 @@ from .color_themes import get_theme
 from .common import get_photos_db
 
 # global that tracks UUID being inspected
-CURRENT_UUID = None
+CURRENT_UUID: str | None = None
 
 # helpers for markup
 bold = add_rich_markup_tag("bold")
@@ -54,7 +55,7 @@ def add_cyclic_color_tag(values: list[str]) -> Generator[str]:
         yield color_tags[idx % modidx](val)
 
 
-def extract_uuid(text: str) -> str:
+def extract_uuid(text: str) -> str | None:
     """Extract a UUID from a string"""
     if match := re.search(
         r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})",
@@ -90,7 +91,7 @@ def format_search_info(photo: PhotoInfo) -> str:
 def inspect_photo(
     photo: PhotoInfo,
     detected_text: str | None = None,
-    templates: list[str] | None = None,
+    templates: Sequence[str] | None = None,
     beta: bool = False,
 ) -> str:
     """Get info about an osxphotos PhotoInfo object formatted for printing
@@ -110,7 +111,8 @@ def inspect_photo(
         bold("Type: ") + get_photo_type(photo),
         bold("UUID: ") + f"[uuid]{photo.uuid}[/]",
         bold("Date: ") + f"[time]{photo.date.isoformat()}[/]",
-        bold("Date added: ") + f"[time]{photo.date_added.isoformat()}[/]",
+        bold("Date added: ")
+        + f"[time]{photo.date_added.isoformat() if photo.date_added else '-'}[/]",
     ]
     if photo.date_modified:
         properties.append(
@@ -237,7 +239,7 @@ def inspect_photo(
     return "\n".join(properties)
 
 
-def format_templates(photo: PhotoInfo, templates: list[str]) -> str:
+def format_templates(photo: PhotoInfo, templates: Sequence[str]) -> str:
     """Format templates for a photo"""
     formatted_templates = []
     for template in templates:
@@ -345,6 +347,8 @@ def format_exif_info(photo: PhotoInfo) -> str:
     """Format exif_info for inspect_photo"""
     exif = photo.exif_info
     exif_str = ""
+    if exif is None:
+        return bold("EXIF: ") + "-"
 
     if exif.camera_make:
         exif_str += f"{exif.camera_make} "
@@ -416,13 +420,15 @@ def get_photo_type(photo: PhotoInfo) -> str:
     return photo_type
 
 
-def start_text_detection(photo: PhotoInfo) -> tuple[Process, Queue]:
+def start_text_detection(
+    photo: PhotoInfo,
+) -> tuple[Process, Queue[list[str | None]]]:
     """Start text detection process for a photo"""
     path_preview = photo.path_derivatives[0] if photo.path_derivatives else None
     path = photo.path_edited or photo.path or path_preview
     if not path:
         raise ValueError("No path to photo")
-    queue = Queue()
+    queue: Queue[list[str | None]] = Queue()
     p = Process(
         target=_get_detected_text,
         args=(photo.uuid, path, photo.orientation, queue),
@@ -431,7 +437,9 @@ def start_text_detection(photo: PhotoInfo) -> tuple[Process, Queue]:
     return (p, queue)
 
 
-def _get_detected_text(uuid: str, path: str, orientation: int, queue: Queue) -> None:
+def _get_detected_text(
+    uuid: str, path: str, orientation: int, queue: Queue[list[str | None]]
+) -> None:
     """Called by start_text_detection to run text detection in separate process"""
     try:
         if text := detect_text_in_photo(path, orientation):
@@ -440,7 +448,7 @@ def _get_detected_text(uuid: str, path: str, orientation: int, queue: Queue) -> 
         queue.put([None, str(e)])
 
 
-def get_uuid_for_photos_selection() -> list[str]:
+def get_uuid_for_photos_selection() -> tuple[str | None, int]:
     """Get the uuid for the first photo selected in Photos
 
     Returns: tuple of (uuid, total_selected_photos)"""
@@ -480,7 +488,13 @@ def make_layout() -> Layout:
 @THEME_OPTION
 @DB_OPTION
 @click.option("--beta", is_flag=True, help="Include beta properties in output")
-def photo_inspect(db, theme, detect_text, template, beta):
+def photo_inspect(
+    db: str | None,
+    theme: str | None,
+    detect_text: bool,
+    template: tuple[str, ...],
+    beta: bool,
+) -> None:
     """Interactively inspect photos selected in Photos.
 
     Open Photos then run 'osxphotos inspect' in the terminal.
@@ -494,8 +508,7 @@ def photo_inspect(db, theme, detect_text, template, beta):
             "Did not locate Photos database. Try running with --db option."
         )
 
-    theme = get_theme(theme)
-    console = Console(theme=theme)
+    console = Console(theme=get_theme(theme))
 
     layout = make_layout()
     layout["footer"].update("Press Ctrl+C to quit")
@@ -503,13 +516,13 @@ def photo_inspect(db, theme, detect_text, template, beta):
         Panel("Loading Photos database, hold on...", title="Loading...")
     )
 
-    def loading_status(status: str):
+    def loading_status(status: str) -> None:
         layout["status"].update(f"Loading database: {status}")
 
-    def update_status(status: str):
+    def update_status(status: str) -> None:
         layout["status"].update(status)
 
-    def update_detected_text(photo: PhotoInfo, uuid: str, text: str):
+    def update_detected_text(photo: PhotoInfo, uuid: str, text: str) -> None:
         if uuid == CURRENT_UUID:
             layout["main"].update(
                 Panel(
@@ -523,11 +536,12 @@ def photo_inspect(db, theme, detect_text, template, beta):
         layout["main"].update(
             Panel("Select a photo in Photos to inspect", title="Select a photo")
         )
-        processes = []
+        # each entry is [alive, process, queue, update_detected_text_callback]
+        processes: list[list[Any]] = []
         global CURRENT_UUID
-        detected_text_cache = {}
-        last_uuid = None
-        uuid = None
+        detected_text_cache: dict[str, str] = {}
+        last_uuid: str | None = None
+        uuid: str | None = None
         total = 0
         width = Console().width
         while True:

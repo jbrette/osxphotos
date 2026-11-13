@@ -39,7 +39,7 @@ def places(
         return
 
     photosdb = osxphotos.PhotosDB(dbfile=db)
-    place_names: dict[str, int] = {}
+    place_names: dict[str | None, int] = {}  # a place may have no name
     for photo in photosdb.photos(movies=True):
         if photo.place:
             try:

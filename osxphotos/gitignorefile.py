@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 DEFAULT_IGNORE_NAMES = [".gitignore", ".git/info/exclude"]
 
@@ -28,16 +28,22 @@ def parse_pattern_list(
         Callable[[str], bool]: Callable which returns 'True' if specified path is ignored.
             You can also pass 'is_dir: bool' optional parameter if you know whether the specified path is a directory.
     """
-    rules = []
+    rules: list[_IgnoreRule] = []
     for pattern in patterns:
         pattern = pattern.rstrip("\r\n")
         if rule := _rule_from_pattern(pattern):
             rules.append(rule)
 
-    return _IgnoreRules(rules, base_path).match
+    # _Path(None) has no parts and every match raised TypeError: default to the cwd
+    return _IgnoreRules(
+        rules, base_path if base_path is not None else os.getcwd()
+    ).match
 
 
-def parse(path, base_path=None):
+def parse(
+    path: str | os.PathLike[str],
+    base_path: str | os.PathLike[str] | _Path | None = None,
+) -> Callable[..., bool]:
     """Parses single '.gitignore' file.
 
     Args:
@@ -52,7 +58,7 @@ def parse(path, base_path=None):
     if base_path is None:
         base_path = os.path.dirname(path) or os.path.dirname(os.path.abspath(path))
 
-    rules = []
+    rules: list[_IgnoreRule] = []
     with open(path) as ignore_file:
         for line in ignore_file:
             line = line.rstrip("\r\n")
@@ -62,7 +68,9 @@ def parse(path, base_path=None):
     return _IgnoreRules(rules, base_path).match
 
 
-def ignore(ignore_names=DEFAULT_IGNORE_NAMES):
+def ignore(
+    ignore_names: list[str] = DEFAULT_IGNORE_NAMES,
+) -> Callable[[str, list[str]], set[str]]:
     """Returns 'shutil.copytree()'-compatible ignore function for skipping ignored files.
 
     It will check if file is ignored by any '.gitignore' in the directory tree.
@@ -80,7 +88,11 @@ def ignore(ignore_names=DEFAULT_IGNORE_NAMES):
     }
 
 
-def ignored(path, is_dir=None, ignore_names=DEFAULT_IGNORE_NAMES):
+def ignored(
+    path: str | os.PathLike[str],
+    is_dir: bool | None = None,
+    ignore_names: list[str] = DEFAULT_IGNORE_NAMES,
+) -> bool:
     """Checks if file is ignored by any '.gitignore' in the directory tree.
 
     Args:
@@ -101,7 +113,7 @@ class Cache:
     Allows to reduce number of queries to filesystem to mininum.
     """
 
-    def __init__(self, ignore_names=DEFAULT_IGNORE_NAMES):
+    def __init__(self, ignore_names: list[str] = DEFAULT_IGNORE_NAMES) -> None:
         """Constructs 'Cache' objects.
 
         Args:
@@ -109,9 +121,11 @@ class Cache:
         """
 
         self.__ignore_names = ignore_names
-        self.__gitignores = {}
+        self.__gitignores: dict[tuple[str, ...], list[Callable[..., bool]]] = {}
 
-    def __call__(self, path, is_dir=None):
+    def __call__(
+        self, path: str | os.PathLike[str], is_dir: bool | None = None
+    ) -> bool:
         """Checks whether the specified path is ignored.
 
         Args:
@@ -119,10 +133,10 @@ class Cache:
             is_dir (bool, optional): Set if you know whether the specified path is a directory.
         """
 
-        path = _Path(path)
-        add_to_children = {}
-        plain_paths = []
-        for parent in path.parents():
+        path_ = _Path(path)
+        add_to_children: dict[_Path, tuple[list[Callable[..., bool]], list[_Path]]] = {}
+        plain_paths: list[_Path] = []
+        for parent in path_.parents():
             if parent.parts in self.__gitignores:
                 break
 
@@ -169,11 +183,14 @@ class Cache:
                 self.__gitignores[plain_path.parts] = self.__gitignores[parent.parts]
 
         # This parent comes either from first or second loop.
-        return any(m(path, is_dir=is_dir) for m in self.__gitignores[parent.parts])
+        return any(m(path_, is_dir=is_dir) for m in self.__gitignores[parent.parts])
 
 
 class _Path:
-    def __init__(self, path):
+    def __init__(self, path: str | os.PathLike[str] | tuple[str, ...]) -> None:
+        self.__parts: tuple[str, ...]
+        self.__joined: str | None
+        self.__is_dir: bool | None
         if isinstance(path, (str, bytes, os.PathLike)):
             abs_path = os.path.abspath(path)
             self.__parts = tuple(_path_split(abs_path))
@@ -186,33 +203,33 @@ class _Path:
             self.__is_dir = None
 
     @property
-    def parts(self):
+    def parts(self) -> tuple[str, ...]:
         return self.__parts
 
-    def join(self, name):
+    def join(self, name: str) -> _Path:
         return _Path((*self.__parts, name))
 
-    def relpath(self, base_path):
+    def relpath(self, base_path: _Path) -> str | None:
         if self.__parts[: len(base_path.__parts)] == base_path.__parts:
             return "/".join(self.__parts[len(base_path.__parts) :])
 
         else:
             return None
 
-    def parents(self):
+    def parents(self) -> Iterator[_Path]:
         for i in range(len(self.__parts) - 1, 0, -1):
             yield _Path(self.__parts[:i])
 
-    def isfile(self):
+    def isfile(self) -> bool:
         return os.path.isfile(str(self))
 
-    def isdir(self):
+    def isdir(self) -> bool:
         if self.__is_dir is not None:
             return self.__is_dir
         self.__is_dir = os.path.isdir(str(self))
         return self.__is_dir
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.__joined is None:
             self.__joined = (
                 os.sep.join(self.__parts) if self.__parts != ("",) else os.sep
@@ -220,7 +237,7 @@ class _Path:
         return self.__joined
 
 
-def _rule_from_pattern(pattern):
+def _rule_from_pattern(pattern: str) -> _IgnoreRule | None:
     # Takes a '.gitignore' match pattern, such as "*.py[cod]" or "**/*.bak",
     # and returns an '_IgnoreRule' suitable for matching against files and
     # directories. Patterns which do not match files, such as comments
@@ -229,11 +246,11 @@ def _rule_from_pattern(pattern):
     # Early returns follow
     # Discard comments and separators
     if not pattern.lstrip() or pattern.lstrip().startswith("#"):
-        return
+        return None
 
     # Discard anything with more than two consecutive asterisks
     if "***" in pattern:
-        return
+        return None
 
     # Strip leading bang before examining double asterisks
     if pattern.startswith("!"):
@@ -251,11 +268,11 @@ def _rule_from_pattern(pattern):
             and start_index != len(pattern) - 2
             and (pattern[start_index - 1] != "/" or pattern[start_index + 2] != "/")
         ):
-            return
+            return None
 
     # Special-casing '/', which doesn't match any files or directories
     if pattern.rstrip() == "/":
-        return
+        return None
 
     directory_only = pattern.endswith("/")
 
@@ -292,14 +309,18 @@ def _rule_from_pattern(pattern):
 
 
 class _IgnoreRules:
-    def __init__(self, rules, base_path):
+    def __init__(
+        self, rules: list[_IgnoreRule], base_path: str | os.PathLike[str] | _Path
+    ) -> None:
         self.__rules = rules
         self.__can_return_immediately = not any(r.negation for r in rules)
         self.__base_path = (
             _Path(base_path) if not isinstance(base_path, _Path) else base_path
         )
 
-    def match(self, path, is_dir=None):
+    def match(
+        self, path: str | os.PathLike[str] | _Path, is_dir: bool | None = None
+    ) -> bool:
         if not isinstance(path, _Path):
             path = _Path(path)
 
@@ -325,21 +346,21 @@ class _IgnoreRules:
 
 
 class _IgnoreRule:
-    def __init__(self, regexp, negation, directory_only):
+    def __init__(self, regexp: str, negation: bool, directory_only: bool) -> None:
         self.__regexp = re.compile(regexp)
         self.__negation = negation
         self.__directory_only = directory_only
         self.__match = self.__regexp.match
 
     @property
-    def regexp(self):
+    def regexp(self) -> re.Pattern[str]:
         return self.__regexp
 
     @property
-    def negation(self):
+    def negation(self) -> bool:
         return self.__negation
 
-    def match(self, rel_path, is_dir):
+    def match(self, rel_path: str, is_dir: bool | None) -> re.Match[str] | bool | None:
         m = self.__match(rel_path)
 
         # If we need a directory, check there is something after slash and if there is not, target must be a directory.
@@ -352,16 +373,18 @@ class _IgnoreRule:
 if os.altsep is not None:
     _all_seps_expr = f"[{re.escape(os.sep)}{re.escape(os.altsep)}]"
 
-    def _path_split(path):
+    def _path_split(path: str) -> list[str]:
         return re.split(_all_seps_expr, path)
 
 else:
 
-    def _path_split(path):
+    def _path_split(path: str) -> list[str]:
         return path.split(os.sep)
 
 
-def _fnmatch_pathname_to_regexp(pattern, anchored, directory_only):
+def _fnmatch_pathname_to_regexp(
+    pattern: str, anchored: bool, directory_only: bool
+) -> str:
     # Implements 'fnmatch' style-behavior, as though with 'FNM_PATHNAME' flagged;
     # the path separator will not match shell-style '*' and '.' wildcards.
 

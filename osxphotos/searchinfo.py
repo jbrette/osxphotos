@@ -398,7 +398,7 @@ class SearchInfo:
         text = self._get_text_for_category(category)
         return text[0] if text else ""
 
-    def _get_text_for_category(self, category):
+    def _get_text_for_category(self, category: int) -> list[str]:
         """return list of text for a specified category ID"""
         if self._db_searchinfo:
             content = "normalized_string" if self._normalized else "content_string"

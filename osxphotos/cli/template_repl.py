@@ -6,8 +6,9 @@ import contextlib
 import re
 import readline
 import sys
+from collections.abc import Iterable
 from textwrap import dedent
-from typing import Literal
+from typing import Literal, NoReturn, cast
 
 import click
 from rich.columns import Columns
@@ -92,8 +93,11 @@ HELP_DICT = (
 @click.option("--vi", "mode", flag_value="vi", help="Use vi keybindings.")
 @click.option("--emacs", "mode", flag_value="emacs", help="Use emacs keybindings.")
 def template_repl(
-    mode: str | None, template: tuple[str, ...], uuid: str | None, db: str | None
-):
+    mode: Literal["emacs", "vi"] | None,
+    template: tuple[str, ...],
+    uuid: str | None,
+    db: str | None,
+) -> None:
     """Interactively render templates for selected photo.
 
     Launches a REPL (Read-Eval-Print-Loop) to interactively render a template for the selected photo.
@@ -110,7 +114,7 @@ def template_repl(
         run_repl_loop(photosdb, uuid)
 
 
-def configure_readline(mode: str | None):
+def configure_readline(mode: Literal["emacs", "vi"] | None) -> None:
     """Configure readline and load history"""
     readline.set_auto_history(True)
     with contextlib.suppress(FileNotFoundError):
@@ -119,7 +123,7 @@ def configure_readline(mode: str | None):
     set_editor_mode(mode=mode)
 
 
-def run_repl_loop(photosdb: osxphotos.PhotosDB, uuid: str | None):
+def run_repl_loop(photosdb: osxphotos.PhotosDB, uuid: str | None) -> None:
     """Run REPL loop to evaluate template
 
     Args:
@@ -181,7 +185,8 @@ def handle_command(command: str) -> bool:
 
     if command in {"emacs", "vi"}:
         # set editor mode
-        set_editor_mode(command)
+        # narrowed by the membership test above
+        set_editor_mode(cast(Literal["emacs", "vi"], command))
         print(f"{command.title()} mode enabled")
         return True
 
@@ -193,7 +198,7 @@ def handle_command(command: str) -> bool:
     return False
 
 
-def print_help(help_command: str):
+def print_help(help_command: str) -> None:
     """Print help"""
     try:
         search_text = help_command.split(" ")[1]
@@ -221,7 +226,7 @@ def print_help(help_command: str):
         print(f"No help found for {search_text}")
 
 
-def print_template_help():
+def print_template_help() -> None:
     """ "Print help for template system"""
     help_text = get_template_help()
     help_text = (
@@ -265,7 +270,7 @@ def get_photo(
     return photo
 
 
-def set_editor_mode(mode: Literal["emacs", "vi"] | None):
+def set_editor_mode(mode: Literal["emacs", "vi"] | None) -> None:
     """Config editor mode and tab completion for readline"""
 
     if "libedit" in readline.__doc__:
@@ -325,7 +330,7 @@ def render_and_print_template(
     return 1 if error else 0
 
 
-def handle_unmatched(unmatched: list[str]):
+def handle_unmatched(unmatched: list[str]) -> None:
     """Print unmatched template fields and suggest possible matches (prints to stderr)"""
     print(
         ("Unknown template field: " + ", ".join([f"'{field}'" for field in unmatched])),
@@ -337,7 +342,7 @@ def handle_unmatched(unmatched: list[str]):
     sys.stderr.flush()
 
 
-def print_intro():
+def print_intro() -> None:
     """Print introductory text for REPL"""
 
     print(
@@ -360,23 +365,23 @@ def print_intro():
     )
 
 
-def print_fields():
+def print_fields() -> None:
     """Print all field names"""
     print_columns(TEMPLATE_FIELDS)
 
 
-def print_filters():
+def print_filters() -> None:
     """Print all filter names"""
     print_columns(FILTER_VALUES.keys())
 
 
-def cleanup_and_exit():
+def cleanup_and_exit() -> NoReturn:
     """Perform any needed cleanup and exit"""
     readline.write_history_file(HISTORY_PATH)
     sys.exit(0)
 
 
-def print_columns(strings: list[str]):
+def print_columns(strings: Iterable[str]) -> None:
     """Print a list of strings in columns"""
     columns = Columns(strings, equal=True, expand=True)
     Console(highlight=False).print(columns)

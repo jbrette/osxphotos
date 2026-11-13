@@ -10,6 +10,7 @@ from .photoinfo_protocol import PhotoInfoMixin
 from .phototemplate import PhotoTemplate, RenderOptions
 from .rehydrate import rehydrate_class
 
+EXIFTOOL_PATH: str | None
 try:
     EXIFTOOL_PATH = get_exiftool_path()
 except FileNotFoundError:

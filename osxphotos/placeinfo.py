@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 from collections import namedtuple  # pylint: disable=syntax-error
+from typing import Any, cast
 
 from bpylist2 import archiver
 
@@ -81,16 +82,16 @@ class PLRevGeoLocationInfo:
 
     def __init__(
         self,
-        addressString,
-        countryCode,
-        mapItem,
-        isHome,
-        compoundNames,
-        compoundSecondaryNames,
-        version,
-        geoServiceProvider,
-        postalAddress,
-    ):
+        addressString: str | None,
+        countryCode: str | None,
+        mapItem: PLRevGeoMapItem,
+        isHome: bool,
+        compoundNames: str | None,
+        compoundSecondaryNames: str | None,
+        version: int,
+        geoServiceProvider: object,
+        postalAddress: CNPostalAddress | None,
+    ) -> None:
         self.addressString = normalize_unicode(addressString)
         self.countryCode = countryCode
         self.mapItem = mapItem
@@ -101,7 +102,7 @@ class PLRevGeoLocationInfo:
         self.geoServiceProvider = geoServiceProvider
         self.postalAddress = postalAddress
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return all(
             getattr(self, field) == getattr(other, field)
             for field in [
@@ -116,14 +117,14 @@ class PLRevGeoLocationInfo:
             ]
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"addressString: {self.addressString}, countryCode: {self.countryCode}, isHome: {self.isHome}, mapItem: {self.mapItem}, postalAddress: {self.postalAddress}"
 
     @staticmethod
-    def encode_archive(obj, archive):
+    def encode_archive(obj: Any, archive: archiver.ArchivingObject) -> None:
         archive.encode("addressString", obj.addressString)
         archive.encode("countryCode", obj.countryCode)
         archive.encode("mapItem", obj.mapItem)
@@ -135,7 +136,7 @@ class PLRevGeoLocationInfo:
         archive.encode("postalAddress", obj.postalAddress)
 
     @staticmethod
-    def decode_archive(archive):
+    def decode_archive(archive: archiver.ArchivedObject) -> PLRevGeoLocationInfo:
         addressString = archive.decode("addressString")
         countryCode = archive.decode("countryCode")
         mapItem = archive.decode("mapItem")
@@ -161,20 +162,24 @@ class PLRevGeoLocationInfo:
 class PLRevGeoMapItem:
     """Stores the list of place names, organized by area"""
 
-    def __init__(self, sortedPlaceInfos, finalPlaceInfos):
+    def __init__(
+        self,
+        sortedPlaceInfos: list[PLRevGeoMapItemAdditionalPlaceInfo],
+        finalPlaceInfos: list[PLRevGeoMapItemAdditionalPlaceInfo],
+    ) -> None:
         self.sortedPlaceInfos = sortedPlaceInfos
         self.finalPlaceInfos = finalPlaceInfos
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return all(
             getattr(self, field) == getattr(other, field)
             for field in ["sortedPlaceInfos", "finalPlaceInfos"]
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         sortedPlaceInfos = [str(place) for place in self.sortedPlaceInfos]
         finalPlaceInfos = [str(place) for place in self.finalPlaceInfos]
         return (
@@ -182,12 +187,12 @@ class PLRevGeoMapItem:
         )
 
     @staticmethod
-    def encode_archive(obj, archive):
+    def encode_archive(obj: Any, archive: archiver.ArchivingObject) -> None:
         archive.encode("sortedPlaceInfos", obj.sortedPlaceInfos)
         archive.encode("finalPlaceInfos", obj.finalPlaceInfos)
 
     @staticmethod
-    def decode_archive(archive):
+    def decode_archive(archive: archiver.ArchivedObject) -> PLRevGeoMapItem:
         sortedPlaceInfos = archive.decode("sortedPlaceInfos")
         finalPlaceInfos = archive.decode("finalPlaceInfos")
         return PLRevGeoMapItem(sortedPlaceInfos, finalPlaceInfos)
@@ -196,33 +201,41 @@ class PLRevGeoMapItem:
 class PLRevGeoMapItemAdditionalPlaceInfo:
     """Additional info about individual places"""
 
-    def __init__(self, area, name, placeType, dominantOrderType):
+    def __init__(
+        self,
+        area: float,
+        name: str | None,
+        placeType: int,
+        dominantOrderType: int,
+    ) -> None:
         self.area = area
         self.name = normalize_unicode(name)
         self.placeType = placeType
         self.dominantOrderType = dominantOrderType
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return all(
             getattr(self, field) == getattr(other, field)
             for field in ["area", "name", "placeType", "dominantOrderType"]
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"area: {self.area}, name: {self.name}, placeType: {self.placeType}"
 
     @staticmethod
-    def encode_archive(obj, archive):
+    def encode_archive(obj: Any, archive: archiver.ArchivingObject) -> None:
         archive.encode("area", obj.area)
         archive.encode("name", obj.name)
         archive.encode("placeType", obj.placeType)
         archive.encode("dominantOrderType", obj.dominantOrderType)
 
     @staticmethod
-    def decode_archive(archive):
+    def decode_archive(
+        archive: archiver.ArchivedObject,
+    ) -> PLRevGeoMapItemAdditionalPlaceInfo:
         area = archive.decode("area")
         name = archive.decode("name")
         placeType = archive.decode("placeType")
@@ -237,15 +250,15 @@ class CNPostalAddress:
 
     def __init__(
         self,
-        _ISOCountryCode,
-        _city,
-        _country,
-        _postalCode,
-        _state,
-        _street,
-        _subAdministrativeArea,
-        _subLocality,
-    ):
+        _ISOCountryCode: str | None,
+        _city: str | None,
+        _country: str | None,
+        _postalCode: str | None,
+        _state: str | None,
+        _street: str | None,
+        _subAdministrativeArea: str | None,
+        _subLocality: str | None,
+    ) -> None:
         self._ISOCountryCode = _ISOCountryCode
         self._city = normalize_unicode(_city)
         self._country = normalize_unicode(_country)
@@ -255,7 +268,7 @@ class CNPostalAddress:
         self._subAdministrativeArea = normalize_unicode(_subAdministrativeArea)
         self._subLocality = normalize_unicode(_subLocality)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return all(
             getattr(self, field) == getattr(other, field)
             for field in [
@@ -270,10 +283,10 @@ class CNPostalAddress:
             ]
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ", ".join(
             map(
                 str,
@@ -291,7 +304,7 @@ class CNPostalAddress:
         )
 
     @staticmethod
-    def encode_archive(obj, archive):
+    def encode_archive(obj: Any, archive: archiver.ArchivingObject) -> None:
         archive.encode("_ISOCountryCode", obj._ISOCountryCode)
         archive.encode("_country", obj._country)
         archive.encode("_city", obj._city)
@@ -302,7 +315,7 @@ class CNPostalAddress:
         archive.encode("_subLocality", obj._subLocality)
 
     @staticmethod
-    def decode_archive(archive):
+    def decode_archive(archive: archiver.ArchivedObject) -> CNPostalAddress:
         _ISOCountryCode = archive.decode("_ISOCountryCode")
         _country = archive.decode("_country")
         _city = archive.decode("_city")
@@ -355,7 +368,7 @@ class PlaceInfo:
         """
 
     @property
-    def ishome(self) -> bool:
+    def ishome(self) -> bool | None:
         """Returns 'True' if photo place is user's home address, otherwise 'False'."""
 
     @property
@@ -406,7 +419,7 @@ class PlaceInfo:
         """
 
     @property
-    def address(self):
+    def address(self) -> PostalAddress | None:
         """Returns a 'PostalAddress' namedtuple with details of the postal address containing the following fields:
 
         * 'city'
@@ -419,14 +432,20 @@ class PlaceInfo:
         * 'iso_country_code'
         """
 
-    def asdict():
+    def asdict(self) -> dict[str, Any]:
         """Returns a dictionary representation of the PlaceInfo object."""
+        # was declared without self, so calling it always raised TypeError
+        raise NotImplementedError
 
 
 class PlaceInfo4(PlaceInfo):
     """Reverse geolocation place info for a photo (Photos <= 4)"""
 
-    def __init__(self, place_names, country_code):
+    def __init__(
+        self,
+        place_names: list[tuple[int, str | None, int, float]],
+        country_code: str | None,
+    ) -> None:
         """place_names: list of place name tuples in ascending order by area
         tuple fields are: modelID, place name, place type, area, e.g.
         [(5, "St James's Park", 45, 0),
@@ -441,30 +460,30 @@ class PlaceInfo4(PlaceInfo):
         self._process_place_info()
 
     @property
-    def address_str(self):
+    def address_str(self) -> None:
         return None
 
     @property
-    def country_code(self):
+    def country_code(self) -> str | None:
         return self._country_code
 
     @property
-    def ishome(self):
+    def ishome(self) -> None:
         return None
 
     @property
-    def name(self):
+    def name(self) -> str | None:
         return self._name
 
     @property
-    def names(self):
+    def names(self) -> PlaceNames:
         return self._names
 
     @property
-    def address(self):
+    def address(self) -> PostalAddress:
         return PostalAddress(None, None, None, None, None, None, None, None)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return False
         else:
@@ -473,12 +492,12 @@ class PlaceInfo4(PlaceInfo):
                 and self._country_code == other._country_code
             )
 
-    def _process_place_info(self):
+    def _process_place_info(self) -> None:
         """Process place_names to set self._name and self._names"""
         places = self._place_names
 
         # build a dictionary where key is placetype
-        places_dict = {}
+        places_dict: dict[int, list[tuple[str | None, float]]] = {}
         for p in places:
             # places in format:
             # [(5, "St James's Park", 45, 0), ]
@@ -493,7 +512,7 @@ class PlaceInfo4(PlaceInfo):
 
         # build list to populate PlaceNames tuple
         # initialize with empty lists for each field in PlaceNames
-        place_info = [[]] * 19
+        place_info: list[list[str | None]] = [[]] * 19
 
         # add the place names sorted by area (ascending)
         # in Photos <=4, possible place type values are:
@@ -529,7 +548,7 @@ class PlaceInfo4(PlaceInfo):
         # 4 (16): locality / city
         # 2 (2): administrative area (state/province)
         # 1 (1): country
-        name_list = []
+        name_list: list[str] = []
         if place_names[8]:
             name_list.append(place_names[8][0])
             if place_names[4]:
@@ -548,10 +567,10 @@ class PlaceInfo4(PlaceInfo):
         name = ", ".join(name_list)
         self._name = name if name != "" else None
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         info = {
             "name": self.name,
             "names": self.names,
@@ -559,7 +578,7 @@ class PlaceInfo4(PlaceInfo):
         }
         return "PlaceInfo(" + ", ".join([f"{k}='{v}'" for k, v in info.items()]) + ")"
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "names": self.names._asdict(),
@@ -570,40 +589,44 @@ class PlaceInfo4(PlaceInfo):
 class PlaceInfo5(PlaceInfo):
     """Reverse geolocation place info for a photo (Photos >= 5)"""
 
-    def __init__(self, revgeoloc_bplist):
+    def __init__(self, revgeoloc_bplist: bytes) -> None:
         """revgeoloc_bplist: a binary plist blob containing
         a serialized PLRevGeoLocationInfo object"""
         self._bplist = revgeoloc_bplist
-        self._plrevgeoloc = archiver.unarchive(revgeoloc_bplist)
+        # the class map registered above makes the top-level object a
+        # PLRevGeoLocationInfo
+        self._plrevgeoloc = cast(
+            PLRevGeoLocationInfo, archiver.unarchive(revgeoloc_bplist)
+        )
         self._process_place_info()
 
     @property
-    def address_str(self):
+    def address_str(self) -> str | None:
         """returns the postal address as a string"""
         return self._plrevgeoloc.addressString
 
     @property
-    def country_code(self):
+    def country_code(self) -> str | None:
         """returns the country code"""
         return self._plrevgeoloc.countryCode
 
     @property
-    def ishome(self):
+    def ishome(self) -> bool:
         """returns True if place is user's home address"""
         return self._plrevgeoloc.isHome
 
     @property
-    def name(self):
+    def name(self) -> str | None:
         """returns local place name"""
         return self._name
 
     @property
-    def names(self):
+    def names(self) -> PlaceNames:
         """returns PlaceNames tuple with detailed reverse geolocation place names"""
         return self._names
 
     @property
-    def address(self):
+    def address(self) -> PostalAddress:
         addr = self._plrevgeoloc.postalAddress
         if addr is not None:
             postal_address = PostalAddress(
@@ -623,12 +646,12 @@ class PlaceInfo5(PlaceInfo):
 
         return postal_address
 
-    def _process_place_info(self):
+    def _process_place_info(self) -> None:
         """Process sortedPlaceInfos to set self._name and self._names"""
         places = self._plrevgeoloc.mapItem.sortedPlaceInfos
 
         # build a dictionary where key is placetype
-        places_dict = {}
+        places_dict: dict[int, list[tuple[str | None, float]]] = {}
         for p in places:
             try:
                 places_dict[p.placeType].append((p.name, p.area))
@@ -636,7 +659,7 @@ class PlaceInfo5(PlaceInfo):
                 places_dict[p.placeType] = [(p.name, p.area)]
 
         # build list to populate PlaceNames tuple
-        place_info = []
+        place_info: list[list[str | None]] = []
         for field in range(18):
             try:
                 # add the place names sorted by area (ascending)
@@ -682,16 +705,16 @@ class PlaceInfo5(PlaceInfo):
         )
         self._name = name if name != "" else None
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return False
         else:
             return self._plrevgeoloc == other._plrevgeoloc
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         info = {
             "name": self.name,
             "names": self.names,
@@ -702,7 +725,7 @@ class PlaceInfo5(PlaceInfo):
         }
         return "PlaceInfo(" + ", ".join([f"{k}='{v}'" for k, v in info.items()]) + ")"
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "names": self.names._asdict(),

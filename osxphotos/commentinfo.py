@@ -13,7 +13,7 @@ class CommentInfo:
     """Class for shared photo comments"""
 
     datetime: datetime.datetime
-    user: str
+    user: str | None
     ismine: bool
     text: str
 
@@ -26,7 +26,7 @@ class LikeInfo:
     """Class for shared photo likes"""
 
     datetime: datetime.datetime
-    user: str
+    user: str | None
     ismine: bool
 
     def asdict(self) -> dict[str, Any]:

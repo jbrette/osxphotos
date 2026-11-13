@@ -27,11 +27,11 @@ class SyncResults:
         self,
         uuid: str,
         filename: str,
-        fingerprint: str,
+        fingerprint: str | None,
         property: str | None,
         updated: bool,
-        before: str | list[str] | bool | None,
-        after: str | list[str] | bool | None,
+        before: Any,
+        after: Any,
         error: str | None = None,
     ) -> None:
         """Add result for a single photo"""

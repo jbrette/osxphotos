@@ -18,11 +18,11 @@ def print_photo_info(
     json: bool = False,
     print_func: Callable[..., Any] = print,
 ) -> None:
-    dump = []
     if json:
-        dump.extend(p.json(shallow=False) for p in photos)
-        print_func(f"[{', '.join(dump)}]")
+        json_dump = [p.json(shallow=False) for p in photos]
+        print_func(f"[{', '.join(json_dump)}]")
     else:
+        dump: list[list[Any]] = []
         # dump as CSV
         csv_writer = csv.writer(
             sys.stdout, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL

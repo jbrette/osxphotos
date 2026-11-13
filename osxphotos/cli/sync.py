@@ -7,8 +7,8 @@ import json
 import os
 import pathlib
 import time
-from collections.abc import Callable
-from typing import Any, Literal
+from collections.abc import Callable, Collection, Iterable
+from typing import Any, Literal, cast
 
 import click
 from photoscript import Photo
@@ -66,31 +66,36 @@ SYNC_IMPORT_TYPES_ALL = ["all", *SYNC_IMPORT_TYPES]
 OSXPHOTOS_SYNC_RETRY_ATTEMPTS = int(os.getenv("OSXPHOTOS_SYNC_RETRY_ATTEMPTS", "10"))
 
 
-class SyncImportPath(click.ParamType):
+class SyncImportPath(click.ParamType[str]):
     """A path to a Photos library or a metadata export file created by --export"""
 
     name = "SYNC_IMPORT_PATH"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> str:
         try:
             if not pathlib.Path(value).exists():
                 self.fail(f"{value} is not a file or directory")
             value = str(pathlib.Path(value).expanduser().resolve())
             # call get_import_type to raise exception if not a valid import type
             get_import_type(value)
-            return value
+            # value was reassigned to the resolved path string above
+            return cast(str, value)
         except Exception as e:
             self.fail(f"Could not determine import type for {value}: {e}")
 
 
-class SyncImportType(click.ParamType):
+class SyncImportType(click.ParamType[str]):
     """A string indicating which metadata to set or merge from the import source"""
 
     # valid values are specified in METADATA_IMPORT_TYPES_ALL
 
     name = "SYNC_IMPORT_TYPE"
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> str:
         try:
             if value not in SYNC_IMPORT_TYPES_ALL:
                 values = [v.strip() for v in value.split(",")]
@@ -99,7 +104,8 @@ class SyncImportType(click.ParamType):
                         self.fail(
                             f"{v} is not a valid import type, valid values are {', '.join(SYNC_IMPORT_TYPES_ALL)}"
                         )
-            return value
+            # command line option values are strings
+            return cast(str, value)
         except Exception as e:
             self.fail(f"Could not determine import type for {value}: {e}")
 
@@ -131,15 +137,15 @@ def render_and_validate_report(report: str) -> str:
     return report
 
 
-def parse_set_merge(values: tuple[str]) -> tuple[str]:
+def parse_set_merge(values: Iterable[str]) -> tuple[str, ...]:
     """Parse --set and --merge options which may be passed individually or as a comma-separated list"""
-    new_values = []
+    new_values: list[str] = []
     for value in values:
         new_values.extend([v.strip() for v in value.split(",")])
     return tuple(new_values)
 
 
-def open_metadata_db(db_path: str):
+def open_metadata_db(db_path: str) -> SQLiteKVStore:
     """Open metadata database at db_path"""
     metadata_db = SQLiteKVStore(
         db_path,
@@ -159,7 +165,7 @@ def get_photo_metadata(photos: list[PhotoInfo]) -> str:
     merge_fields = ["keywords", "persons", "albums", "title", "description", "uuid"]
     # if any bool_fields field is True, value should be True
     bool_fields = ["favorite"]
-    photos_dict = {}
+    photos_dict: dict[str, Any] = {}
     for photo in photos:
         data = photo.asdict()
         for k, v in data.items():
@@ -181,16 +187,17 @@ def get_photo_metadata(photos: list[PhotoInfo]) -> str:
 
     # convert photos_dict to JSON string
     # wouldn't it be nice if json encoder handled datetimes...
-    def default(o):
+    def default(o: Any) -> str | None:
         if isinstance(o, (datetime.date, datetime.datetime)):
             return o.isoformat()
+        return None
 
     return json.dumps(photos_dict, sort_keys=True, default=default)
 
 
 def export_metadata(
     photos: list[PhotoInfo], output_path: str, verbose: Callable[..., None]
-):
+) -> None:
     """Export metadata to metadata_db"""
     metadata_db = open_metadata_db(output_path)
     verbose(f"Exporting metadata to [filepath]{output_path}[/]")
@@ -209,7 +216,7 @@ def export_metadata_to_db(
     photos: list[PhotoInfo],
     metadata_db: SQLiteKVStore,
     progress: bool = True,
-):
+) -> None:
     """Export metadata for photos to metadata database
 
     Args:
@@ -221,7 +228,7 @@ def export_metadata_to_db(
     # for example, the same photo was imported twice or the photo was duplicated in Photos
     # in this case, we need to merge the metadata for the photos with the same fingerprint
     # as there is no way to know which photo is the "correct" one
-    key_to_photos = {}
+    key_to_photos: dict[str, list[PhotoInfo]] = {}
     for photo in photos:
         key = photo_signature(photo)
         if key in key_to_photos:
@@ -271,8 +278,8 @@ def get_import_type(import_path: str) -> Literal["library", "export"]:
 def import_metadata(
     photos: list[PhotoInfo],
     import_path: str,
-    set_: tuple[str, ...],
-    merge: tuple[str, ...],
+    set_: Collection[str],
+    merge: Collection[str],
     dry_run: bool,
     unmatched: bool,
     verbose: Callable[..., None],
@@ -307,8 +314,8 @@ def import_metadata(
     # if a photo's signature isn't in the import database, retry with any
     # collision counter Photos appended to the filename removed,
     # e.g. "IMG_1234 2.HEIC" -> "IMG_1234.HEIC"
-    key_to_photo = {}
-    unmatched_photos = []
+    key_to_photo: dict[str, list[PhotoInfo]] = {}
+    unmatched_photos: list[PhotoInfo] = []
     for photo in photos:
         key = photo_signature(photo)
         if key not in import_db and not photo.shared:
@@ -352,8 +359,8 @@ def import_metadata(
 def import_metadata_for_photo(
     photo: PhotoInfo,
     metadata: str,
-    set_: tuple[str, ...],
-    merge: tuple[str, ...],
+    set_: Collection[str],
+    merge: Collection[str],
     dry_run: bool,
     verbose: Callable[..., None],
 ) -> SyncResults:
@@ -368,7 +375,7 @@ def import_metadata_for_photo(
         verbose: verbose function
     """
     # convert metadata to dict
-    metadata = json.loads(metadata)
+    metadata_dict: dict[str, Any] = json.loads(metadata)
 
     results = SyncResults()
 
@@ -394,20 +401,20 @@ def import_metadata_for_photo(
     if "albums" in set_ or "albums" in merge:
         # behavior is the same for albums for set and merge:
         # add photo to any new albums but do not remove from existing albums
-        results += _update_albums_for_photo(photo, metadata, dry_run, verbose)
+        results += _update_albums_for_photo(photo, metadata_dict, dry_run, verbose)
 
     if "location" in set_:
         # If --set use origin location in the destination photo
-        results += _set_location_for_photo(photo, metadata, dry_run, verbose)
+        results += _set_location_for_photo(photo, metadata_dict, dry_run, verbose)
     elif "location" in merge:
         # if --merge
         #   and property is set in the destination then no action is taken;
         #   if property is not set in the destination but is set in the source,
         #      then the value is copied to destination.
-        results += _merge_location_for_photo(photo, metadata, dry_run, verbose)
+        results += _merge_location_for_photo(photo, metadata_dict, dry_run, verbose)
 
-    results += _set_metadata_for_photo(photo, metadata, set_, dry_run, verbose)
-    results += _merge_metadata_for_photo(photo, metadata, merge, dry_run, verbose)
+    results += _set_metadata_for_photo(photo, metadata_dict, set_, dry_run, verbose)
+    results += _merge_metadata_for_photo(photo, metadata_dict, merge, dry_run, verbose)
 
     return results
 
@@ -556,7 +563,7 @@ def _update_albums_for_photo(
 def _set_metadata_for_photo(
     photo: PhotoInfo,
     metadata: dict[str, Any],
-    set_: tuple[str, ...],
+    set_: Collection[str],
     dry_run: bool,
     verbose: Callable[..., None],
 ) -> SyncResults:
@@ -601,7 +608,7 @@ def _set_metadata_for_photo(
 def _merge_metadata_for_photo(
     photo: PhotoInfo,
     metadata: dict[str, Any],
-    merge: tuple[str, ...],
+    merge: Collection[str],
     dry_run: bool,
     verbose: Callable[..., None],
 ) -> SyncResults:
@@ -637,6 +644,8 @@ def _merge_metadata_for_photo(
             )
             continue
 
+        # value comes from JSON metadata so its type is only known at runtime
+        new_value: Any
         if isinstance(value, list) and isinstance(before, list):
             new_value = sorted(set(value + before))
         elif isinstance(before, bool):
@@ -673,7 +682,7 @@ def _merge_metadata_for_photo(
     return results
 
 
-def set_photo_property(photo: photoscript.Photo, property: str, value: Any):
+def set_photo_property(photo: photoscript.Photo, property: str, value: Any) -> None:
     """Set property on photo"""
 
     # do some basic validation
@@ -704,7 +713,7 @@ def set_photo_property(photo: photoscript.Photo, property: str, value: Any):
         attempts += 1
 
 
-def print_import_summary(results: SyncResults):
+def print_import_summary(results: SyncResults) -> None:
     """Print summary of import results"""
     summary = results.results_summary()
     property_summary = ", ".join(
@@ -809,25 +818,25 @@ def print_import_summary(results: SyncResults):
 @QUERY_OPTIONS(exclude=["--shared", "--not-shared"])
 @DB_OPTION
 @THEME_OPTION
-@click.pass_obj
-@click.pass_context
+@click.pass_obj  # type: ignore[arg-type]  # click's stubs expect positional-only params
+@click.pass_context  # type: ignore[arg-type]  # click's stubs expect positional-only params
 def sync(
-    ctx,
-    cli_obj,
-    db,
-    append,
-    dry_run,
-    export_path,
-    import_path,
-    merge,
-    report,
-    set_,
-    theme,
-    timestamp,
-    unmatched,
-    verbose_flag,
-    **kwargs,  # query options
-):
+    ctx: click.Context,
+    cli_obj: Any,
+    db: str | None,
+    append: bool,
+    dry_run: bool,
+    export_path: str | None,
+    import_path: str | None,
+    merge: Collection[str],
+    report: str | None,
+    set_: Collection[str],
+    theme: str | None,
+    timestamp: bool,
+    unmatched: bool,
+    verbose_flag: int,
+    **kwargs: Any,  # query options
+) -> None:
     """Sync metadata and albums between Photos libraries.
 
     Use sync to update metadata in a local Photos library to match

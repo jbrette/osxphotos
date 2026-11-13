@@ -32,7 +32,6 @@ from .utils import (
 
 if TYPE_CHECKING:
     from .photoinfo import PhotoInfo
-    from .photoinfo_protocol import PhotoInfoProtocol
 
 logger = logging.getLogger("osxphotos")
 
@@ -434,9 +433,7 @@ class PhotoTemplateParser:
 class PhotoTemplate:
     """PhotoTemplate class to render a template string from a PhotoInfo object"""
 
-    def __init__(
-        self, photo: PhotoInfoProtocol, exiftool_path: str | None = None
-    ) -> None:
+    def __init__(self, photo: Any, exiftool_path: str | None = None) -> None:
         """Inits PhotoTemplate class with photo
 
         Args:
@@ -1612,7 +1609,7 @@ def parse_default_kv(default, default_dict):
     return default_dict_
 
 
-def get_template_help():
+def get_template_help() -> str:
     """Return help for template system as markdown string"""
     # TODO: would be better to use importlib.abc.ResourceReader but I can't find a single example of how to do this
     help_file = pathlib.Path(__file__).parent / "phototemplate.md"
@@ -1621,7 +1618,7 @@ def get_template_help():
     return md
 
 
-def get_template_field_table():
+def get_template_field_table() -> str:
     """Return markdown table of template field substitutions"""
     template_table = "| Field | Description |" + "\n|--------------|-------------|"
     for subst, descr in [

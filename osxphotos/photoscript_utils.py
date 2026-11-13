@@ -56,7 +56,7 @@ def photoscript_object_from_name(
 
 
 def _uuid_is_asset(
-    uuid: str, connection: sqlite3.Connection, version: int
+    uuid: str, connection: sqlite3.Connection, version: float
 ) -> str | None:
     """Return uuid if uuid is an asset uuid otherwise None"""
     asset_table = _DB_TABLE_NAMES[version]["ASSET"]
@@ -76,7 +76,7 @@ def _uuid_is_asset(
 
 
 def _uuid_is_album(
-    uuid: str, connection: sqlite3.Connection, version: int
+    uuid: str, connection: sqlite3.Connection, version: float
 ) -> str | None:
     """Return uuid if uuid is an album uuid otherwise None"""
     cursor = connection.cursor()
@@ -96,7 +96,7 @@ def _uuid_is_album(
 
 
 def _uuid_is_folder(
-    uuid: str, connection: sqlite3.Connection, version: int
+    uuid: str, connection: sqlite3.Connection, version: float
 ) -> str | None:
     """Return uuid if uuid is an folder uuid otherwise None"""
     cursor = connection.cursor()
@@ -116,7 +116,7 @@ def _uuid_is_folder(
 
 
 def _asset_uuid_for_name(
-    name: str, connection: sqlite3.Connection, version: int
+    name: str, connection: sqlite3.Connection, version: float
 ) -> str | None:
     """Return uuid for asset with name or None if not found"""
     asset_table = _DB_TABLE_NAMES[version]["ASSET"]
@@ -138,14 +138,14 @@ def _asset_uuid_for_name(
 
 
 def _album_uuid_for_name(
-    name: str, connection: sqlite3.Connection, version: int
+    name: str, connection: sqlite3.Connection, version: float
 ) -> str | None:
     """Return uuid for album with name or None if not found"""
     return _folder_album_uuid_for_name(name, connection, version, album=True)
 
 
 def _folder_uuid_for_name(
-    name: str, connection: sqlite3.Connection, version: int
+    name: str, connection: sqlite3.Connection, version: float
 ) -> str | None:
     """Return uuid for album with name or None if not found"""
     return _folder_album_uuid_for_name(name, connection, version, folder=True)
@@ -154,7 +154,7 @@ def _folder_uuid_for_name(
 def _folder_album_uuid_for_name(
     name: str,
     connection: sqlite3.Connection,
-    version: int,
+    version: float,
     album: bool = False,
     folder: bool = False,
 ) -> str | None:

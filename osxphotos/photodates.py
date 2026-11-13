@@ -48,7 +48,7 @@ logger = logging.getLogger("osxphotos")
 
 
 def reset_photo_date_time_tz(
-    photo: photoscript.Photo, library_path: str, verbose: Callable[..., None]
+    photo: photoscript.Photo, library_path: str | None, verbose: Callable[..., None]
 ) -> None:
     """Reset the date/time/timezone of a photo to the original values
     Args:
@@ -85,7 +85,7 @@ def reset_photo_date_time_tz(
 
 
 def update_photo_date_time(
-    library_path: str,
+    library_path: str | None,
     photo: photoscript.Photo,
     date: datetime.date | None,
     time: datetime.time | None,
@@ -216,7 +216,7 @@ def update_photo_date_time(
 
 
 def update_photo_from_function(
-    library_path: str,
+    library_path: str | None,
     function: Callable[..., Any],
     verbose: Callable[..., None],
     photo: photoscript.Photo,
@@ -313,7 +313,7 @@ def update_datetime_for_new_timezone(
 
 
 def update_photo_time_for_new_timezone(
-    library_path: str,
+    library_path: str | None,
     photo: photoscript.Photo,
     new_timezone: Timezone,
     verbose: Callable[..., None],
