@@ -6,6 +6,7 @@ import datetime
 import os
 import pathlib
 import re
+from typing import Any
 
 import bitmath
 import click
@@ -105,10 +106,12 @@ class PathOrURL(click.Path):
 
     name = "PATH_OR_URL"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-    def convert(self, value, param, ctx):
+    def convert(
+        self, value: Any, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Any:
         if is_http_url(value):
             # users often pass the URL of the GitHub page showing a file
             # instead of the raw file; download the raw file they intended

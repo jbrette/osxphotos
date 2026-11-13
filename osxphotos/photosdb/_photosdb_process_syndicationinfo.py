@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_SYNDICATION_MODEL_VERSION
 from ..sqlite_utils import sqlite_open_ro
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from osxphotos.photosdb import PhotosDB
 
 
-def _process_syndicationinfo(self: PhotosDB):
+def _process_syndicationinfo(self: PhotosDB) -> None:
     """Process syndication information"""
 
     self._db_syndication_uuid = {}
@@ -27,7 +27,7 @@ def _process_syndicationinfo(self: PhotosDB):
     _process_syndicationinfo_7(self)
 
 
-def _process_syndicationinfo_7(photosdb: PhotosDB):
+def _process_syndicationinfo_7(photosdb: PhotosDB) -> None:
     """Process Syndication info for Photos 8.0 and later
 
     Args:
@@ -35,7 +35,7 @@ def _process_syndicationinfo_7(photosdb: PhotosDB):
     """
 
     db = photosdb._tmp_db
-    zasset = _DB_TABLE_NAMES[photosdb._photos_ver]["ASSET"]
+    zasset = cast("dict[str, str]", _DB_TABLE_NAMES[photosdb._photos_ver])["ASSET"]
 
     (_conn, cursor) = sqlite_open_ro(db)
 

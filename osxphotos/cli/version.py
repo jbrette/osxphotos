@@ -3,12 +3,11 @@
 import os
 
 import click
-import packaging
+import packaging.version
 
 from osxphotos._constants import OSXPHOTOS_URL
 from osxphotos._version import __version__
-
-from .common import get_latest_version
+from osxphotos.utils import get_latest_version
 
 
 @click.command(name="version")
@@ -21,7 +20,7 @@ from .common import get_latest_version
     type=str,
     help="Run COMMAND if there is a new version of osxphotos available.",
 )
-def version(ctx, cli_obj, run):
+def version(ctx: click.Context, cli_obj: object, run: str | None) -> None:
     """Check for new version of osxphotos."""
     latest_version, err = get_latest_version()
     if latest_version and packaging.version.parse(

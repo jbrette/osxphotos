@@ -1,6 +1,8 @@
 """Use Apple's Vision Framework via PyObjC to perform text detection on images (macOS 10.15+ only)"""
 
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from .platform import assert_macos, get_macos_version
 
@@ -32,7 +34,7 @@ else:
     vision = True
 
 
-def detect_text(img_path: str, orientation: int | None = None) -> list:
+def detect_text(img_path: str, orientation: int | None = None) -> list[list[Any]]:
     """process image at img_path with VNRecognizeTextRequest and return list of results
 
     Args:
@@ -67,7 +69,7 @@ def detect_text(img_path: str, orientation: int | None = None) -> list:
             )
         else:
             raise ValueError("orientation must be between 1 and 8")
-        results = []
+        results: list[list[Any]] = []
         handler = make_request_handler(results)
         vision_request = (
             Vision.VNRecognizeTextRequest.alloc().initWithCompletionHandler_(handler)
@@ -80,12 +82,12 @@ def detect_text(img_path: str, orientation: int | None = None) -> list:
         return results
 
 
-def make_request_handler(results):
+def make_request_handler(results: list[list[Any]]) -> Callable[[Any, Any], None]:
     """results: list to store results"""
     if not isinstance(results, list):
         raise InvalidResultsTypeError("results must be a list")
 
-    def handler(request, error):
+    def handler(request: Any, error: Any) -> None:
         if error:
             print(f"Error! {error}")
         else:

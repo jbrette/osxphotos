@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 import datetime
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -16,7 +17,7 @@ class CommentInfo:
     ismine: bool
     text: str
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
 
@@ -28,5 +29,5 @@ class LikeInfo:
     user: str
     ismine: bool
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)

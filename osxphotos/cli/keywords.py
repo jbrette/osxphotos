@@ -1,6 +1,7 @@
 """keywords command for osxphotos CLI"""
 
 import json
+from typing import Any
 
 import click
 import yaml
@@ -18,7 +19,7 @@ from .list import _list_libraries
 @JSON_OPTION
 @click.pass_obj
 @click.pass_context
-def keywords(ctx, cli_obj, db, json_):
+def keywords(ctx: click.Context, cli_obj: Any, db: str | None, json_: bool) -> None:
     """Print out keywords found in the Photos library."""
 
     # below needed for to make CliRunner work for testing

@@ -8,8 +8,8 @@ from rich import print
 from osxphotos.photosdb.photosdb_utils import get_photos_library_version
 from osxphotos.sqlgrep import sqlgrep
 
-from .cli_params import DB_OPTION, OSXPHOTOS_HIDDEN
-from .common import get_photos_db
+from .cli_params import DB_OPTION
+from .common import OSXPHOTOS_HIDDEN, get_photos_db
 
 
 @click.command(name="grep", hidden=OSXPHOTOS_HIDDEN)
@@ -33,26 +33,30 @@ from .common import get_photos_db
     help="Print name of database file when printing results.",
 )
 @click.argument("pattern", metavar="PATTERN", required=True)
-def grep(ctx, cli_obj, db, ignore_case, print_filename, pattern):
+def grep(
+    ctx: click.Context,
+    cli_obj: object,
+    db: str | None,
+    ignore_case: bool,
+    print_filename: bool,
+    pattern: str,
+) -> None:
     """Search for PATTERN in the Photos sqlite database file"""
-    db = db or get_photos_db()
-    db = pathlib.Path(db)
-    if db.is_file():
+    db_path = pathlib.Path(db or get_photos_db())
+    if db_path.is_file():
         # if passed the actual database, really want the parent of the database directory
-        db = db.parent.parent
-    photos_ver = get_photos_library_version(str(db))
+        db_path = db_path.parent.parent
+    photos_ver = get_photos_library_version(str(db_path))
     if photos_ver < 5:
-        db_file = db / "database" / "photos.db"
+        db_file = db_path / "database" / "photos.db"
     else:
-        db_file = db / "database" / "Photos.sqlite"
+        db_file = db_path / "database" / "Photos.sqlite"
 
     if not db_file.is_file():
         click.secho(f"Could not find database file {db_file}", fg="red")
         ctx.exit(2)
 
-    db_file = str(db_file)
-
     for table, column, row_id, value in sqlgrep(
-        db_file, pattern, ignore_case, print_filename, rich_markup=True
+        str(db_file), pattern, ignore_case, print_filename, rich_markup=True
     ):
         print(f"{table}, {column}, {row_id}, {value}")

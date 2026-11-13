@@ -37,6 +37,6 @@ class ScoreInfo:
     well_framed_subject: float
     well_timed_shot: float
 
-    def asdict(self):
+    def asdict(self) -> dict[str, float]:
         """Return ScoreInfo as a dict"""
         return asdict(self)

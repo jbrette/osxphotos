@@ -5,7 +5,7 @@ import subprocess
 from .cli_commands import echo_error
 
 
-def kill_photos():
+def kill_photos() -> bool:
     """Run 'killall Photos' when Photos generates too many errors in response
     to operations like Import.
     """

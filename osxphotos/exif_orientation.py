@@ -20,7 +20,7 @@ __all__ = ["check_exif_orientation", "fix_exif_orientation"]
 
 def check_exif_orientation(
     orientation: int,
-    src: str | os.PathLike,
+    src: str | os.PathLike[str],
     exiftool_path: str | None = None,
     exiftool_flags: list[str] | None = None,
 ) -> tuple[bool, int | None]:
@@ -50,7 +50,7 @@ def check_exif_orientation(
 
 
 def fix_exif_orientation(
-    photo: PhotoInfo, src: str | os.PathLike, options: ExportOptions
+    photo: PhotoInfo, src: str | os.PathLike[str], options: ExportOptions
 ) -> tuple[bool, str]:
     """Fix orientation of photo using exiftool to match the orientation in the photo info
 

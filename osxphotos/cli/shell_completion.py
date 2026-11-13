@@ -21,7 +21,7 @@ from .common import get_data_dir
     type=click.Choice(["bash", "zsh", "fish"], case_sensitive=False),
     required=False,
 )
-def install_shell_completion(shell: str | None):
+def install_shell_completion(shell: str | None) -> None:
     """Install shell completion for osxphotos.
 
     Installs tab completion for your shell. Supports bash, zsh, and fish.

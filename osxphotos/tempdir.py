@@ -9,7 +9,7 @@ _TEMPDIR = tempfile.TemporaryDirectory(prefix="osxphotos_")
 TEMPDIR = pathlib.Path(_TEMPDIR.name)
 
 
-def tempdir(subdir: str | None = None):
+def tempdir(subdir: str | None = None) -> pathlib.Path:
     """Return path to temporary directory that exists for the duration of the osxphotos session
 
     Args:
@@ -25,6 +25,6 @@ def tempdir(subdir: str | None = None):
         return TEMPDIR
 
 
-def cleanup():
+def cleanup() -> None:
     """Cleanup temporary directory"""
     _TEMPDIR.cleanup()

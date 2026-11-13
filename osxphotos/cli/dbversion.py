@@ -2,6 +2,7 @@
 
 import os
 import sqlite3
+from typing import Any
 
 import click
 
@@ -13,7 +14,7 @@ from osxphotos.photosdb.photosdb_utils import (
 )
 
 
-def get_schema_sql(db_path: str | os.PathLike):
+def get_schema_sql(db_path: str | os.PathLike[str]) -> dict[str, dict[str, Any]]:
     """Retrieve CREATE statements for all objects."""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -41,7 +42,9 @@ def get_schema_sql(db_path: str | os.PathLike):
     is_flag=True,
     help="Print SQL schema for the database instead of printing version info.",
 )
-def dbversion(ctx, cli_obj, library_path, schema):
+def dbversion(
+    ctx: click.Context, cli_obj: object, library_path: str, schema: bool
+) -> None:
     """Print version info for a Photos library"""
     try:
         db_path = get_db_path_for_library(library_path)
@@ -51,7 +54,7 @@ def dbversion(ctx, cli_obj, library_path, schema):
             if photos_db_path.is_file():
                 db_path = photos_db_path
         photos_version = get_photos_library_version(db_path)
-        model_version = get_model_version(db_path)
+        model_version = get_model_version(str(db_path))
     except Exception as e:
         click.echo(f"Error reading Photos version: {e}", err=True)
         raise click.Abort() from e

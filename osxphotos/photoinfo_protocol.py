@@ -293,7 +293,7 @@ class PhotoInfoProtocol(Protocol):
         self, template_str: str, options: RenderOptions | None = None
     ) -> tuple[list[str], list[str]]: ...
 
-    def export(self, dest: str, **kwargs) -> list[str]: ...
+    def export(self, dest: str, **kwargs: Any) -> list[str]: ...
 
     def asdict(self, shallow: bool = True) -> dict[str, Any]: ...
 
@@ -310,7 +310,7 @@ class PhotoInfoProtocol(Protocol):
 
 
 class PhotoInfoMixin:
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         if name in [
             "render_template",
             "export",

@@ -37,9 +37,9 @@ def _network_via_nsurl(path: pathlib.Path) -> bool | None:
     if not is_macos:
         return None
 
-    import Foundation  # type: ignore
-    import objc  # type: ignore
-    from Foundation import NSURL  # type: ignore
+    import Foundation
+    import objc
+    from Foundation import NSURL
 
     try:
         with objc.autorelease_pool():
@@ -123,7 +123,7 @@ def _is_path_on_network_volume_cached(path_str: str) -> bool:
     return False
 
 
-def is_path_on_network_volume(path: str | os.PathLike | pathlib.Path) -> bool:
+def is_path_on_network_volume(path: str | os.PathLike[str] | pathlib.Path) -> bool:
     """Return True if path is on a network/NAS volume, else False.
 
     Uses macOS NSURL volume resource keys via pyobjc when available. Falls back to

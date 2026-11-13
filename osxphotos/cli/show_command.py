@@ -26,7 +26,7 @@ from .cli_params import DB_OPTION
 @DB_OPTION
 @click.argument("uuid_or_name", metavar="UUID_OR_NAME", nargs=1, required=True)
 @click.pass_context
-def show(ctx, db, uuid_or_name):
+def show(ctx: click.Context, db: str | None, uuid_or_name: str) -> None:
     """Show photo, album, or folder in Photos from UUID_OR_NAME
 
     Examples:

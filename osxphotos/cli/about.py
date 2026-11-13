@@ -300,7 +300,7 @@ xdg (Copyright 2016-2021 Scott Stevenson <scott@stevenson.io>)
 @click.command(name="about")
 @click.pass_obj
 @click.pass_context
-def about(ctx, cli_obj):
+def about(ctx: click.Context, cli_obj: object) -> None:
     """Print information about osxphotos including license."""
     click.echo_via_pager(
         f"osxphotos, version {__version__}\n\n"

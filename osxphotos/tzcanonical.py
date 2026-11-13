@@ -424,13 +424,15 @@ def _canonical_timezone_cached(
             return matched[0]
 
     if token:
-        cand = candidates_by_abbrev_and_offset(naive_dt, offset_seconds_from_gmt, token)
-        if len(cand) == 1:
-            return cand[0]
-        if len(cand) > 1:
+        cands = candidates_by_abbrev_and_offset(
+            naive_dt, offset_seconds_from_gmt, token
+        )
+        if len(cands) == 1:
+            return cands[0]
+        if len(cands) > 1:
             if require_unique:
                 return None
-            return _rank_preferred(cand)[0]
+            return _rank_preferred(cands)[0]
 
     # Last resort: search all timezones (expensive even with caching)
     # Use cached set to avoid filesystem scan

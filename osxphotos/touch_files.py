@@ -6,6 +6,7 @@ import os
 from typing import TYPE_CHECKING
 
 from .exportoptions import ExportOptions, ExportResults
+from .fileutil import FileUtil
 
 if TYPE_CHECKING:
     from .photoinfo import PhotoInfo
@@ -29,7 +30,7 @@ def touch_files(
     Note:
         Does not touch files if options.dry_run is True
     """
-    fileutil = options.fileutil
+    fileutil = options.fileutil or FileUtil
     stat_cache = options.stat_cache
     touch_results = []
     for touch_file in set(touch_files):

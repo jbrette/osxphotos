@@ -280,7 +280,7 @@ def get_last_library_path() -> str | None:
         return None
 
 
-def list_photo_libraries():
+def list_photo_libraries() -> list[str]:
     """returns list of Photos libraries found on the system"""
     """ on MacOS < 10.15, this may omit some libraries """
     if not is_macos:

@@ -11,6 +11,7 @@ import os.path
 import pathlib
 import sqlite3
 import tempfile
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 from unicodedata import normalize
@@ -80,6 +81,9 @@ class PhotosDBReadError(Exception):
 class PhotosDB:
     """Processes a Photos.app library database to extract information about photos"""
 
+    # set by the _process_* mixin methods imported below
+    _db_scoreinfo_uuid: dict[str, dict[str, Any]]
+
     # import additional methods
     from ._photosdb_process_comments import _process_comments
     from ._photosdb_process_exif import _process_exifinfo
@@ -97,13 +101,13 @@ class PhotosDB:
 
     def __init__(
         self,
-        dbfile=None,
-        verbose=None,
-        exiftool=None,
-        rich=None,
-        library_path=None,
-        _skip_searchinfo=False,
-    ):
+        dbfile: str | os.PathLike[str] | None = None,
+        verbose: Callable[..., Any] | None = None,
+        exiftool: str | None = None,
+        rich: bool | None = None,
+        library_path: str | os.PathLike[str] | None = None,
+        _skip_searchinfo: bool = False,
+    ) -> None:
         """Create a new PhotosDB object.
 
         Args:

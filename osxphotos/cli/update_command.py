@@ -9,6 +9,6 @@ from .selfupdate import update
 
 
 @click.command(name="update")
-def update_command():
+def update_command() -> None:
     """Update the installation to the latest version."""
     update(APP_NAME, __version__, APP_NAME)

@@ -35,7 +35,7 @@ class PushResults:
 
     def __init__(
         self,
-    ):
+    ) -> None:
         """PushResults data class to hold results of push-exif.
 
         See class docstring for details.
@@ -55,7 +55,7 @@ class PushResults:
         """Return datetime when ExportResults was created"""
         return self._datetime
 
-    def __iadd__(self, other) -> Self:
+    def __iadd__(self, other: object) -> Self:
         if type(other) is not PushResults:
             raise TypeError("Can only add PushResults to PushResults")
 

@@ -3,7 +3,7 @@
 from collections.abc import Callable
 
 
-def add_rich_markup_tag(tag: str, rich=True) -> Callable:
+def add_rich_markup_tag(tag: str, rich: bool = True) -> Callable[[str], str]:
     """Returns function that rich markup tags to string"""
 
     if not rich:

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import urllib.request
 from collections.abc import Iterable
+from typing import cast
 
 from packaging.version import parse as version_parse
 from uv import find_uv_bin
@@ -92,6 +93,6 @@ def get_latest_version(package_name: str) -> str:
         ssl_context = ssl._create_unverified_context()
         response = urllib.request.urlopen(url, context=ssl_context)
         data = json.load(response)
-        return data["info"]["version"]
+        return cast(str, data["info"]["version"])
     except Exception as e:
         raise ValueError(f"Error retrieving version for {package_name}: {e}") from e

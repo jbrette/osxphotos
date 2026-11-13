@@ -71,7 +71,7 @@ def install_crash_reporter(command: click.Command) -> click.Command:
     return command
 
 
-def get_photos_db(*db_options):
+def get_photos_db(*db_options: str | None) -> str | None:
     """Return path to photos db, select first non-None db_options
     If no db_options are non-None, try to find library to use in
     the following order:

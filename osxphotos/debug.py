@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime
+from typing import Any
 
 import wrapt
 from rich import print
@@ -38,7 +40,7 @@ def set_debug(debug: bool):
         logger.setLevel(logging.WARNING)
 
 
-def is_debug():
+def is_debug() -> bool:
     """return debug flag"""
     return __osxphotos_debug
 
@@ -64,7 +66,7 @@ def debug_breakpoint(wrapped, instance, args, kwargs):
     return wrapped(*args, **kwargs)
 
 
-def wrap_function(function_path, wrapper):
+def wrap_function(function_path: str, wrapper: Callable[..., Any]) -> Any:
     """Wrap a function with wrapper function"""
     module, name = function_path.split("::", 1)
     try:

@@ -260,12 +260,12 @@ class ExifTool:
 
     def __init__(
         self,
-        filepath,
-        exiftool=None,
-        overwrite=True,
-        flags=None,
-        large_file_support=True,
-    ):
+        filepath: str | os.PathLike[str],
+        exiftool: str | None = None,
+        overwrite: bool = True,
+        flags: list[str] | None = None,
+        large_file_support: bool = True,
+    ) -> None:
         """Create ExifTool object
 
         Args:
@@ -455,7 +455,9 @@ class ExifTool:
         ver, _, _ = self.run_commands("-ver", no_file=True)
         return ver.decode("utf-8")
 
-    def asdict(self, tag_groups=True, normalized=False):
+    def asdict(
+        self, tag_groups: bool = True, normalized: bool = False
+    ) -> dict[str, Any]:
         """return dictionary of all EXIF tags and values from exiftool
         returns empty dict if no tags
 
@@ -562,7 +564,9 @@ class _ExifToolCaching(ExifTool):
             self._json_cache = super().json()
         return self._json_cache
 
-    def asdict(self, tag_groups=True, normalized=False):
+    def asdict(
+        self, tag_groups: bool = True, normalized: bool = False
+    ) -> dict[str, Any]:
         """return dictionary of all EXIF tags and values from exiftool
         returns empty dict if no tags
 

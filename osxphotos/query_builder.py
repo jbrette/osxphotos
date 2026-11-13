@@ -3,6 +3,7 @@
 import os.path
 import pathlib
 from functools import cache
+from typing import Any, cast
 
 from mako.template import Template
 
@@ -13,19 +14,20 @@ __all__ = ["get_query"]
 QUERY_DIR = os.path.join(os.path.dirname(__file__), "queries")
 
 
-def get_query(query_name, photos_ver, **kwargs):
+def get_query(query_name: str, photos_ver: int, **kwargs: Any) -> str:
     """Return sqlite query string for an attribute and a given database version"""
 
     # there can be a single query for multiple database versions or separate queries for each version
     # try generic version first (most common case), if that fails, look for version specific query
     query_string = _get_query_string(query_name, photos_ver)
-    asset_table = _DB_TABLE_NAMES[photos_ver]["ASSET"]
+    table_names = cast(dict[int, dict[str, str]], _DB_TABLE_NAMES)
+    asset_table = table_names[photos_ver]["ASSET"]
     query_template = Template(query_string)
-    return query_template.render(asset_table=asset_table, **kwargs)
+    return cast(str, query_template.render(asset_table=asset_table, **kwargs))
 
 
 @cache
-def _get_query_string(query_name, photos_ver):
+def _get_query_string(query_name: str, photos_ver: int) -> str:
     """Return sqlite query string for an attribute and a given database version"""
     query_file = pathlib.Path(QUERY_DIR) / f"{query_name}.sql.mako"
     if not query_file.is_file():

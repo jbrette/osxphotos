@@ -13,11 +13,11 @@ from .common import get_data_dir
 __all__ = ["kvstore"]
 
 # Store open connections
-__kvstores = []
+__kvstores: list[SQLiteKVStore] = []
 
 
 @atexit.register
-def close_kvstore():
+def close_kvstore() -> None:
     """Close any open SQLiteKVStore databases"""
     for kv in __kvstores:
         with contextlib.suppress(Exception):

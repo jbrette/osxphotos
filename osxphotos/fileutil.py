@@ -473,7 +473,7 @@ class FileUtilABC(ABC):
 
     @classmethod
     @abstractmethod
-    def utime(cls, path, times):
+    def utime(cls, path: str | os.PathLike[str], times: tuple[int, int]) -> None:
         pass
 
     @classmethod
@@ -599,7 +599,7 @@ class FileUtilMacOS(FileUtilABC):
             os.makedirs(dirpath, mode=mode, exist_ok=exist_ok)
 
     @classmethod
-    def utime(cls, path, times):
+    def utime(cls, path: str | os.PathLike[str], times: tuple[int, int]) -> None:
         """Set the access and modified time of path."""
         path = normalize_fs_path(path)
         utime_macos(path, times)
@@ -785,7 +785,7 @@ class FileUtilShUtil(FileUtilMacOS):
         return True
 
     @classmethod
-    def utime(cls, path, times):
+    def utime(cls, path: str | os.PathLike[str], times: tuple[int, int]) -> None:
         """Set the access and modified time of path."""
         path = normalize_fs_path(path)
         if is_macos:
@@ -838,7 +838,7 @@ class FileUtilNoOp(FileUtil):
         pass
 
     @classmethod
-    def utime(cls, path, times):
+    def utime(cls, path: str | os.PathLike[str], times: tuple[int, int]) -> None:
         pass
 
     @classmethod

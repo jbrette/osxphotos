@@ -7,6 +7,7 @@ import logging
 from ._constants import AlbumSortOrder
 from ._version import __version__
 from .albuminfo import AlbumInfo, FolderInfo, ImportInfo, ProjectInfo
+from .commentinfo import CommentInfo, LikeInfo
 from .debug import is_debug, set_debug
 from .exifinfo import ExifInfo
 from .exiftool import ExifTool
@@ -28,7 +29,6 @@ from .photoexporter import PhotoExporter
 from .photoinfo import PhotoInfo
 from .photoquery import QueryOptions
 from .photosdb import PhotosDB
-from .photosdb._photosdb_process_comments import CommentInfo, LikeInfo
 from .phototables import PhotoTables
 from .phototemplate import PhotoTemplate
 from .placeinfo import PlaceInfo

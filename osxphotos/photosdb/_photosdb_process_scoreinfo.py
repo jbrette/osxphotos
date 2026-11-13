@@ -2,8 +2,15 @@
 ref: https://simonwillison.net/2020/May/21/dogsheep-photos/
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
+
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_4_VERSION
 from ..sqlite_utils import sqlite_open_ro
+
+if TYPE_CHECKING:
+    from .photosdb import PhotosDB
 
 """
     This module should be imported in the class defintion of PhotosDB in photosdb.py
@@ -18,12 +25,13 @@ from ..sqlite_utils import sqlite_open_ro
 """
 
 
-def _process_scoreinfo(self):
+def _process_scoreinfo(self: PhotosDB) -> None:
     """Process computed photo scores
     Note: Only works on Photos version == 5.0
     """
 
     # _db_scoreinfo_uuid is dict in form {uuid: {score values}}
+    # attribute is added to PhotosDB by this mixin and not declared on the class
     self._db_scoreinfo_uuid = {}
 
     if self._db_version <= _PHOTOS_4_VERSION:
@@ -34,7 +42,7 @@ def _process_scoreinfo(self):
         _process_scoreinfo_5(self)
 
 
-def _process_scoreinfo_5(photosdb):
+def _process_scoreinfo_5(photosdb: PhotosDB) -> None:
     """Process computed photo scores for Photos 5 databases
 
     Args:
@@ -43,7 +51,7 @@ def _process_scoreinfo_5(photosdb):
 
     db = photosdb._tmp_db
 
-    asset_table = _DB_TABLE_NAMES[photosdb._photos_ver]["ASSET"]
+    asset_table = cast("dict[str, str]", _DB_TABLE_NAMES[photosdb._photos_ver])["ASSET"]
 
     (conn, cursor) = sqlite_open_ro(db)
 
@@ -95,6 +103,9 @@ def _process_scoreinfo_5(photosdb):
     JOIN ZCOMPUTEDASSETATTRIBUTES ON ZCOMPUTEDASSETATTRIBUTES.ZASSET = {asset_table}.Z_PK
     """
 
+    # attribute set by _process_scoreinfo, not declared on PhotosDB
+    db_scoreinfo_uuid: dict[str, dict[str, Any]] = photosdb._db_scoreinfo_uuid
+
     result = cursor.execute(sql_query)
 
     # 0     ZGENERICASSET.ZUUID,
@@ -128,7 +139,7 @@ def _process_scoreinfo_5(photosdb):
 
     for row in result:
         uuid = row[0]
-        scores = {"uuid": uuid}
+        scores: dict[str, Any] = {"uuid": uuid}
         scores["overall_aesthetic"] = row[1]
         scores["curation"] = row[2]
         scores["promotion"] = row[3]
@@ -156,6 +167,6 @@ def _process_scoreinfo_5(photosdb):
         scores["well_chosen_subject"] = row[25]
         scores["well_framed_subject"] = row[26]
         scores["well_timed_shot"] = row[27]
-        photosdb._db_scoreinfo_uuid[uuid] = scores
+        db_scoreinfo_uuid[uuid] = scores
 
     conn.close()

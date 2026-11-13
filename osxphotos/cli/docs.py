@@ -4,6 +4,7 @@ import pathlib
 import shutil
 import zipfile
 from contextlib import suppress
+from typing import Any
 
 import click
 
@@ -15,7 +16,7 @@ from .common import get_config_dir, get_data_dir
 @click.command(name="docs")
 @click.pass_obj
 @click.pass_context
-def docs_command(ctx, cli_obj):
+def docs_command(ctx: click.Context, cli_obj: Any) -> None:
     """Open osxphotos documentation in your browser."""
 
     # first check if docs installed in old location in confir dir and if so, delete them
@@ -51,7 +52,7 @@ def get_docs_version(docs_dir: pathlib.Path) -> str | None:
         return f.read().strip()
 
 
-def copy_docs():
+def copy_docs() -> None:
     """Copy the latest docs to the config directory"""
     # there must be a better way to do this
     # docs are in osxphotos/docs and this file is in osxphotos/cli
@@ -63,7 +64,7 @@ def copy_docs():
     set_docs_version(data_dir / "docs", __version__)
 
 
-def set_docs_version(docs_dir: pathlib.Path, version: str):
+def set_docs_version(docs_dir: pathlib.Path, version: str) -> None:
     """Set the version of the docs directory"""
     if not docs_dir.exists():
         docs_dir.mkdir(parents=True)

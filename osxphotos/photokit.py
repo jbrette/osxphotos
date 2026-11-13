@@ -112,7 +112,7 @@ def path_to_NSURL(path):
     return url
 
 
-def check_photokit_authorization():
+def check_photokit_authorization() -> bool:
     """Check authorization to use user's Photos Library
 
     Returns:
@@ -123,7 +123,7 @@ def check_photokit_authorization():
     return auth_status == Photos.PHAuthorizationStatusAuthorized
 
 
-def request_photokit_authorization():
+def request_photokit_authorization() -> int:
     """Request authorization to user's Photos Library
 
     Returns:

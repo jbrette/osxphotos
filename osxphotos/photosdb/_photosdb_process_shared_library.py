@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_SHARED_LIBRARY_VERSION
 from ..sqlite_utils import sqlite_open_ro
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("osxphotos")
 
 
-def _process_shared_library_info(self: PhotosDB):
+def _process_shared_library_info(self: PhotosDB) -> None:
     """Process syndication information"""
 
     if self.photos_version < 7:
@@ -28,7 +28,7 @@ def _process_shared_library_info(self: PhotosDB):
     _process_shared_library_info_8(self)
 
 
-def _process_shared_library_info_8(photosdb: PhotosDB):
+def _process_shared_library_info_8(photosdb: PhotosDB) -> None:
     """Process shared iCloud library info for Photos 8.0 and later
 
     Args:
@@ -36,7 +36,8 @@ def _process_shared_library_info_8(photosdb: PhotosDB):
     """
 
     db = photosdb._tmp_db
-    zasset = _DB_TABLE_NAMES[photosdb._photos_ver]["ASSET"]
+    table_names = cast("dict[str, str | None]", _DB_TABLE_NAMES[photosdb._photos_ver])
+    zasset = table_names["ASSET"]
 
     (_conn, cursor) = sqlite_open_ro(db)
 

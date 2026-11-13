@@ -1,6 +1,7 @@
 """list command for osxphotos CLI"""
 
 import json
+from typing import Any
 
 import click
 
@@ -13,7 +14,7 @@ from .cli_params import JSON_OPTION
 @JSON_OPTION
 @click.pass_obj
 @click.pass_context
-def list_libraries(ctx, cli_obj, json_):
+def list_libraries(ctx: click.Context, cli_obj: Any, json_: bool) -> None:
     """Print list of Photos libraries found on the system."""
 
     # implemented in _list_libraries so it can be called by other CLI functions
@@ -21,7 +22,7 @@ def list_libraries(ctx, cli_obj, json_):
     _list_libraries(json_=json_ or cli_obj.json, error=False)
 
 
-def _list_libraries(json_=False, error=True):
+def _list_libraries(json_: bool = False, error: bool = True) -> None:
     """Print list of Photos libraries found on the system.
     If json_ == True, print output as JSON (default = False)"""
 

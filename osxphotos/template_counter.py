@@ -60,14 +60,14 @@ def get_counter_value(field: str, subfield: str | None, fieldarg: str | None) ->
 
     fieldarg = fieldarg or ""
     args = fieldarg.split(",", 3)
-    start, stop, step = args + [""] * (3 - len(args))
+    start_str, stop_str, step_str = args + [""] * (3 - len(args))
     try:
-        start = int(start) if start != "" else 0
-        stop = int(stop) if stop != "" else 0
-        step = int(step) if step != "" else 1
+        start = int(start_str) if start_str != "" else 0
+        stop = int(stop_str) if stop_str != "" else 0
+        step = int(step_str) if step_str != "" else 1
     except TypeError as e:
         raise ValueError(
-            f"start, stop, step must be integers: {start}, {stop}, {step}"
+            f"start, stop, step must be integers: {start_str}, {stop_str}, {step_str}"
         ) from e
 
     if stop and stop < start:
@@ -102,13 +102,13 @@ def format_str_value(value: Any, format_str: str | None) -> str:
     return format_str.format(value)
 
 
-def reset_all_counters():
+def reset_all_counters() -> None:
     """Reset all counters to 0"""
     global _counter_state
     _counter_state = {}
 
 
-def reset_counter(field: str):
+def reset_counter(field: str) -> None:
     """Reset counter to 0"""
     if field in _counter_state:
         _counter_state[field].count = _counter_state[field].settings.start

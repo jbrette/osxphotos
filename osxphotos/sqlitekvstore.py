@@ -149,7 +149,7 @@ class SQLiteKVStore:
         for key, value in cursor:
             yield key, self._deserialize(value)
 
-    def close(self):
+    def close(self) -> None:
         """Close the database"""
         self.connection().close()
 

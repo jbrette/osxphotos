@@ -6,6 +6,7 @@ import contextlib
 import datetime
 import os
 import pathlib
+from typing import cast
 
 from ._constants import _DB_TABLE_NAMES
 from .fingerprint import fingerprint
@@ -36,7 +37,7 @@ class FingerprintQuery:
         db_path = self.conn.execute("PRAGMA database_list").fetchone()[2]
         self.photos_version = get_photos_version_from_model(db_path)
 
-    def __del__(self):
+    def __del__(self) -> None:
         with contextlib.suppress(Exception):
             self.conn.close()
 
@@ -45,8 +46,9 @@ class FingerprintQuery:
     ) -> list[tuple[str, datetime.datetime, str]]:
         """Return a list of tuples of (uuid, date_added, filename) for all photos matching fingerprint"""
 
-        asset_table = _DB_TABLE_NAMES[self.photos_version]["ASSET"]
-        fingerprint_column = _DB_TABLE_NAMES[self.photos_version]["MASTER_FINGERPRINT"]
+        table_names = cast("dict[str, str]", _DB_TABLE_NAMES[self.photos_version])
+        asset_table = table_names["ASSET"]
+        fingerprint_column = table_names["MASTER_FINGERPRINT"]
 
         sql = f"""
             SELECT
@@ -73,7 +75,8 @@ class FingerprintQuery:
     ) -> list[tuple[str, datetime.datetime, str]]:
         """Return a list of tuples of (uuid, date_added, filename) for all photos matching filename and size"""
 
-        asset_table = _DB_TABLE_NAMES[self.photos_version]["ASSET"]
+        table_names = cast("dict[str, str]", _DB_TABLE_NAMES[self.photos_version])
+        asset_table = table_names["ASSET"]
         sql = f"""
             SELECT
             {asset_table}.ZUUID,
@@ -97,7 +100,7 @@ class FingerprintQuery:
         return results
 
     def possible_duplicates(
-        self, filepath: str | os.PathLike, in_trash: bool = False
+        self, filepath: str | os.PathLike[str], in_trash: bool = False
     ) -> list[tuple[str, datetime.datetime, str]]:
         """Return a list of tuples of (uuid, date_added, filename) for all photos that might be duplicates of filepath
 
