@@ -334,7 +334,7 @@ def test_init2():
 def test_init3():
     # test positional and named argument (raises exception)
 
-    with pytest.raises(Exception):
+    with pytest.raises(TypeError):
         assert osxphotos.PhotosDB(PHOTOS_DB, dbfile=PHOTOS_DB)
 
 
@@ -344,10 +344,10 @@ def test_init4():
     bad_db, bad_db_name = tempfile.mkstemp(suffix=".db", prefix="osxphotos-")
     os.close(bad_db)
 
-    with pytest.raises(Exception):
+    with pytest.raises(sqlite3.OperationalError):
         assert osxphotos.PhotosDB(bad_db_name)
 
-    with pytest.raises(Exception):
+    with pytest.raises(sqlite3.OperationalError):
         assert osxphotos.PhotosDB(dbfile=bad_db_name)
 
     with contextlib.suppress(Exception):
@@ -364,7 +364,7 @@ def test_init5(mocker):
     # because of the layout of photosdb/ need to patch it this way...don't really understand why, but it works
     mocker.patch("osxphotos.photosdb.photosdb.get_last_library_path", new=bad_library)
 
-    with pytest.raises(Exception):
+    with pytest.raises(FileNotFoundError):
         assert osxphotos.PhotosDB()
 
 
