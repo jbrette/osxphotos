@@ -145,21 +145,19 @@ def load_aae_file(filepath: str | os.PathLike) -> dict[str, Any] | None:
 
 def is_apple_photos_aae_file(filepath: str | os.PathLike) -> bool:
     """Return True if filepath is an AAE file containing Apple Photos adjustments; returns False is file contains adjustments for an external editor"""
-    if plist := load_aae_file(filepath):
-        if plist.get("adjustmentFormatIdentifier") in [
-            "com.apple.photo",
-            "com.apple.video",
-        ]:
-            return True
-    return False
+    return bool(
+        (plist := load_aae_file(filepath))
+        and plist.get("adjustmentFormatIdentifier")
+        in ["com.apple.photo", "com.apple.video"]
+    )
 
 
 def is_edited_version_of_file(file1: pathlib.Path, file2: pathlib.Path) -> bool:
     """Return True if file2 appears to be an edited version of file1"""
-    if match := re.match(ORIGINAL_RE, str(file1)):
-        if re.match(
+    return bool(
+        (match := re.match(ORIGINAL_RE, str(file1)))
+        and re.match(
             f"{re.escape(match.group(1))}{match.group(2)}_E{match.group(3)}{re.escape(match.group(4))}",
             str(file2),
-        ):
-            return True
-    return False
+        )
+    )

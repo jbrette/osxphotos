@@ -90,7 +90,7 @@ def _network_via_mount(path: pathlib.Path) -> bool | None:
                 str(mnt_point_path)
             ) > len(best_match[0]):
                 best_match = (str(mnt_point_path), fstype)
-        except Exception:
+        except Exception:  # noqa: S112  (best effort: skip unreadable mount points)
             continue
 
     if not best_match[0]:

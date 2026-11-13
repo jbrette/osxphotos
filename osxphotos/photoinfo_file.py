@@ -92,9 +92,8 @@ class PhotoInfoFromFile:
     @property
     def date(self):
         """Use file creation date and local time zone if not exiftool or sidecar"""
-        if self._metadata.date:
-            if dt := self._metadata.date:
-                return datetime_naive_to_local(dt)
+        if self._metadata.date and (dt := self._metadata.date):
+            return datetime_naive_to_local(dt)
 
         ctime = os.path.getctime(self._path)
         dt = datetime.datetime.fromtimestamp(ctime)

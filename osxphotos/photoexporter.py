@@ -766,10 +766,9 @@ class PhotoExporter:
                 return ShouldUpdate.EXIFTOOL_DIFFERENT
             return False
 
-        if options.force_update:
-            if self.photo.hexdigest != file_record.digest:
-                # metadata in Photos changed, force update
-                return ShouldUpdate.DIGEST_DIFFERENT
+        if options.force_update and self.photo.hexdigest != file_record.digest:
+            # metadata in Photos changed, force update
+            return ShouldUpdate.DIGEST_DIFFERENT
 
         # photo should not be updated
         return False
@@ -824,9 +823,8 @@ class PhotoExporter:
                 return ShouldUpdate.EXIFTOOL_DIFFERENT
             return False
 
-        if options.force_update:
-            if self.photo.hexdigest != file_record.digest:
-                return ShouldUpdate.DIGEST_DIFFERENT
+        if options.force_update and self.photo.hexdigest != file_record.digest:
+            return ShouldUpdate.DIGEST_DIFFERENT
 
         return False
 
@@ -971,11 +969,12 @@ class PhotoExporter:
         # In update mode, check if any missing files actually need updating
         # before downloading from iCloud (#1086)
         # Skip this check in dry_run mode since we want to return predicted filenames
-        if not options.dry_run and dest and (options.update or options.force_update):
-            if not self._needs_download_for_update(staged, dest, options):
-                # No update needed, skip the download
-                staged.update_skipped = True
-                return staged
+        if (
+            not options.dry_run and dest and (options.update or options.force_update)
+        ) and not self._needs_download_for_update(staged, dest, options):
+            # No update needed, skip the download
+            staged.update_skipped = True
+            return staged
 
         missing_options = ExportOptions(
             edited=options.edited,

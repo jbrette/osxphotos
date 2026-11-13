@@ -79,9 +79,9 @@ def get_selected(photosdb: PhotosDB):
         return photosdb.photos(uuid=[p.uuid for p in selected]) if selected else []
     except ScriptError as e:
         # some photos (e.g. shared items) can't be selected and raise ScriptError:
-        # applescript.ScriptError: Photos got an error: Can’t get media item id "34C26DFA-0CEA-4DB7-8FDA-B87789B3209D/L0/001". (-1728) app='Photos' range=16820-16873
+        # applescript.ScriptError: Photos got an error: Can't get media item id "34C26DFA-0CEA-4DB7-8FDA-B87789B3209D/L0/001". (-1728) app='Photos' range=16820-16873
         # In this case, we can parse the UUID from the error (though this only works for a single selected item)
-        if match := re.match(r".*Can’t get media item id \"(.*)\".*", str(e)):
+        if match := re.match(r".*Can’t get media item id \"(.*)\".*", str(e)):  # noqa: RUF001  (Apple's apostrophe)
             uuid = match[1].split("/")[0]
             return photosdb.photos(uuid=[uuid])
     return []

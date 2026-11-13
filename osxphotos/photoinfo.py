@@ -1160,10 +1160,10 @@ class PhotoInfo:
                 return str(path)
             # path didn't exist so try to resolve from the bookmark data
             # this only works on macOS
-            if is_macos:
-                if path := resolve_bookmark_path(bookmark):
-                    if path.exists():
-                        return str(path)
+            if (
+                is_macos and (path := resolve_bookmark_path(bookmark))
+            ) and path.exists():
+                return str(path)
         return None
 
     @cached_property

@@ -36,6 +36,7 @@ from .unicode import normalize_fs_path
 __all__ = [
     "BatchContext",
     "ExportDB",
+    "ExportDBConnectionError",
     "ExportDBInMemory",
     "ExportDBTemp",
 ]
@@ -90,6 +91,10 @@ def unzip_and_unpickle(data: bytes) -> Any:
         unpickled data
     """
     return pickle.loads(gzip.decompress(data))
+
+
+class ExportDBConnectionError(Exception):
+    """Could not get a connection to the export database"""
 
 
 class BatchContext:
@@ -1537,7 +1542,9 @@ class ExportDBInMemory(ExportDB):
             # database doesn't exist so create it in-memory
             src = self._get_db_connection()
             if not src:
-                raise Exception("Error getting connection to in-memory database")
+                raise ExportDBConnectionError(
+                    "Error getting connection to in-memory database"
+                )
             self._create_or_migrate_db_tables(src, version=version)
             self.was_created = True
             self.was_upgraded = ()

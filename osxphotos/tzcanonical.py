@@ -279,7 +279,7 @@ class AbbrevIndex:
                     if zi is None:
                         continue
                     abbr = zi.tzname(dt)
-                except Exception:
+                except Exception:  # noqa: S112  (best effort: skip zones that fail to load)
                     continue
                 if not abbr:
                     continue
@@ -324,7 +324,7 @@ def _filter_by_offset(
 def _rank_preferred(zones: list[str]) -> list[str]:
     if not zones:
         return zones
-    PREFERRED: set[str] = {
+    preferred: set[str] = {
         "America/New_York",
         "America/Chicago",
         "America/Denver",
@@ -358,7 +358,7 @@ def _rank_preferred(zones: list[str]) -> list[str]:
     }
 
     def score(z: str) -> tuple[int, int, str]:
-        is_pref = 0 if z in PREFERRED else 1
+        is_pref = 0 if z in preferred else 1
         is_bad = 1 if z.startswith(("Etc/", "posix/")) else 0
         return (is_pref, is_bad, z)
 

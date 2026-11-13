@@ -1,7 +1,5 @@
 """Test --add-exported-to-album"""
 
-import os
-
 import pytest
 from click.testing import CliRunner
 
@@ -27,11 +25,10 @@ def test_export_add_to_album(addalbum_library):
     from osxphotos.cli import export
 
     runner = CliRunner()
-    os.getcwd()
     with runner.isolated_filesystem():
-        EXPORT_ALBUM = "OSXPhotos Export"
-        SKIP_ALBUM = "OSXPhotos Skipped"
-        MISSING_ALBUM = "OSXPhotos Missing"
+        export_album = "OSXPhotos Export"
+        skip_album = "OSXPhotos Skipped"
+        missing_album = "OSXPhotos Missing"
 
         uuid_opt = [f"--uuid={uuid}" for uuid in UUID_EXPORT]
         uuid_opt += [f"--uuid={uuid}" for uuid in UUID_MISSING]
@@ -42,25 +39,25 @@ def test_export_add_to_album(addalbum_library):
                 ".",
                 "-V",
                 "--add-exported-to-album",
-                EXPORT_ALBUM,
+                export_album,
                 "--add-skipped-to-album",
-                SKIP_ALBUM,
+                skip_album,
                 *uuid_opt,
             ],
         )
         assert result.exit_code == 0
-        assert f"Creating album '{EXPORT_ALBUM}'" in result.output
-        assert f"Creating album '{SKIP_ALBUM}'" in result.output
+        assert f"Creating album '{export_album}'" in result.output
+        assert f"Creating album '{skip_album}'" in result.output
 
         photoslib = photoscript.PhotosLibrary()
-        album = photoslib.album(EXPORT_ALBUM)
+        album = photoslib.album(export_album)
         assert album is not None
 
         assert len(album) == len(UUID_EXPORT)
         got_uuids = [p.uuid for p in album.photos()]
         assert sorted(got_uuids) == sorted(UUID_EXPORT.keys())
 
-        skip_album = photoslib.album(SKIP_ALBUM)
+        skip_album = photoslib.album(skip_album)
         assert skip_album is not None
         assert len(skip_album) == 0
 
@@ -70,32 +67,32 @@ def test_export_add_to_album(addalbum_library):
                 ".",
                 "-V",
                 "--add-exported-to-album",
-                EXPORT_ALBUM,
+                export_album,
                 "--add-skipped-to-album",
-                SKIP_ALBUM,
+                skip_album,
                 "--add-missing-to-album",
-                MISSING_ALBUM,
+                missing_album,
                 "--update",
                 *uuid_opt,
             ],
         )
         assert result.exit_code == 0
-        assert f"Creating album '{EXPORT_ALBUM}'" not in result.output
-        assert f"Creating album '{SKIP_ALBUM}'" not in result.output
-        assert f"Creating album '{MISSING_ALBUM}'" in result.output
+        assert f"Creating album '{export_album}'" not in result.output
+        assert f"Creating album '{skip_album}'" not in result.output
+        assert f"Creating album '{missing_album}'" in result.output
 
         photoslib = photoscript.PhotosLibrary()
-        export_album = photoslib.album(EXPORT_ALBUM)
+        export_album = photoslib.album(export_album)
         assert export_album is not None
         assert len(export_album) == len(UUID_EXPORT)
 
-        skip_album = photoslib.album(SKIP_ALBUM)
+        skip_album = photoslib.album(skip_album)
         assert skip_album is not None
         assert len(skip_album) == len(UUID_EXPORT)
         got_uuids = [p.uuid for p in skip_album.photos()]
         assert sorted(got_uuids) == sorted(UUID_EXPORT.keys())
 
-        missing_album = photoslib.album(MISSING_ALBUM)
+        missing_album = photoslib.album(missing_album)
         assert missing_album is not None
         assert len(missing_album) == len(UUID_MISSING)
         got_uuids = [p.uuid for p in missing_album.photos()]
@@ -107,17 +104,16 @@ def test_query_add_to_album(addalbum_library):
     from osxphotos.cli import query
 
     runner = CliRunner()
-    os.getcwd()
     with runner.isolated_filesystem():
-        QUERY_ALBUM = "OSXPhotos Query"
+        query_album = "OSXPhotos Query"
 
         uuid_opt = [f"--uuid={uuid}" for uuid in UUID_EXPORT]
 
-        result = runner.invoke(query, ["--add-to-album", QUERY_ALBUM, *uuid_opt])
+        result = runner.invoke(query, ["--add-to-album", query_album, *uuid_opt])
         assert result.exit_code == 0
 
         photoslib = photoscript.PhotosLibrary()
-        album = photoslib.album(QUERY_ALBUM)
+        album = photoslib.album(query_album)
         assert album is not None
 
         assert len(album) == len(UUID_EXPORT)
@@ -131,16 +127,15 @@ def test_query_add_to_album_multiple_results(addalbum_library):
     from osxphotos.cli import query
 
     runner = CliRunner()
-    os.getcwd()
     with runner.isolated_filesystem():
-        QUERY_ALBUM = "OSXPhotos Query"
+        query_album = "OSXPhotos Query"
 
         result = runner.invoke(
-            query, ["--add-to-album", QUERY_ALBUM, "--name", QUERY_NAME]
+            query, ["--add-to-album", query_album, "--name", QUERY_NAME]
         )
         assert result.exit_code == 0
 
         photoslib = photoscript.PhotosLibrary()
-        album = photoslib.album(QUERY_ALBUM)
+        album = photoslib.album(query_album)
         assert album is not None
         assert len(album) == QUERY_COUNT

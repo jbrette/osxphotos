@@ -185,9 +185,11 @@ def test_setvalue_context_manager():
     tempfile = os.path.join(tempdir.name, os.path.basename(TEST_FILE_ONE_KEYWORD))
     FileUtil.copy(TEST_FILE_ONE_KEYWORD, tempfile)
 
-    with pytest.raises(NotImplementedError):
-        with osxphotos.exiftool.ExifToolCaching(tempfile) as exif:
-            exif.setvalue("IPTC:Keywords", "test1")
+    with (
+        pytest.raises(NotImplementedError),
+        osxphotos.exiftool.ExifToolCaching(tempfile) as exif,
+    ):
+        exif.setvalue("IPTC:Keywords", "test1")
 
 
 def test_flags():
@@ -202,10 +204,12 @@ def test_flags():
     tempfile = os.path.join(tempdir.name, os.path.basename(TEST_FILE_WARNING))
     FileUtil.copy(TEST_FILE_WARNING, tempfile)
 
-    with pytest.raises(TypeError):
-        # ExifToolCaching doesn't take flags arg
-        with osxphotos.exiftool.ExifToolCaching(tempfile, flags=["-m"]) as exif:
-            exif.setvalue("XMP:Subject", "foo/ba    r")
+    # ExifToolCaching doesn't take flags arg
+    with (
+        pytest.raises(TypeError),
+        osxphotos.exiftool.ExifToolCaching(tempfile, flags=["-m"]) as exif,
+    ):
+        exif.setvalue("XMP:Subject", "foo/ba    r")
 
 
 def test_clear_value():

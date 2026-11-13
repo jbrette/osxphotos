@@ -16,7 +16,12 @@ from wurlitzer import pipes
 
 logger = logging.getLogger("osxphotos")
 
-__all__ = ["detect_text", "make_request_handler"]
+__all__ = ["InvalidResultsTypeError", "detect_text", "make_request_handler"]
+
+
+class InvalidResultsTypeError(TypeError, ValueError):
+    """results is not a list; a ValueError too, for existing callers"""
+
 
 ver, major, minor = get_macos_version()
 if ver == "10" and int(major) < 15:
@@ -78,7 +83,7 @@ def detect_text(img_path: str, orientation: int | None = None) -> list:
 def make_request_handler(results):
     """results: list to store results"""
     if not isinstance(results, list):
-        raise ValueError("results must be a list")
+        raise InvalidResultsTypeError("results must be a list")
 
     def handler(request, error):
         if error:

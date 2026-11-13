@@ -37,20 +37,20 @@ def test_get_uti_for_extension():
 
 def test_get_preferred_uti_extension_no_objc():
     """test get_preferred_uti_extension when running on macOS >= 12"""
-    OLD_VER = osxphotos.uti.OS_VER
+    old_ver = osxphotos.uti.OS_VER
     osxphotos.uti.OS_VER = 12
     for uti in UTI_DICT:
         assert get_preferred_uti_extension(uti) == UTI_DICT[uti]
-    osxphotos.uti.OS_VER = OLD_VER
+    osxphotos.uti.OS_VER = old_ver
 
 
 def test_get_uti_for_extension_no_objc():
     """get get_uti_for_extension when running on macOS >= 12"""
-    OLD_VER = osxphotos.uti.OS_VER
+    old_ver = osxphotos.uti.OS_VER
     osxphotos.uti.OS_VER = 12
     for ext in EXT_DICT:
         assert get_uti_for_extension(ext) == EXT_DICT[ext]
-    osxphotos.uti.OS_VER = OLD_VER
+    osxphotos.uti.OS_VER = old_ver
 
 
 def test_get_uti_for_path():
@@ -70,13 +70,13 @@ def test_get_uti_from_mdls():
 def test_get_uti_not_in_dict():
     """get UTI when objc is not available and it's not in the EXT_UTI_DICT"""
     # monkey patch the EXT_UTI_DICT
-    OLD_VER = osxphotos.uti.OS_VER
+    old_ver = osxphotos.uti.OS_VER
     osxphotos.uti.OS_VER = 12
     osxphotos.uti.EXT_UTI_DICT = {}
     osxphotos.uti.UTI_EXT_DICT = {}
     for ext in EXT_DICT:
         assert get_uti_for_extension(ext) == EXT_DICT[ext]
-    osxphotos.uti.OS_VER = OLD_VER
+    osxphotos.uti.OS_VER = old_ver
 
     # re-initialize the cached dicts
     osxphotos.uti._load_uti_dict()

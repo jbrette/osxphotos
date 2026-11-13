@@ -117,16 +117,14 @@ def get_exif_date_time_offset(
     if dt:
         # make sure we have time
         matched = re.match(r"\d{4}:\d{2}:\d{2}\s(\d{2}:\d{2}:\d{2})", dt)
-        if not matched:
-            if matched := re.match(r"^(\d{4}:\d{2}:\d{2})", dt):
-                # set time to 00:00:00
-                dt = f"{matched.group(1)} 00:00:00"
-                default_time = True
+        if not matched and (matched := re.match(r"^(\d{4}:\d{2}:\d{2})", dt)):
+            # set time to 00:00:00
+            dt = f"{matched.group(1)} 00:00:00"
+            default_time = True
 
-    if offset is not None:
-        # make sure we have offset
-        if not re.match(r"([+-]\d{2}:\d{2})", offset):
-            offset = None
+    # make sure we have offset
+    if offset is not None and not re.match(r"([+-]\d{2}:\d{2})", offset):
+        offset = None
 
     offset_seconds = exif_offset_to_seconds(offset) if offset else None
 

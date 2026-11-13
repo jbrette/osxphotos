@@ -57,7 +57,7 @@ if is_macos:
 
 
 # Click CLI object & context settings
-class CLI_Obj:
+class CLI_Obj:  # noqa: N801  (public name)
     def __init__(self, db=None, json=False, debug=False, group=None):
         self.db = db
         self.json = json

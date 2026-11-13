@@ -583,75 +583,71 @@ class PhotoAsset:
             ValueError if dest is not a valid directory
         """
 
-        with objc.autorelease_pool():
-            with pipes() as (_out, _err):
-                filename = (
-                    pathlib.Path(filename)
-                    if filename
-                    else pathlib.Path(self.original_filename)
-                )
+        with objc.autorelease_pool(), pipes() as (_out, _err):
+            filename = (
+                pathlib.Path(filename)
+                if filename
+                else pathlib.Path(self.original_filename)
+            )
 
-                dest = pathlib.Path(dest)
-                if not dest.is_dir():
-                    raise ValueError("dest must be a valid directory: {dest}")
+            dest = pathlib.Path(dest)
+            if not dest.is_dir():
+                raise ValueError("dest must be a valid directory: {dest}")
 
-                output_file = None
-                if self.isphoto:
-                    # will hold exported image data and needs to be cleaned up at end
-                    imagedata = None
-                    if raw:
-                        # export the raw component
-                        resources = self._resources()
-                        for resource in resources:
-                            if (
-                                resource.type()
-                                == Photos.PHAssetResourceTypeAlternatePhoto
-                            ):
-                                data = self._request_resource_data(resource)
-                                suffix = pathlib.Path(self.raw_filename).suffix
-                                ext = suffix[1:] if suffix else ""
-                                break
-                        else:
-                            raise PhotoKitExportError(
-                                "Could not get image data for RAW photo"
-                            )
+            output_file = None
+            if self.isphoto:
+                # will hold exported image data and needs to be cleaned up at end
+                imagedata = None
+                if raw:
+                    # export the raw component
+                    resources = self._resources()
+                    for resource in resources:
+                        if resource.type() == Photos.PHAssetResourceTypeAlternatePhoto:
+                            data = self._request_resource_data(resource)
+                            suffix = pathlib.Path(self.raw_filename).suffix
+                            ext = suffix[1:] if suffix else ""
+                            break
                     else:
-                        # TODO: if user has selected use RAW as original, this returns the RAW
-                        # can get the jpeg with resource.type() == Photos.PHAssetResourceTypePhoto
-                        imagedata = self._request_image_data(version=version)
-                        if not imagedata.image_data:
-                            raise PhotoKitExportError("Could not get image data")
-                        ext = get_preferred_uti_extension(imagedata.uti)
-                        data = imagedata.image_data
+                        raise PhotoKitExportError(
+                            "Could not get image data for RAW photo"
+                        )
+                else:
+                    # TODO: if user has selected use RAW as original, this returns the RAW
+                    # can get the jpeg with resource.type() == Photos.PHAssetResourceTypePhoto
+                    imagedata = self._request_image_data(version=version)
+                    if not imagedata.image_data:
+                        raise PhotoKitExportError("Could not get image data")
+                    ext = get_preferred_uti_extension(imagedata.uti)
+                    data = imagedata.image_data
 
-                    output_file = dest / f"{filename.stem}.{ext}"
+                output_file = dest / f"{filename.stem}.{ext}"
 
-                    if not overwrite:
-                        output_file = pathlib.Path(increment_filename(output_file))
+                if not overwrite:
+                    output_file = pathlib.Path(increment_filename(output_file))
 
-                    with open(output_file, "wb") as fd:
-                        fd.write(data)
+                with open(output_file, "wb") as fd:
+                    fd.write(data)
 
-                    if imagedata:
-                        del imagedata
-                elif self.ismovie:
-                    videodata = self._request_video_data(version=version)
-                    if videodata.asset is None:
-                        raise PhotoKitExportError("Could not get video for asset")
+                if imagedata:
+                    del imagedata
+            elif self.ismovie:
+                videodata = self._request_video_data(version=version)
+                if videodata.asset is None:
+                    raise PhotoKitExportError("Could not get video for asset")
 
-                    url = videodata.asset.URL()
-                    path = pathlib.Path(NSURL_to_path(url))
-                    if not path.is_file():
-                        raise FileNotFoundError("Could not get path to video file")
-                    ext = path.suffix
-                    output_file = dest / f"{filename.stem}{ext}"
+                url = videodata.asset.URL()
+                path = pathlib.Path(NSURL_to_path(url))
+                if not path.is_file():
+                    raise FileNotFoundError("Could not get path to video file")
+                ext = path.suffix
+                output_file = dest / f"{filename.stem}{ext}"
 
-                    if not overwrite:
-                        output_file = pathlib.Path(increment_filename(output_file))
+                if not overwrite:
+                    output_file = pathlib.Path(increment_filename(output_file))
 
-                    FileUtil.copy(path, output_file)
+                FileUtil.copy(path, output_file)
 
-                return [str(output_file)]
+            return [str(output_file)]
 
     def _request_image_data(self, version=PHOTOS_VERSION_ORIGINAL):
         """Request image data and metadata for self._phasset

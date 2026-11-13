@@ -108,7 +108,6 @@ def test_export_3(photosdb):
     filename = photos[0].filename
     filename2 = pathlib.Path(filename)
     filename2 = f"{filename2.stem} (1){filename2.suffix}"
-    os.path.join(dest, filename)
     expected_dest_2 = os.path.join(dest, filename2)
 
     photos[0].export(dest)[0]
@@ -132,7 +131,6 @@ def test_export_4(photosdb):
     timestamp = time.time()
     filename = f"osxphotos-export-2-test-{timestamp}.jpg"
     filename2 = f"osxphotos-export-2-test-{timestamp} (1).jpg"
-    os.path.join(dest, filename)
     expected_dest_2 = os.path.join(dest, filename2)
 
     photos[0].export(dest, filename)[0]
@@ -191,16 +189,11 @@ def test_export_6(photosdb):
 def test_export_7(photosdb):
     # test file already exists and test increment=False (not default), overwrite=False (default)
     # should raise exception
-    import os
-    import os.path
     import tempfile
 
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
-
-    filename = photos[0].filename
-    os.path.join(dest, filename)
 
     photos[0].export(dest)[0]
     with pytest.raises(Exception) as e:
@@ -223,16 +216,11 @@ def test_export_8(photosdb):
 def test_export_9(photosdb):
     # try to export edited file that's not edited
     # should raise exception
-    import os
-    import os.path
     import tempfile
 
     tempdir = tempfile.TemporaryDirectory(prefix="osxphotos_")
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["no_adjustments"]])
-
-    filename = photos[0].filename
-    os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, edited=True)
@@ -242,8 +230,6 @@ def test_export_9(photosdb):
 def test_export_10(photosdb):
     # try to export edited file that's not edited and name provided
     # should raise exception
-    import os
-    import os.path
     import tempfile
     import time
 
@@ -253,7 +239,6 @@ def test_export_10(photosdb):
 
     timestamp = time.time()
     filename = f"osxphotos-export-test-{timestamp}.jpg"
-    os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, filename, edited=True)[0]
@@ -316,9 +301,6 @@ def test_export_13(photosdb):
         i += 1
 
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
-
-    filename = photos[0].filename
-    os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest)[0]

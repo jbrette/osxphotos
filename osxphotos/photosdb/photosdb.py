@@ -1403,34 +1403,35 @@ class PhotosDB:
 
         for row in c:
             uuid = row[0]
-            if uuid in self._dbphotos:
-                # get info on adjustments (edits)
-                if self._dbphotos[uuid]["adjustmentUuid"] == row[3]:
-                    if (
-                        row[1] != "UNADJUSTEDNONRAW"
-                        and row[1] != "UNADJUSTED"
-                        and row[6] == 2
-                    ):
-                        resource_type = row[7]
-                        # UTI_edited will be set to the appropriate UTI for the edited resource below
-                        # a live photo that's edited will have both a photo and video resource but the photo
-                        # UTI will be used for the edited live photo, see #859
-                        if resource_type == 4:
-                            # photo
-                            if "edit_resource_id_photo" in self._dbphotos[uuid]:
-                                logger.debug(
-                                    f"WARNING: found more than one edit_resource_id_photo for UUID {row[0]},adjustmentUUID {row[1]}, modelID {row[2]}"
-                                )
-                            self._dbphotos[uuid]["edit_resource_id_photo"] = row[2]
-                            self._dbphotos[uuid]["UTI_edited_photo"] = row[4]
-                        elif resource_type == 8:
-                            # video
-                            if "edit_resource_id_video" in self._dbphotos[uuid]:
-                                logger.debug(
-                                    f"WARNING: found more than one edit_resource_id_video for UUID {row[0]},adjustmentUUID {row[1]}, modelID {row[2]}"
-                                )
-                            self._dbphotos[uuid]["edit_resource_id_video"] = row[2]
-                            self._dbphotos[uuid]["UTI_edited_video"] = row[4]
+            # get info on adjustments (edits)
+            if uuid in self._dbphotos and (
+                self._dbphotos[uuid]["adjustmentUuid"] == row[3]
+                and (
+                    row[1] != "UNADJUSTEDNONRAW"
+                    and row[1] != "UNADJUSTED"
+                    and row[6] == 2
+                )
+            ):
+                resource_type = row[7]
+                # UTI_edited will be set to the appropriate UTI for the edited resource below
+                # a live photo that's edited will have both a photo and video resource but the photo
+                # UTI will be used for the edited live photo, see #859
+                if resource_type == 4:
+                    # photo
+                    if "edit_resource_id_photo" in self._dbphotos[uuid]:
+                        logger.debug(
+                            f"WARNING: found more than one edit_resource_id_photo for UUID {row[0]},adjustmentUUID {row[1]}, modelID {row[2]}"
+                        )
+                    self._dbphotos[uuid]["edit_resource_id_photo"] = row[2]
+                    self._dbphotos[uuid]["UTI_edited_photo"] = row[4]
+                elif resource_type == 8:
+                    # video
+                    if "edit_resource_id_video" in self._dbphotos[uuid]:
+                        logger.debug(
+                            f"WARNING: found more than one edit_resource_id_video for UUID {row[0]},adjustmentUUID {row[1]}, modelID {row[2]}"
+                        )
+                    self._dbphotos[uuid]["edit_resource_id_video"] = row[2]
+                    self._dbphotos[uuid]["UTI_edited_video"] = row[4]
 
         # get details on external edits
         c.execute(

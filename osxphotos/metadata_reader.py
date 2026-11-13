@@ -302,7 +302,7 @@ def metadata_from_google_takeout(filepath: str | pathlib.Path) -> MetaData:
             date = datetime.datetime.fromtimestamp(int(timestamp))
             # From datetime.datetime.fromtimestamp docs:
             # Return the local date and time corresponding to the POSIX timestamp, such as is returned by time.time().
-            # If optional argument tz is None or not specified, the timestamp is converted to the platform’s local date and time,
+            # If optional argument tz is None or not specified, the timestamp is converted to the platform's local date and time,
             # and the returned datetime object is naive.
         except ValueError:
             date = None
@@ -495,20 +495,19 @@ def location_from_metadata_dict(
                 longitude = float(metadata.get("XMP:GPSLongitude"))
             except TypeError:
                 longitude = None
-        if latitude is None or longitude is None:
-            # maybe it's a video
-            if (
-                lat_lon := metadata.get("QuickTime:GPSCoordinates")
-                or metadata.get("UserData:GPSCoordinates")
-                or metadata.get("GPSCoordinates")
-            ):
-                lat_lon = lat_lon.split()
-                if len(lat_lon) != 2:
-                    latitude = None
-                    longitude = None
-                else:
-                    latitude = float(lat_lon[0])
-                    longitude = float(lat_lon[1])
+        # maybe it's a video
+        if (latitude is None or longitude is None) and (
+            lat_lon := metadata.get("QuickTime:GPSCoordinates")
+            or metadata.get("UserData:GPSCoordinates")
+            or metadata.get("GPSCoordinates")
+        ):
+            lat_lon = lat_lon.split()
+            if len(lat_lon) != 2:
+                latitude = None
+                longitude = None
+            else:
+                latitude = float(lat_lon[0])
+                longitude = float(lat_lon[1])
     except ValueError:
         # couldn't convert one of the numbers to float
         return None, None

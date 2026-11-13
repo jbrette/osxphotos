@@ -1326,18 +1326,20 @@ class iPhotoPhotoInfo:
     @property
     def event_info(self) -> iPhotoEventInfo | None:
         """Return iPhotoEventInfo object for photo or None if photo is not in an event"""
-        if event := self._db._db_photos[self._uuid].get("roll"):
-            if event_data := self._db._db_folders.get(event):
-                return iPhotoEventInfo(event_data, self._db)
+        if (event := self._db._db_photos[self._uuid].get("roll")) and (
+            event_data := self._db._db_folders.get(event)
+        ):
+            return iPhotoEventInfo(event_data, self._db)
         return None
 
     @property
     def moment_info(self) -> iPhotoMomentInfo | None:
         """Return iPhotoMomentInfo object for photo or None if photo is not in a moment; for iPhoto returns event as moment"""
         # iPhoto doesn't actually have moment so use event
-        if event := self._db._db_photos[self._uuid].get("roll"):
-            if event_data := self._db._db_folders.get(event):
-                return iPhotoMomentInfo(event_data, self._db)
+        if (event := self._db._db_photos[self._uuid].get("roll")) and (
+            event_data := self._db._db_folders.get(event)
+        ):
+            return iPhotoMomentInfo(event_data, self._db)
         return None
 
     @cached_property

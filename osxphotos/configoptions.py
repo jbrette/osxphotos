@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-class ConfigOptionsException(Exception):
+class ConfigOptionsException(Exception):  # noqa: N818  (public name)
     """Invalid combination of options."""
 
     def __init__(self, message):

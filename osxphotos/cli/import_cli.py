@@ -1621,10 +1621,9 @@ def set_photo_metadata(
     photo.description = normalize_unicode(metadata.description)
     keywords = metadata.keywords.copy()
     keywords = normalize_unicode(keywords)
-    if merge_keywords:
-        if old_keywords := normalize_unicode(photo.keywords):
-            keywords.extend(old_keywords)
-            keywords = list(set(keywords))
+    if merge_keywords and (old_keywords := normalize_unicode(photo.keywords)):
+        keywords.extend(old_keywords)
+        keywords = list(set(keywords))
     photo.keywords = keywords
     if metadata.favorite:
         # this will set favorite if True but cannot clear favorite as lack of favorite and not favorite is ambiguous
@@ -1893,10 +1892,11 @@ def set_photo_keywords(
         keywords.extend(kw)
     if keywords:
         keywords = normalize_unicode(keywords)
-        if merge and photo is not None:
-            if old_keywords := normalize_unicode(photo.keywords):
-                keywords.extend(old_keywords)
-                keywords = list(set(keywords))
+        if (merge and photo is not None) and (
+            old_keywords := normalize_unicode(photo.keywords)
+        ):
+            keywords.extend(old_keywords)
+            keywords = list(set(keywords))
         verbose(f"Setting keywords of photo [filename]{filepath.name}[/] to {keywords}")
         if photo and not dry_run:
             photo.keywords = keywords
@@ -3128,19 +3128,20 @@ def import_files(
                 relative_filepath = get_relative_filepath(filepath, relative_to)
 
                 # check if file already imported
-                if resume:
-                    if record := import_db.get(str(filepath)):
-                        if record.imported and not record.error:
-                            # file already imported
-                            verbose(
-                                f"Skipping [filepath]{filepath}[/], already imported on "
-                                f"[time]{record.import_datetime.isoformat()}[/] with "
-                                f"UUID [uuid]{record.uuid}[/]"
-                                f" ({progress.tasks[task].completed + 1 + error_count}/{progress.tasks[task].total})"
-                            )
-                            skipped_count += 1
-                            progress.advance(task)
-                            continue
+                if resume and (
+                    (record := import_db.get(str(filepath)))
+                    and (record.imported and not record.error)
+                ):
+                    # file already imported
+                    verbose(
+                        f"Skipping [filepath]{filepath}[/], already imported on "
+                        f"[time]{record.import_datetime.isoformat()}[/] with "
+                        f"UUID [uuid]{record.uuid}[/]"
+                        f" ({progress.tasks[task].completed + 1 + error_count}/{progress.tasks[task].total})"
+                    )
+                    skipped_count += 1
+                    progress.advance(task)
+                    continue
 
                 verbose(
                     "Importing "
@@ -3495,9 +3496,10 @@ def has_non_apple_aae(filepaths: Iterable[str | os.PathLike]) -> str | None:
             if not isinstance(filepath, pathlib.Path)
             else filepath
         )
-        if filepath.name.lower().endswith(".aae"):
-            if not is_apple_photos_aae_file(filepath):
-                return str(filepath)
+        if filepath.name.lower().endswith(".aae") and not is_apple_photos_aae_file(
+            filepath
+        ):
+            return str(filepath)
     return None
 
 
@@ -3690,18 +3692,19 @@ def rename_edited_group(
             edited_files.append(filepath)
             original_files.remove(filepath)
 
-    if not edited_files:
-        # look for edited file using template
-        if edited_files := edited_suffix_files(
+    # look for edited file using template
+    if not edited_files and (
+        edited_files := edited_suffix_files(
             filepaths,
             edited_suffix,
             relative_filepath,
             exiftool_path,
             sidecar,
             sidecar_filename_template,
-        ):
-            for e in edited_files:
-                original_files.remove(e)
+        )
+    ):
+        for e in edited_files:
+            original_files.remove(e)
 
     if not edited_files:
         return filepaths

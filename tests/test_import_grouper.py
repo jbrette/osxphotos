@@ -79,7 +79,7 @@ def test_group_same_stems():
     )
 
 
-def test_group_edited_E():
+def test_group_edited_e():
     execute_grouping_test(
         (
             ("IMG_1234.JPG", "IMG_1234.aae", "IMG_E1234.JPG"),
@@ -198,7 +198,7 @@ def test_group_edited_suffix_with_increment():
     )
 
 
-def test_group_edited_E_with_increment():
+def test_group_edited_e_with_increment():
     """Test grouping of IMG_E style edited files with increment suffix.
 
     For files using the IMG_E pattern (Apple's native edited format),

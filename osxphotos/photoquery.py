@@ -40,7 +40,7 @@ __all__ = [
 ]
 
 
-class IncompatibleQueryOptions(Exception):
+class IncompatibleQueryOptions(Exception):  # noqa: N818  (public name)
     """Incompatible query options"""
 
 

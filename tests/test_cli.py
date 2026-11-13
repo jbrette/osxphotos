@@ -1298,7 +1298,6 @@ def test_about():
     """Test about"""
 
     runner = CliRunner()
-    os.getcwd()
     result = runner.invoke(about, [])
     assert result.exit_code == 0
     assert "MIT License" in result.output
@@ -7938,7 +7937,6 @@ def test_export_cleanup_keep_leading_slash():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -8114,7 +8112,6 @@ def test_export_cleanup_osxphotos_keep():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -8191,7 +8188,6 @@ def test_export_cleanup_osxphotos_keep_keep():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        os.getcwd()
         result = runner.invoke(
             export, ["--library", os.path.join(cwd, CLI_PHOTOS_DB), ".", "-V"]
         )
@@ -9185,7 +9181,6 @@ def test_export_xattr_template_dry_run():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        os.getcwd()
         for uuid in CLI_FINDER_TAGS:
             result = runner.invoke(
                 export,

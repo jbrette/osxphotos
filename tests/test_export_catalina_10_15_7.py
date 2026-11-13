@@ -207,9 +207,6 @@ def test_export_7(photosdb):
     dest = tempdir.name
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
 
-    filename = photos[0].filename
-    os.path.join(dest, filename)
-
     photos[0].export(dest)[0]
     with pytest.raises(Exception) as e:
         # try to export again with increment = False
@@ -250,7 +247,6 @@ def test_export_10(photosdb):
 
     timestamp = time.time()
     filename = f"osxphotos-export-test-{timestamp}.jpg"
-    os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest, filename, edited=True)
@@ -304,9 +300,6 @@ def test_export_13(photosdb):
         i += 1
 
     photos = photosdb.photos(uuid=[UUID_DICT["export"]])
-
-    filename = photos[0].filename
-    os.path.join(dest, filename)
 
     with pytest.raises(Exception) as e:
         assert photos[0].export(dest)

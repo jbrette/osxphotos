@@ -18,12 +18,12 @@ else:
 
 
 class FakePHAsset:
-    def localIdentifier(self):
+    def localIdentifier(self):  # noqa: N802  (mocks a PhotoKit method)
         return "TEST-ASSET-ID"
 
 
 class FakeImageManager:
-    def requestAVAssetForVideo_options_resultHandler_(self, asset, options, handler):
+    def requestAVAssetForVideo_options_resultHandler_(self, asset, options, handler):  # noqa: N802  (mocks a PhotoKit method)
         self.version = options.version()
         handler(None, None, None)
 

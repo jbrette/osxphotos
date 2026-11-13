@@ -28,7 +28,7 @@ else:
 class FakePHAsset:
     """Stand-in for PHAsset; _request_resource_data only needs localIdentifier()"""
 
-    def localIdentifier(self) -> str:
+    def localIdentifier(self) -> str:  # noqa: N802  (mocks a PhotoKit method)
         return "TEST-ASSET-ID/L0/001"
 
 
@@ -42,7 +42,7 @@ class FakeResourceManager:
         self.thread: threading.Thread | None = None
         self.callback_exception: BaseException | None = None
 
-    def requestDataForAssetResource_options_dataReceivedHandler_completionHandler_(
+    def requestDataForAssetResource_options_dataReceivedHandler_completionHandler_(  # noqa: N802  (mocks a PhotoKit method)
         self, resource, options, data_handler, completion_handler
     ):
         def run():

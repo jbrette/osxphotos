@@ -503,7 +503,7 @@ class SearchCategory:
         }
 
 
-class SearchCategory_Photos8(SearchCategory):
+class SearchCategory_Photos8(SearchCategory):  # noqa: N801  (public name)
     """Search categories for Photos 8"""
 
     # Many of the category values changed in Ventura / Photos 8

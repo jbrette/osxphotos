@@ -24,7 +24,7 @@ def kill_photos():
             return True
         # Exit code 1 usually means "no matching process"
         if "No matching processes" in result.stderr:
-            echo_error("ℹ️  Photos app was not running.")
+            echo_error("ℹ️  Photos app was not running.")  # noqa: RUF001  (info emoji)
             return False
 
         # Unknown issue/error

@@ -59,7 +59,7 @@ class CatchSmartQuotesPath(click.Path):
         except click.exceptions.BadParameter as e:
             # check to see if the error is due to smart quotes (curly quotes created by some apps such as Notes)
             # if so, print a more helpful error message
-            if "“" in str(e) or "”" in str(e) or "‘" in str(e) or "’" in str(e):
+            if "“" in str(e) or "”" in str(e) or "‘" in str(e) or "’" in str(e):  # noqa: RUF001  (smart quotes on purpose)
                 self.fail(
                     f"Path {value} contains smart quotes. Please check the path and try again. "
                     "If you copied this path from an app like Notes or TextEdit, try disabling smart quotes in the app."

@@ -384,17 +384,18 @@ def export_db_migrate_photos_library(
                 )
                 matched += 1
                 continue
-        if signature := photo_signature(photoinfo):
-            if signature in photosdb_signature:
-                new_uuid = photosdb_signature[signature]
-                verbose(
-                    f"[green]Matched by signature[/green]: [uuid]{uuid}[/] -> [uuid]{new_uuid}[/]"
-                )
-                _export_db_update_uuid_info(
-                    conn, uuid, new_uuid, photoinfo, photosdb, dry_run
-                )
-                matched += 1
-                continue
+        if (
+            signature := photo_signature(photoinfo)
+        ) and signature in photosdb_signature:
+            new_uuid = photosdb_signature[signature]
+            verbose(
+                f"[green]Matched by signature[/green]: [uuid]{uuid}[/] -> [uuid]{new_uuid}[/]"
+            )
+            _export_db_update_uuid_info(
+                conn, uuid, new_uuid, photoinfo, photosdb, dry_run
+            )
+            matched += 1
+            continue
         if original_filesize := photoinfo.get("original_filesize", None):
             key = f"{photoinfo['original_filename']}:{original_filesize}"
             if key in photosdb_name_size:
@@ -624,17 +625,18 @@ def export_db_get_photoinfo_for_filepath(
     try:
         # if the filepath is not in the export path, this will eventually fail with a RetryError
         # as get_file_record keeps trying to read the database
-        if file_rec := exportdb.get_file_record(filepath):
-            if info_str := file_rec.photoinfo:
-                try:
-                    info_dict = json.loads(info_str)
-                except Exception as e:
-                    raise ValueError(
-                        f"Error loading PhotoInfo dict from database: {e}"
-                    ) from e
-                return photoinfo_from_dict(
-                    info_dict, exiftool=str(exiftool) if exiftool else None
-                )
+        if (file_rec := exportdb.get_file_record(filepath)) and (
+            info_str := file_rec.photoinfo
+        ):
+            try:
+                info_dict = json.loads(info_str)
+            except Exception as e:
+                raise ValueError(
+                    f"Error loading PhotoInfo dict from database: {e}"
+                ) from e
+            return photoinfo_from_dict(
+                info_dict, exiftool=str(exiftool) if exiftool else None
+            )
     except tenacity.RetryError:
         return None
     return None

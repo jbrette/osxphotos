@@ -11,7 +11,7 @@ from osxphotos.photokit_utils import wait_for_photokit_authorization
 def find_album_via_path(path: str) -> Photos.PHAssetCollection:
     """
     Resolve 'Folder/SubFolder/Album' → PHAssetCollection.
-    Raises ValueError if any component isn’t found.
+    Raises ValueError if any component isn't found.
     """
     parts = [p for p in path.split("/") if p]
     if not parts:
@@ -47,7 +47,7 @@ def find_album_via_path(path: str) -> Photos.PHAssetCollection:
 
 def sort_album_by_size(album_path: str, ascend: bool) -> int:
     """
-    Re‑order *album_path* so the largest asset appears first.
+    Re-order *album_path* so the largest asset appears first.
     Album may be nested inside user folders (e.g. “A/B/C”).
 
     Args:
@@ -97,7 +97,7 @@ def sort_album_by_size(album_path: str, ascend: bool) -> int:
     ok, err = lib.performChangesAndWait_error_(change_block, None)
 
     if not ok:
-        raise RuntimeError(f"Re‑order failed: {err.localizedDescription()}")
+        raise RuntimeError(f"Re-order failed: {err.localizedDescription()}")
     return len(assets)
 
 

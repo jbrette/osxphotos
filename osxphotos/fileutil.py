@@ -301,6 +301,10 @@ class FileDateType(enum.IntFlag):
     ACCESS = 4
 
 
+class InvalidDateTypeError(TypeError, ValueError):
+    """date_type is not a FileDateType; a ValueError too, for existing callers"""
+
+
 __all__ = [
     "FileDateType",
     "FileUtil",
@@ -308,6 +312,7 @@ __all__ = [
     "FileUtilMacOS",
     "FileUtilNoOp",
     "FileUtilShUtil",
+    "InvalidDateTypeError",
     "set_file_dates",
 ]
 
@@ -405,7 +410,7 @@ def set_file_dates(
         )
 
     if not isinstance(date_type, FileDateType):
-        raise ValueError(
+        raise InvalidDateTypeError(
             f"Error: Invalid date_type - must be FileDateType, got {type(date_type)}"
         )
 

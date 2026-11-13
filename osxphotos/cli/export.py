@@ -3230,29 +3230,29 @@ def collect_files_to_keep(
     export_dir = pathlib.Path(export_dir).expanduser()
     export_dir_str = str(export_dir)
 
-    KEEP_RULEs = []
+    keep_rules = []
 
     # parse .osxphotos_keep file if it exists
     keep_file: pathlib.Path = export_dir / ".osxphotos_keep"
     if keep_file.is_file():
         for line in keep_file.read_text().splitlines():
             line = line.rstrip("\r\n")
-            KEEP_RULEs.append(line)
+            keep_rules.append(line)
 
     # parse any patterns passed via --keep
     # do this after the file so negations to the file could be applied via --keep
     for k in keep:
         if k.startswith(export_dir_str):
             # allow full path to be specified for keep (e.g. --keep /path/to/file)
-            KEEP_RULEs.append(k.replace(export_dir_str, ""))
+            keep_rules.append(k.replace(export_dir_str, ""))
         else:
-            KEEP_RULEs.append(k)
+            keep_rules.append(k)
 
-    if not KEEP_RULEs:
+    if not keep_rules:
         return [], []
 
     # have some rules to apply
-    matcher = osxphotos.gitignorefile.parse_pattern_list(KEEP_RULEs, export_dir)
+    matcher = osxphotos.gitignorefile.parse_pattern_list(keep_rules, export_dir)
 
     files_to_keep = []
     dirs_to_keep = []
@@ -3646,12 +3646,13 @@ def run_cleanup_command(
             should_return = False
             photo = PhotoInfoNone()
             # try to reconstitute the PhotoInfo class for this file
-            if uuid := exportdb.get_uuid_for_file(f):
-                if photo_info := exportdb.get_photoinfo_for_uuid(uuid):
-                    with contextlib.suppress(Exception):
-                        photo = photoinfo_from_dict(
-                            json.loads(photo_info), exiftool=exiftool_path
-                        )
+            if (uuid := exportdb.get_uuid_for_file(f)) and (
+                photo_info := exportdb.get_photoinfo_for_uuid(uuid)
+            ):
+                with contextlib.suppress(Exception):
+                    photo = photoinfo_from_dict(
+                        json.loads(photo_info), exiftool=exiftool_path
+                    )
             for command_template in cleanup_command:
                 if should_return:
                     break

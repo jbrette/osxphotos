@@ -305,7 +305,7 @@ LIMITED_QUERY_OPTION_NAMES = [
 ]
 
 
-def LIMITED_QUERY_OPTIONS(
+def LIMITED_QUERY_OPTIONS(  # noqa: N802  (public decorator)
     wrapped=None, *, exclude: list[str] | None = None
 ) -> Callable[..., Any]:
     """Function decorator to add subset of query options to a click command.
@@ -779,7 +779,7 @@ if not is_macos:
     del _QUERY_PARAMETERS_DICT["--selected"]
 
 
-def QUERY_OPTIONS(
+def QUERY_OPTIONS(  # noqa: N802  (public decorator)
     wrapped=None, *, exclude: list[str] | None = None
 ) -> Callable[..., Any]:
     """Function decorator to add query options to a click command.
