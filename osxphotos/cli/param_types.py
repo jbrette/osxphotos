@@ -74,7 +74,7 @@ class DeprecatedPath(click.Path):
 
     name = "DEPRECATED_PATH"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         if "deprecation_warning" in kwargs:
             self.deprecation_warning = kwargs.pop("deprecation_warning")
         else:
@@ -94,7 +94,7 @@ class PathOrStdin(click.Path):
 
     name = "PATH_OR_STDIN"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
     def convert(self, value, param, ctx):

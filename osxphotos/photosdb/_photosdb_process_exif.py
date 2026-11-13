@@ -1,15 +1,21 @@
 """PhotosDB method for processing exif info
 Do not import this module directly"""
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING, Any
 
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_4_VERSION
 from ..sqlite_utils import sqlite_open_ro
 
+if TYPE_CHECKING:
+    from .photosdb import PhotosDB
+
 logger = logging.getLogger("osxphotos")
 
 
-def _process_exifinfo(self):
+def _process_exifinfo(self: PhotosDB) -> None:
     """load the exif data from the database
     this is a PhotosDB method that should be imported in
     the PhotosDB class definition in photosdb.py
@@ -24,14 +30,14 @@ def _process_exifinfo(self):
 # but will get called by _process_exifinfo
 
 
-def _process_exifinfo_4(photosdb):
+def _process_exifinfo_4(photosdb: PhotosDB) -> None:
     """process exif info for Photos <= 4
     photosdb: PhotosDB instance"""
     photosdb._db_exifinfo_uuid = {}
     raise NotImplementedError("search info not implemented for this database version")
 
 
-def _process_exifinfo_5(photosdb):
+def _process_exifinfo_5(photosdb: PhotosDB) -> None:
     """process exif info for Photos >= 5
     photosdb: PhotosDB instance"""
 
@@ -53,7 +59,7 @@ def _process_exifinfo_5(photosdb):
     photosdb._db_exifinfo_uuid = {}
     cols = [c[0] for c in result.description]
     for row in result.fetchall():
-        record = dict(zip(cols, row, strict=True))
+        record: dict[str, Any] = dict(zip(cols, row, strict=True))
         uuid = record["ZUUID"]
         if uuid in photosdb._db_exifinfo_uuid:
             logger.warning(f"duplicate exifinfo record found for uuid {uuid}")

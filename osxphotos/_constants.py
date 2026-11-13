@@ -73,7 +73,7 @@ _PHOTOS_SYNDICATION_MODEL_VERSION = 15323  # 12.0.1
 _PHOTOS_SHARED_LIBRARY_VERSION = 16320  # 13.0
 
 # some table names differ between Photos 5 and later versions
-_DB_TABLE_NAMES = {
+_DB_TABLE_NAMES: dict[float, dict[str, str | None]] = {
     5: {  # macOS 10.15
         "ASSET": "ZGENERICASSET",
         "KEYWORD_JOIN": "Z_1KEYWORDS.Z_37KEYWORDS",

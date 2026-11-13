@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable
+from typing import Any
 
 from photoscript import Photo
 
@@ -35,10 +36,10 @@ class ExifDateTimeUpdater:
     def __init__(
         self,
         library_path: str | None = None,
-        verbose: Callable | None = None,
+        verbose: Callable[..., Any] | None = None,
         exiftool_path: str | None = None,
-        plain=False,
-    ):
+        plain: bool = False,
+    ) -> None:
         self.library_path = library_path
         self.db = PhotosDB(self.library_path)
         self.verbose = verbose or noop
@@ -100,7 +101,7 @@ class ExifDateTimeUpdater:
         # for videos:
         # [QuickTime]     CreateDate                      : 2020:12:11 06:10:10
         # [Keys]          CreationDate                    : 2020:12:10 22:10:10-08:00
-        exif = {}
+        exif: dict[str, str | list[str]] = {}
         if _photo.isphoto:
             exif["EXIF:DateTimeOriginal"] = datetimeoriginal
             exif["EXIF:CreateDate"] = datetimeoriginal

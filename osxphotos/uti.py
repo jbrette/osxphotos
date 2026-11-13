@@ -25,6 +25,7 @@ import pathlib
 import re
 import subprocess
 import tempfile
+from typing import cast
 
 from .platform import get_macos_version, is_macos
 
@@ -514,11 +515,11 @@ afploc,com.apple.afp-internet-location,afploc,None
 """
 
 # load CSV separated uti data into dictionaries with key of extension and UTI
-EXT_UTI_DICT = {}
-UTI_EXT_DICT = {}
+EXT_UTI_DICT: dict[str, str] = {}
+UTI_EXT_DICT: dict[str, str] = {}
 
 
-def _load_uti_dict():
+def _load_uti_dict() -> None:
     """load an initialize the cached UTI and extension dicts"""
     _reader = csv.DictReader(UTI_CSV.split("\n"), delimiter=",")
     for row in _reader:
@@ -534,7 +535,7 @@ OS_VER, OS_MAJOR, _ = (
 )
 
 
-def _get_uti_from_mdls(extension):
+def _get_uti_from_mdls(extension: str) -> str | None:
     """use mdls to get the UTI for a given extension on systems that don't support UTTypeCreatePreferredIdentifierForTag
     Returns: UTI or None if UTI cannot be determined"""
 
@@ -546,7 +547,7 @@ def _get_uti_from_mdls(extension):
 
     try:
         with tempfile.NamedTemporaryFile(suffix="." + extension) as temp:
-            output = subprocess.check_output(
+            lines = subprocess.check_output(
                 [
                     "/usr/bin/mdls",
                     "-name",
@@ -554,7 +555,7 @@ def _get_uti_from_mdls(extension):
                     temp.name,
                 ]
             ).splitlines()
-            output = output[0].decode("UTF-8") if output else None
+            output = lines[0].decode("UTF-8") if lines else None
             if not output:
                 return None
 
@@ -566,14 +567,14 @@ def _get_uti_from_mdls(extension):
         return None
 
 
-def _get_uti_from_ext_dict(ext):
+def _get_uti_from_ext_dict(ext: str) -> str | None:
     try:
         return EXT_UTI_DICT[ext.lower()]
     except KeyError:
         return None
 
 
-def _get_ext_from_uti_dict(uti):
+def _get_ext_from_uti_dict(uti: str) -> str | None:
     try:
         return UTI_EXT_DICT[uti.lower()]
     except KeyError:
@@ -599,7 +600,8 @@ def get_preferred_uti_extension(uti: str) -> str:
                 uti, CoreServices.kUTTagClassFilenameExtension
             )
             if extension:
-                return extension
+                # pyobjc returns an untyped NSString (a str subclass)
+                return cast(str, extension)
 
             # on MacOS 10.12, HEIC files are not supported and UTTypeCopyPreferredTagWithClass will return None for HEIC
             if uti == "public.heic":
@@ -631,7 +633,8 @@ def get_uti_for_extension(extension: str) -> str | None:
                 CoreServices.kUTTagClassFilenameExtension, extension, None
             )
             if uti:
-                return uti
+                # pyobjc returns an untyped NSString (a str subclass)
+                return cast(str, uti)
 
             # on MacOS 10.12, HEIC files are not supported and UTTypeCopyPreferredTagWithClass will return None for HEIC
             if extension.lower() == "heic":
@@ -653,7 +656,7 @@ def get_uti_for_extension(extension: str) -> str | None:
     return None
 
 
-def get_uti_for_path(path: str | pathlib.Path | os.PathLike) -> str | None:
+def get_uti_for_path(path: str | pathlib.Path | os.PathLike[str]) -> str | None:
     """Get UTI for a file at given path or None if UTI cannot be determined"""
     path = path if isinstance(path, pathlib.Path) else pathlib.Path(path)
     return get_uti_for_extension(path.suffix)

@@ -4,10 +4,11 @@ import contextlib
 import os.path
 import sqlite3
 from collections.abc import Callable, Generator, Iterable
-from typing import TypeVar
+from types import TracebackType
+from typing import Any, Self
 
-# keep mypy happy, keys/values can be any type supported by SQLite
-T = TypeVar("T")
+# keys/values can be any type supported by SQLite (or by the serialize function)
+T = Any
 
 __version__ = "0.3.0"
 
@@ -23,7 +24,7 @@ class SQLiteKVStore:
         serialize: Callable[[T], T] | None = None,
         deserialize: Callable[[T], T] | None = None,
         wal: bool = False,
-    ):
+    ) -> None:
         """Opens the database if it exists, otherwise creates it
 
         Args:
@@ -53,7 +54,7 @@ class SQLiteKVStore:
             self._conn.execute("PRAGMA synchronous=NORMAL;")
             self._conn.commit()
 
-    def _create_database(self, dbpath: str):
+    def _create_database(self, dbpath: str) -> sqlite3.Connection:
         """Create the key-value database"""
         conn = sqlite3.connect(dbpath)
         cursor = conn.cursor()
@@ -75,7 +76,7 @@ class SQLiteKVStore:
         """Return connection to underlying sqlite3 database"""
         return self._conn
 
-    def set(self, key: T, value: T):
+    def set(self, key: T, value: T) -> None:
         """Set key:value pair"""
         serialized_value = self._serialize(value)
         conn = self.connection()
@@ -85,7 +86,7 @@ class SQLiteKVStore:
         )
         conn.commit()
 
-    def set_many(self, items: Iterable[tuple[T, T]] | dict[T, T]):
+    def set_many(self, items: Iterable[tuple[T, T]] | dict[T, T]) -> None:
         """Set multiple key:value pairs
 
         Args:
@@ -116,14 +117,14 @@ class SQLiteKVStore:
         except KeyError:
             return default
 
-    def delete(self, key: T):
+    def delete(self, key: T) -> None:
         """Delete key from key-value store"""
         conn = self.connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM data WHERE key = ?;", (key,))
         conn.commit()
 
-    def pop(self, key) -> T | None:
+    def pop(self, key: T) -> T | None:
         """Delete key and return value"""
         value = self[key]
         del self[key]
@@ -165,7 +166,7 @@ class SQLiteKVStore:
         return results[0] if results else ""
 
     @about.setter
-    def about(self, description: str):
+    def about(self, description: str) -> None:
         """Set description of the database"""
         conn = self.connection()
         cursor = conn.cursor()
@@ -183,13 +184,13 @@ class SQLiteKVStore:
         """Return path to the database"""
         return self._dbpath
 
-    def wipe(self):
+    def wipe(self) -> None:
         """Wipe the database"""
         self.connection().execute("DELETE FROM data;")
         self.connection().commit()
         self.vacuum()
 
-    def vacuum(self):
+    def vacuum(self) -> None:
         """Vacuum the database, ref: https://www.sqlite.org/matrix/lang_vacuum.html"""
         self.connection().execute("VACUUM;")
 
@@ -212,17 +213,17 @@ class SQLiteKVStore:
     def __getitem__(self, key: T) -> T:
         return self._get(key)
 
-    def __setitem__(self, key: T, value: T):
+    def __setitem__(self, key: T, value: T) -> None:
         self.set(key, value)
 
-    def __delitem__(self, key: T):
+    def __delitem__(self, key: T) -> None:
         # try to get the key which will raise KeyError if key does not exist
         if key in self:
             self.delete(key)
         else:
             raise KeyError(key)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[T]:
         cursor = self.connection().cursor()
         cursor.execute("SELECT key FROM data;")
         for key in cursor:
@@ -234,18 +235,24 @@ class SQLiteKVStore:
         cursor.execute("SELECT 1 FROM data WHERE key = ?;", (key,))
         return bool(cursor.fetchone())
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
+    ) -> None:
         self.close()
 
-    def __len__(self):
+    def __len__(self) -> int:
         cursor = self.connection().cursor()
         cursor.execute("SELECT COUNT(*) FROM data;")
-        return cursor.fetchone()[0]
+        count: int = cursor.fetchone()[0]
+        return count
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Try to close the database in case it wasn't already closed. Don't count on this!"""
         with contextlib.suppress(Exception):
             self.close()

@@ -1,7 +1,11 @@
 """PhotosDB method for processing comments and likes on shared photos.
 Do not import this module directly"""
 
+from __future__ import annotations
+
 import logging
+import sqlite3
+from typing import TYPE_CHECKING, cast
 
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_4_VERSION
 from ..commentinfo import CommentInfo, LikeInfo
@@ -10,10 +14,15 @@ from ..shareparticipant import PersonNameComponents
 from ..sqlite_utils import sqlite_columns, sqlite_open_ro
 from ..unicode import normalize_unicode
 
+if TYPE_CHECKING:
+    import datetime
+
+    from .photosdb import PhotosDB
+
 logger = logging.getLogger(__name__)
 
 
-def _process_comments(self):
+def _process_comments(self: PhotosDB) -> None:
     """load the comments and likes data from the database
     this is a PhotosDB method that should be imported in
     the PhotosDB class definition in photosdb.py
@@ -28,7 +37,7 @@ def _process_comments(self):
 
 # The following methods do not get imported into PhotosDB
 # but will get called by _process_comments
-def _process_comments_4(photosdb):
+def _process_comments_4(photosdb: PhotosDB) -> None:
     """process comments and likes info for Photos <= 4
     photosdb: PhotosDB instance"""
     raise NotImplementedError(
@@ -36,7 +45,7 @@ def _process_comments_4(photosdb):
     )
 
 
-def _process_comments_5(photosdb):
+def _process_comments_5(photosdb: PhotosDB) -> None:
     """process comments and likes info for Photos >= 5
     photosdb: PhotosDB instance"""
 
@@ -124,7 +133,8 @@ def _process_comments_5(photosdb):
         except KeyError:
             user_name = None
 
-        dt = photos_datetime_local(row[2], True)
+        # with default=True, photos_datetime_local never returns None
+        dt = cast("datetime.datetime", photos_datetime_local(row[2], True))
 
         ismine = bool(row[5])
 
@@ -149,7 +159,9 @@ def _process_comments_5(photosdb):
     conn.close()
 
 
-def _process_share_participant_names(photosdb, conn):
+def _process_share_participant_names(
+    photosdb: PhotosDB, conn: sqlite3.Connection
+) -> None:
     """Add names of share participants to photosdb._db_hashed_person_id
     for any hashed person id not already found"""
     if not {"ZHASHEDPERSONID", "ZNAMECOMPONENTS"}.issubset(

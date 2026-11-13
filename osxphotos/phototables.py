@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any
+from typing import Any, cast
 
 import osxphotos
 
@@ -17,7 +17,7 @@ def get_table_columns(conn: sqlite3.Connection, table_name: str) -> list[str]:
 
 
 class PhotoTables:
-    def __init__(self, photo: osxphotos.PhotoInfo):
+    def __init__(self, photo: osxphotos.PhotoInfo) -> None:
         """Create a PhotoTables object.
 
         Args:
@@ -56,7 +56,7 @@ class PhotoTables:
 
 
 class Table:
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str):
+    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
         """Create a Table object.
 
         Args:
@@ -67,11 +67,12 @@ class Table:
         self.conn, _ = self.db.get_db_connection()
         self.version = version
         self.uuid = uuid
-        self.asset_table = _DB_TABLE_NAMES[self.version]["ASSET"]
-        self.columns = []  # must be set in subclass
+        # "ASSET" is defined (never None) for every Photos version
+        self.asset_table = cast(str, _DB_TABLE_NAMES[self.version]["ASSET"])
+        self.columns: list[str] = []  # must be set in subclass
         self.table_name = ""  # must be set in subclass
 
-    def rows(self) -> list[tuple[Any]]:
+    def rows(self) -> list[tuple[Any, ...]]:
         """Return rows for this photo from the table."""
         # this should be implemented in the subclass
         raise NotImplementedError
@@ -83,12 +84,12 @@ class Table:
             [dict(zip(self.columns, row, strict=False)) for row in rows] if rows else []
         )
 
-    def _get_column(self, column: str):
+    def _get_column(self, column: str) -> tuple[Any, ...]:
         """Get column value for this photo from the table."""
         # this should be implemented in the subclass
         raise NotImplementedError
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Get column value for this photo from the table."""
         if name not in self.__dict__ and name in self.columns:
             return self._get_column(name)
@@ -99,13 +100,13 @@ class Table:
 class AssetTable(Table):
     """ZASSET table."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str):
+    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, self.asset_table)
         self.table_name = self.asset_table
 
-    def rows(self) -> list[Any]:
+    def rows(self) -> list[tuple[Any, ...]]:
         """Return row2 for this photo from the ZASSET table."""
         _conn, cursor = self.db.get_db_connection()
         cursor.execute(
@@ -113,7 +114,7 @@ class AssetTable(Table):
         )
         return result if (result := cursor.fetchall()) else []
 
-    def _get_column(self, column: str) -> tuple[Any]:
+    def _get_column(self, column: str) -> tuple[Any, ...]:
         """Get column value for this photo from the ZASSET table."""
         _conn, cursor = self.db.get_db_connection()
         cursor.execute(
@@ -130,13 +131,13 @@ class AssetTable(Table):
 class AdditionalAttributesTable(Table):
     """ZADDITIONALASSETATTRIBUTES table."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str):
+    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, "ZADDITIONALASSETATTRIBUTES")
         self.table_name = "ZADDITIONALASSETATTRIBUTES"
 
-    def rows(self) -> list[tuple[Any]]:
+    def rows(self) -> list[tuple[Any, ...]]:
         """Return rows for this photo from the ZADDITIONALASSETATTRIBUTES table."""
         _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZADDITIONALASSETATTRIBUTES.*
@@ -147,7 +148,7 @@ class AdditionalAttributesTable(Table):
         cursor.execute(sql, (self.uuid,))
         return result if (result := cursor.fetchall()) else []
 
-    def _get_column(self, column: str) -> tuple[Any]:
+    def _get_column(self, column: str) -> tuple[Any, ...]:
         """Get column value for this photo from the ZADDITIONALASSETATTRIBUTES table."""
         _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZADDITIONALASSETATTRIBUTES.{column}
@@ -166,13 +167,13 @@ class AdditionalAttributesTable(Table):
 class ExtendedAttributesTable(Table):
     """ZEXTENDEDATTRIBUTEStable."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str):
+    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, "ZEXTENDEDATTRIBUTES")
         self.table_name = "ZEXTENDEDATTRIBUTES"
 
-    def rows(self) -> list[tuple[Any]]:
+    def rows(self) -> list[tuple[Any, ...]]:
         """Return rows for this photo from the ZEXTENDEDATTRIBUTES table."""
         _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZEXTENDEDATTRIBUTES.*
@@ -183,7 +184,7 @@ class ExtendedAttributesTable(Table):
         cursor.execute(sql, (self.uuid,))
         return result if (result := cursor.fetchall()) else []
 
-    def _get_column(self, column: str) -> tuple[Any]:
+    def _get_column(self, column: str) -> tuple[Any, ...]:
         """Get column value for this photo from the ZEXTENDEDATTRIBUTES table."""
         _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZEXTENDEDATTRIBUTES.{column}
@@ -202,13 +203,13 @@ class ExtendedAttributesTable(Table):
 class DetectedFaceTable(Table):
     """ZDETECTEDFACE table."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str):
+    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, "ZDETECTEDFACE")
         self.table_name = "ZDETECTEDFACE"
 
-    def rows(self) -> list[tuple[Any]]:
+    def rows(self) -> list[tuple[Any, ...]]:
         """Return rows for this photo from the ZDETECTEDFACE table."""
         _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZDETECTEDFACE.*
@@ -219,7 +220,7 @@ class DetectedFaceTable(Table):
         cursor.execute(sql, (self.uuid,))
         return result if (result := cursor.fetchall()) else []
 
-    def _get_column(self, column: str) -> tuple[Any]:
+    def _get_column(self, column: str) -> tuple[Any, ...]:
         """Get column value for this photo from the ZDETECTEDFACE table."""
         _conn, cursor = self.db.get_db_connection()
         sql = f"""  SELECT ZDETECTEDFACE.{column}
@@ -238,13 +239,13 @@ class DetectedFaceTable(Table):
 class PersonTable(Table):
     """ZPERSON table."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str):
+    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, "ZPERSON")
         self.table_name = "ZPERSON"
 
-    def rows(self) -> list[tuple[Any]]:
+    def rows(self) -> list[tuple[Any, ...]]:
         """Return rows for this photo from the ZPERSON table."""
         _conn, cursor = self.db.get_db_connection()
         person_fk = _DB_TABLE_NAMES[self.version]["DETECTED_FACE_PERSON_FK"]
@@ -258,7 +259,7 @@ class PersonTable(Table):
         cursor.execute(sql, (self.uuid,))
         return result if (result := cursor.fetchall()) else []
 
-    def _get_column(self, column: str) -> tuple[Any]:
+    def _get_column(self, column: str) -> tuple[Any, ...]:
         """Get column value for this photo from the ZPERSON table."""
         _conn, cursor = self.db.get_db_connection()
         person_fk = _DB_TABLE_NAMES[self.version]["DETECTED_FACE_PERSON_FK"]

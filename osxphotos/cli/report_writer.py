@@ -49,11 +49,11 @@ class ReportWriterABC(ABC):
     """Abstract base class for report writers"""
 
     @abstractmethod
-    def write(self, *args, **kwargs):
+    def write(self, *args: Any, **kwargs: Any) -> None:
         """Write results to the output file"""
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         """Close the output file"""
 
 

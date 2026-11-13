@@ -42,7 +42,11 @@ def grep(
     pattern: str,
 ) -> None:
     """Search for PATTERN in the Photos sqlite database file"""
-    db_path = pathlib.Path(db or get_photos_db())
+    photos_db = db or get_photos_db()
+    if photos_db is None:
+        click.secho("Could not find Photos library; use --db", fg="red")
+        ctx.exit(2)
+    db_path = pathlib.Path(photos_db)
     if db_path.is_file():
         # if passed the actual database, really want the parent of the database directory
         db_path = db_path.parent.parent

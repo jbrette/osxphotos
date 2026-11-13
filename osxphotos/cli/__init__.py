@@ -50,8 +50,8 @@ for func_name in args.get("--breakpoint", []):
         print(f"{func_name} does not exist")
         sys.exit(1)
 
-args = get_debug_flags(["--debug"], sys.argv)
-if args.get("--debug", False):
+debug_flags = get_debug_flags(["--debug"], sys.argv)
+if debug_flags.get("--debug", False):
     set_debug(True)
     print("Debugging enabled", file=sys.stderr)
 

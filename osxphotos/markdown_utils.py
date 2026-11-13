@@ -21,9 +21,9 @@ def markdown_to_plaintext(markdown_text: str) -> str:
     html = markdown2.markdown(markdown_text, extras=["fenced-code-blocks"])
     soup = BeautifulSoup(html, "html.parser")
 
-    lines = []
+    lines: list[str] = []
 
-    def add_line(text="", indent=0):
+    def add_line(text: str | None = "", indent: int = 0) -> None:
         if text is not None:
             indented = (" " * indent) + text.strip()
             lines.append(indented)

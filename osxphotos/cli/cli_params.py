@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 
-def validate_selected(ctx, param, value):
+def validate_selected(ctx: click.Context, param: click.Parameter, value: bool) -> bool:
     """ "Validate photos are actually selected when --selected is used"""
 
     if not value:
@@ -105,7 +105,7 @@ def _param_memo(f: Callable[..., Any], param: click.Parameter) -> None:
 def make_click_option_decorator(*params: click.Parameter) -> Callable[..., Any]:
     """Make a decorator for a click option from one or more click Parameter objects"""
 
-    def decorator(wrapped=None) -> Callable[..., Any]:
+    def decorator(wrapped: Callable[..., Any] | None = None) -> Callable[..., Any]:
         """Function decorator to add option to a click command.
 
         Args:
@@ -115,7 +115,7 @@ def make_click_option_decorator(*params: click.Parameter) -> Callable[..., Any]:
         if wrapped is None:
             return decorator
 
-        def _add_options(wrapped):
+        def _add_options(wrapped: Callable[..., Any]) -> Callable[..., Any]:
             """Add query options to wrapped function"""
             for param in params:
                 _param_memo(wrapped, param)
@@ -306,7 +306,7 @@ LIMITED_QUERY_OPTION_NAMES = [
 
 
 def LIMITED_QUERY_OPTIONS(  # noqa: N802  (public decorator)
-    wrapped=None, *, exclude: list[str] | None = None
+    wrapped: Callable[..., Any] | None = None, *, exclude: list[str] | None = None
 ) -> Callable[..., Any]:
     """Function decorator to add subset of query options to a click command.
 
@@ -319,7 +319,7 @@ def LIMITED_QUERY_OPTIONS(  # noqa: N802  (public decorator)
 
     exclude = exclude or []
 
-    def _add_options(wrapped):
+    def _add_options(wrapped: Callable[..., Any]) -> Callable[..., Any]:
         """Add query options to wrapped function"""
         for option in reversed(_LIMITED_QUERY_OPTIONS_DICT.keys()):
             if option in exclude:
@@ -780,7 +780,7 @@ if not is_macos:
 
 
 def QUERY_OPTIONS(  # noqa: N802  (public decorator)
-    wrapped=None, *, exclude: list[str] | None = None
+    wrapped: Callable[..., Any] | None = None, *, exclude: list[str] | None = None
 ) -> Callable[..., Any]:
     """Function decorator to add query options to a click command.
 
@@ -793,7 +793,7 @@ def QUERY_OPTIONS(  # noqa: N802  (public decorator)
 
     exclude = exclude or []
 
-    def _add_options(wrapped):
+    def _add_options(wrapped: Callable[..., Any]) -> Callable[..., Any]:
         """Add query options to wrapped function"""
         for option in reversed(_QUERY_PARAMETERS_DICT.keys()):
             if option in exclude:

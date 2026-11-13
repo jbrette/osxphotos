@@ -32,6 +32,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     from .photoinfo import PhotoInfo
+    from .photoinfo_protocol import PhotoInfoProtocol
 
 logger = logging.getLogger("osxphotos")
 
@@ -433,7 +434,9 @@ class PhotoTemplateParser:
 class PhotoTemplate:
     """PhotoTemplate class to render a template string from a PhotoInfo object"""
 
-    def __init__(self, photo, exiftool_path=None):
+    def __init__(
+        self, photo: PhotoInfoProtocol, exiftool_path: str | None = None
+    ) -> None:
         """Inits PhotoTemplate class with photo
 
         Args:
@@ -472,7 +475,7 @@ class PhotoTemplate:
         self,
         template: str,
         options: RenderOptions,
-    ):
+    ) -> tuple[list[str], list[str]]:
         """Render a filename or directory template
 
         Args:

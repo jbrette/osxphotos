@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
+from typing import Any
 
 import click
 
 from osxphotos.compare_libraries import compare_photos_libraries
+from osxphotos.photoinfo import PhotoInfo
 from osxphotos.photosdb import PhotosDB
 
 from .cli_params import VERBOSE_OPTION
@@ -58,17 +61,17 @@ from .verbose import verbose_print
 @click.argument("library_b", type=click.Path(exists=True))
 @click.pass_context
 def compare(
-    ctx,
-    check,
-    csv_flag,
-    tsv_flag,
-    json_flag,
-    output,
-    signature,
-    verbose_flag,
-    library_a,
-    library_b,
-):
+    ctx: click.Context,
+    check: bool,
+    csv_flag: bool,
+    tsv_flag: bool,
+    json_flag: bool,
+    output: str | None,
+    signature: str | None,
+    verbose_flag: int,
+    library_a: str,
+    library_b: str,
+) -> None:
     """Compare two Photos libraries to find differences"""
 
     _validate_compare_options(ctx)
@@ -85,12 +88,15 @@ def compare(
     verbose("Opening library B")
     db_b = PhotosDB(dbfile=library_b, verbose=verbose)
 
-    _signature = None
+    _signature: Callable[[PhotoInfo], Any] | None = None
     if signature:
+        signature_template = signature
 
-        def _signature(photo):
-            sig, _ = photo.render_template(signature)
+        def _render_signature(photo: PhotoInfo) -> Any:
+            sig, _ = photo.render_template(signature_template)
             return sig[0]
+
+        _signature = _render_signature
 
     diff = compare_photos_libraries(
         db_a, db_b, verbose=verbose, signature_function=_signature
@@ -105,7 +111,7 @@ def compare(
             sys.exit(0)
 
     if not any([csv_flag, tsv_flag, json_flag]):
-        print_output(diff, output)
+        print_output(str(diff), output)
         sys.exit(0)
 
     if csv_flag:
@@ -116,7 +122,7 @@ def compare(
         print_output(diff.json(), output)
 
 
-def print_output(message: str, file: str | None):
+def print_output(message: str, file: str | None) -> None:
     if file:
         with open(file, "w") as f:
             f.write(message)
@@ -124,14 +130,14 @@ def print_output(message: str, file: str | None):
         print(message, end="")
 
 
-def _validate_compare_options(ctx):
+def _validate_compare_options(ctx: click.Context) -> None:
     if (
         sum(
             [
-                ctx.params.get("check"),
-                ctx.params.get("csv_flag"),
-                ctx.params.get("tsv_flag"),
-                ctx.params.get("json_flag"),
+                bool(ctx.params.get("check")),
+                bool(ctx.params.get("csv_flag")),
+                bool(ctx.params.get("tsv_flag")),
+                bool(ctx.params.get("json_flag")),
             ]
         )
         > 1

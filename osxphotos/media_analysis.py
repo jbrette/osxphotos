@@ -38,7 +38,7 @@ UNKNOWN_KEY = "unknown"
 
 
 @cache
-def _get_media_analysis_path(photosdb_path: str | os.PathLike) -> pathlib.Path:
+def _get_media_analysis_path(photosdb_path: str | os.PathLike[str]) -> pathlib.Path:
     """Get path to media analysis database for a photo"""
     # media analysis is in private/com.apple.mediaanalysisd/MediaAnalysis
     # media analysis database is called MediaAnalysis.sqlite or mediaanalysis.db
@@ -102,7 +102,9 @@ def _get_typed_caption_results(
     if "ZASSET" not in tables or "ZIMAGECAPTIONRESULT" not in tables:
         return []
 
-    def get_captions(table: str, text_key: str, confidence_key: str) -> list[dict]:
+    def get_captions(
+        table: str, text_key: str, confidence_key: str
+    ) -> list[dict[str, Any]]:
         if table not in tables:
             return []
         sql = f"""
@@ -189,7 +191,7 @@ def get_media_analysis_date(photo: PhotoInfo) -> datetime.datetime | None:
 
 def _get_media_analysis_data(
     photo: PhotoInfo,
-) -> tuple[datetime.datetime | None, list[list[dict]]]:
+) -> tuple[datetime.datetime | None, list[list[dict[str, Any]]]]:
     """Get media analysis data for a photo"""
 
     try:
@@ -252,7 +254,7 @@ def _get_media_analysis_data(
     return analysis_date, results
 
 
-def _get_key_from_attributes(d: dict) -> str:
+def _get_key_from_attributes(d: dict[str, Any]) -> str:
     if "attributes" in d:
         attrs = d["attributes"]
         if "faceBounds" in attrs:
@@ -285,7 +287,9 @@ def _get_key_from_attributes(d: dict) -> str:
     return UNKNOWN_KEY
 
 
-def _parse_bounds(bounds_str):
+def _parse_bounds(
+    bounds_str: str,
+) -> tuple[tuple[float, ...], tuple[float, ...]] | str:
     match = re.match(r"\{\{([^}]+)\}, \{([^}]+)\}\}", bounds_str)
     if match:
         p1 = tuple(float(x.strip()) for x in match.group(1).split(","))
@@ -294,8 +298,8 @@ def _parse_bounds(bounds_str):
     return bounds_str
 
 
-def _process_dict(d):
-    result = {}
+def _process_dict(d: dict[str, Any]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
     if "flags" in d:
         result["flags"] = d["flags"]
     if "attributes" in d:
@@ -311,8 +315,10 @@ def _process_dict(d):
     return result
 
 
-def _media_analysis_result_to_dict(data: list[list[dict]]) -> dict:
-    result = {}
+def _media_analysis_result_to_dict(
+    data: list[list[dict[str, Any]]],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
     for sublist in data:
         if not sublist:
             continue
@@ -325,7 +331,7 @@ def _media_analysis_result_to_dict(data: list[list[dict]]) -> dict:
     return result
 
 
-def _remove_byte_keys(obj):
+def _remove_byte_keys(obj: Any) -> Any:
     if isinstance(obj, dict):
         return {
             k: _remove_byte_keys(v) for k, v in obj.items() if not isinstance(v, bytes)
@@ -337,7 +343,7 @@ def _remove_byte_keys(obj):
 
 
 class BytesEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, bytes):
             return "<bytes>"  # or base64.b64encode(obj).decode('ascii')
         if isinstance(obj, datetime.datetime):

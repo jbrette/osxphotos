@@ -2,6 +2,7 @@
 
 import pprint
 import time
+from typing import Any
 
 import click
 from rich import print
@@ -32,9 +33,19 @@ from .verbose import verbose_print
 @VERBOSE_OPTION
 @TIMESTAMP_OPTION
 @QUERY_OPTIONS
-@click.pass_obj
-@click.pass_context
-def debug_dump(ctx, cli_obj, db, dump, verbose_flag, timestamp, **kwargs):
+# click passes ctx and obj positionally; the named parameters do not match its
+# positional-only Callable signature
+@click.pass_obj  # type: ignore[arg-type]
+@click.pass_context  # type: ignore[arg-type]
+def debug_dump(
+    ctx: click.Context,
+    cli_obj: Any,
+    db: str | None,
+    dump: tuple[str, ...],
+    verbose_flag: int,
+    timestamp: bool,
+    **kwargs: Any,
+) -> None:
     """Print out debug info.
 
     When run with --dump photos, any of the query options can be used to limit the
@@ -101,10 +112,12 @@ def debug_dump(ctx, cli_obj, db, dump, verbose_flag, timestamp, **kwargs):
                     print(p.asdict(shallow=False))
                 except Exception as e:
                     print(f"Error dumping PhotoInfo.asdict(): {e}")
-                print("ZASSET")
-                print(p.tables().ZASSET.rows_dict())
-                print("ZADDITIONALASSETATTRIBUTES")
-                print(p.tables().ZADDITIONALASSETATTRIBUTES.rows_dict())
+                # tables() is None for Photos < 5
+                if (tables := p.tables()) is not None:
+                    print("ZASSET")
+                    print(tables.ZASSET.rows_dict())
+                    print("ZADDITIONALASSETATTRIBUTES")
+                    print(tables.ZADDITIONALASSETATTRIBUTES.rows_dict())
                 print("-" * 40)
         else:
             try:

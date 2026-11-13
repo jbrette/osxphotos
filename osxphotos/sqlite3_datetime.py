@@ -7,51 +7,51 @@ import sqlite3
 # Reference: https://docs.python.org/3/library/sqlite3.html?highlight=sqlite3#sqlite3-adapter-converter-recipes
 
 
-def adapt_date_iso(val):
+def adapt_date_iso(val: datetime.date) -> str:
     """Adapt datetime.date to ISO 8601 date."""
     return val.isoformat()
 
 
-def adapt_datetime_iso(val):
+def adapt_datetime_iso(val: datetime.datetime) -> str:
     """Adapt datetime.datetime to timezone-naive ISO 8601 date."""
     return val.isoformat()
 
 
-def adapt_datetime_epoch(val):
+def adapt_datetime_epoch(val: datetime.datetime) -> int:
     """Adapt datetime.datetime to Unix timestamp."""
     return int(val.timestamp())
 
 
-def convert_date(val):
+def convert_date(val: bytes) -> datetime.date:
     """Convert ISO 8601 date to datetime.date object."""
     return datetime.date.fromisoformat(val.decode())
 
 
-def convert_datetime(val):
+def convert_datetime(val: bytes) -> datetime.datetime:
     """Convert ISO 8601 datetime to datetime.datetime object."""
     return datetime.datetime.fromisoformat(val.decode())
 
 
-def convert_timestamp(val):
+def convert_timestamp(val: bytes) -> datetime.datetime:
     """Convert Unix epoch timestamp to datetime.datetime object."""
     return datetime.datetime.fromtimestamp(int(val))
 
 
-def register_adapters():
+def register_adapters() -> None:
     """Register adapters for datetime objects."""
     sqlite3.register_adapter(datetime.date, adapt_date_iso)
     sqlite3.register_adapter(datetime.datetime, adapt_datetime_iso)
     sqlite3.register_adapter(datetime.datetime, adapt_datetime_epoch)
 
 
-def register_converters():
+def register_converters() -> None:
     """Register converters for datetime objects."""
     sqlite3.register_converter("date", convert_date)
     sqlite3.register_converter("datetime", convert_datetime)
     sqlite3.register_converter("timestamp", convert_timestamp)
 
 
-def register():
+def register() -> None:
     """Register adapters and converters for datetime objects."""
     register_adapters()
     register_converters()

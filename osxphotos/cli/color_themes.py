@@ -178,7 +178,7 @@ def get_theme_dir() -> pathlib.Path:
     return theme_dir
 
 
-def _write_theme_file(theme: Theme, path: pathlib.Path):
+def _write_theme_file(theme: Theme, path: pathlib.Path) -> None:
     """Write theme to path atomically so readers never see a partial file"""
     fd, tmp = tempfile.mkstemp(
         dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp"
@@ -193,7 +193,7 @@ def _write_theme_file(theme: Theme, path: pathlib.Path):
         raise
 
 
-def _sync_theme_files(theme_dir: pathlib.Path):
+def _sync_theme_files(theme_dir: pathlib.Path) -> None:
     """Ensure the built-in theme files exist on disk and define every built-in style.
 
     Files are only written when missing, unreadable, or out of date; this keeps
@@ -226,7 +226,7 @@ def get_theme_manager() -> ThemeManager:
 
 def get_theme(
     theme_name: str | None = None,
-):
+) -> Theme:
     """Get theme by name, or default theme if no name is provided"""
 
     if theme_name is None:
@@ -242,7 +242,7 @@ def get_theme(
         ) from e
 
 
-def get_default_theme():
+def get_default_theme() -> Theme:
     """Get the default color theme"""
     theme_manager = get_theme_manager()
     try:

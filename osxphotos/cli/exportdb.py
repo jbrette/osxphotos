@@ -213,41 +213,41 @@ from .verbose import verbose_print
 )
 @click.argument("export_db", metavar="EXPORT_DATABASE", type=click.Path())
 def exportdb(
-    append,
-    check,
-    check_signatures,
-    create,
-    dry_run,
-    export_db,
-    export_dir,
-    info,
-    errors,
-    last_errors,
-    last_export_dir,
-    last_run,
-    migrate_photos_library,
-    repair,
-    report,
-    runs,
-    save_config,
-    sql,
-    theme,
-    timestamp,
-    touch_file,
-    update_signatures,
-    upgrade,
-    missing,
-    uuid_files,
-    uuid_info,
-    uuid,
-    history,
-    delete_uuid,
-    delete_file,
-    vacuum,
-    verbose_flag,
-    version,
-    db,
-):
+    append: bool,
+    check: bool,
+    check_signatures: bool,
+    create: str | None,
+    dry_run: bool,
+    export_db: str | pathlib.Path,
+    export_dir: str | pathlib.Path | None,
+    info: str | None,
+    errors: bool,
+    last_errors: bool,
+    last_export_dir: bool,
+    last_run: bool,
+    migrate_photos_library: str | None,
+    repair: bool,
+    report: tuple[str, int] | None,
+    runs: bool,
+    save_config: str | None,
+    sql: str | None,
+    theme: str | None,
+    timestamp: bool,
+    touch_file: bool,
+    update_signatures: bool,
+    upgrade: bool,
+    missing: bool,
+    uuid_files: str | None,
+    uuid_info: str | None,
+    uuid: str | None,
+    history: str | None,
+    delete_uuid: tuple[str, ...],
+    delete_file: tuple[str, ...],
+    vacuum: bool,
+    verbose_flag: int,
+    version: bool,
+    db: str | None,
+) -> None:
     """Utilities for working with the osxphotos export database"""
     verbose = verbose_print(verbose=verbose_flag, timestamp=timestamp, theme=theme)
 
@@ -310,7 +310,10 @@ def exportdb(
             about_str = export_db_get_about(export_db)
             # find create date by searching for this pattern:
             # on 2024-01-22 05:58:19.171571
-            date_created = re.search(r" on (\d{4}.*)$", about_str).group(1)
+            date_match = re.search(r" on (\d{4}.*)$", about_str)
+            if date_match is None:
+                raise ValueError(f"no creation date in '{about_str}'")
+            date_created = date_match.group(1)
 
         except Exception as e:
             rich_echo_error(
@@ -346,13 +349,13 @@ def exportdb(
             sys.exit(0)
 
     if check:
-        errors = sqlite_check_integrity(export_db)
-        if not errors:
+        integrity_errors = sqlite_check_integrity(export_db)
+        if not integrity_errors:
             rich_echo(f"Ok: [filepath]{export_db}[/]")
             sys.exit(0)
         else:
             rich_echo_error(f"[error]Errors: [filepath]{export_db}[/][/error]")
-            for error in errors:
+            for error in integrity_errors:
                 rich_echo_error(error)
             sys.exit(1)
 
@@ -491,8 +494,8 @@ def exportdb(
             sys.exit(1)
         else:
             if error_list:
-                for error in error_list:
-                    rich_echo(error)
+                for error_msg in error_list:
+                    rich_echo(error_msg)
             else:
                 rich_echo("No errors found")
             sys.exit(0)
@@ -517,14 +520,14 @@ def exportdb(
         # get photoinfo record for a uuid
         exportdb = ExportDB(export_db, export_dir)
         try:
-            info_rec = exportdb.get_photoinfo_for_uuid(uuid_info)
+            photoinfo_rec = exportdb.get_photoinfo_for_uuid(uuid_info)
         except Exception as e:
             rich_echo_error(f"[error]Error: {e}[/error]")
             sys.exit(1)
         else:
-            if info_rec:
+            if photoinfo_rec:
                 # use rich print as rich_echo doesn't highlight json
-                print(json.dumps(json.loads(info_rec), sort_keys=True, indent=2))
+                print(json.dumps(json.loads(photoinfo_rec), sort_keys=True, indent=2))
             else:
                 rich_echo(
                     f"[error]UUID '{uuid_info}' not found in export database[/error]"
@@ -607,7 +610,9 @@ def exportdb(
     if report:
         exportdb = ExportDB(export_db, export_dir)
         report_template, run_id = report
-        report_filename = render_and_validate_report(report_template, "", export_dir)
+        report_filename = render_and_validate_report(
+            report_template, "", str(export_dir)
+        )
         export_results = exportdb.get_export_results(run_id)
         if not export_results:
             rich_echo_error(

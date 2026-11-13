@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from .._constants import _DB_TABLE_NAMES, _PHOTOS_SHARED_LIBRARY_VERSION
 from ..sqlite_utils import sqlite_open_ro
@@ -36,7 +36,7 @@ def _process_shared_library_info_8(photosdb: PhotosDB) -> None:
     """
 
     db = photosdb._tmp_db
-    table_names = cast("dict[str, str | None]", _DB_TABLE_NAMES[photosdb._photos_ver])
+    table_names = _DB_TABLE_NAMES[photosdb._photos_ver]
     zasset = table_names["ASSET"]
 
     (_conn, cursor) = sqlite_open_ro(db)

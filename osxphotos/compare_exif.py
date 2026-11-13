@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 from collections.abc import Callable
+from typing import Any
 
 from osxphotos import PhotosDB
 from osxphotos.exiftool import ExifTool
@@ -47,9 +48,9 @@ class PhotoCompare:
     def __init__(
         self,
         library_path: str | None = None,
-        verbose: Callable | None = None,
+        verbose: Callable[..., Any] | None = None,
         exiftool_path: str | None = None,
-    ):
+    ) -> None:
         self.library_path = library_path
         self.db = PhotosDB(self.library_path)
         self.verbose = verbose or noop
@@ -71,7 +72,7 @@ class PhotoCompare:
         photos_date_str = photos_date.strftime("%Y-%m-%d %H:%M:%S")
 
         photo_ = self.db.get_photo(photo.uuid)
-        if photo_path := photo_.path:
+        if photo_ is not None and (photo_path := photo_.path):
             exif = ExifTool(filepath=photo_path, exiftool=self.exiftool_path)
             exif_dict = exif.asdict()
             exif_dt_offset = get_exif_date_time_offset(exif_dict)
@@ -96,7 +97,9 @@ class PhotoCompare:
             plain (bool): Flag to determine if plain (True) or markup (False) should be applied
         """
 
-        def compare_values(photo_value: str, exif_value: str) -> tuple:
+        diff = False
+
+        def compare_values(photo_value: str, exif_value: str) -> tuple[str, str]:
             """Compare two values and return them with or without markup.
 
             Affects nonlocal variable diff (from timewarp_compare_exif) with result.
@@ -114,7 +117,6 @@ class PhotoCompare:
 
         # Get values from comparison function
         photos_date, photos_tz, exif_date, exif_tz = self.compare_exif(photo)
-        diff = False
 
         # Split date and time
         photos_date, photos_time = photos_date.split(" ", 1)

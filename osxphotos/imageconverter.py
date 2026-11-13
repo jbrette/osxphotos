@@ -4,7 +4,11 @@ for example, RAW to JPEG.  Only works if Mac equipped with GPU."""
 
 # reference: https://stackoverflow.com/questions/59330149/coreimage-ciimage-write-jpg-is-shifting-colors-macos/59334308#59334308
 
+from __future__ import annotations
+
+import os
 import pathlib
+from typing import Any, ClassVar, Self, cast
 
 # needed to capture system-level stderr
 from wurlitzer import pipes
@@ -29,14 +33,18 @@ class ImageConverter:
     which will re-use the Core Image CIContext to avoid
     creating a new context for every conversion."""
 
-    def __new__(cls, *args, **kwargs):
+    instance: ClassVar[ImageConverter | None]
+    context: Any  # pyobjc CIContext
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
         """create new object or return instance of already created singleton"""
         if not hasattr(cls, "instance") or not cls.instance:
             cls.instance = super().__new__(cls)
 
-        return cls.instance
+        # the singleton was created by cls.__new__ so it is an instance of cls
+        return cast(Self, cls.instance)
 
-    def __init__(self):
+    def __init__(self) -> None:
         """return existing singleton or create a new one"""
 
         if hasattr(self, "context"):
@@ -51,7 +59,12 @@ class ImageConverter:
         )
         self.context = Quartz.CIContext.contextWithOptions_(context_options)
 
-    def write_jpeg(self, input_path, output_path, compression_quality=1.0):
+    def write_jpeg(
+        self,
+        input_path: str | os.PathLike[str],
+        output_path: str | os.PathLike[str],
+        compression_quality: float = 1.0,
+    ) -> bool:
         """convert image to jpeg and write image to output_path
 
         Args:

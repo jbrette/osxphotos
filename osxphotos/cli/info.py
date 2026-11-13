@@ -1,8 +1,11 @@
 """info command for osxphotos CLI"""
 
+from __future__ import annotations
+
 import datetime
 import json
-from typing import Any
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 
@@ -16,21 +19,22 @@ from osxphotos._constants import (
     BURST_SELECTED,
 )
 from osxphotos.cli.click_rich_echo import rich_echo as echo
-from osxphotos.iphoto import iPhotoDB, is_iphoto_library
+from osxphotos.iphoto import iPhotoDB, iPhotoPhotoInfo, is_iphoto_library
 from osxphotos.photoquery import QueryOptions
 
 from .cli_params import DB_OPTION, JSON_OPTION
 from .common import get_photos_db
 from .list import _list_libraries
 
-try:
-    from osxphotos._constants import TIME_DELTA
-except ImportError:
-    # TIME_DELTA moved in v0.69.0
-    from osxphotos.photos_datetime import TIME_DELTA
+if TYPE_CHECKING:
+    from .cli import CLI_Obj
+
+from osxphotos.photos_datetime import TIME_DELTA
 
 
-def get_non_analyzed_assets(photosdb: osxphotos.PhotosDB) -> list[osxphotos.PhotoInfo]:
+def get_non_analyzed_assets(
+    photosdb: osxphotos.PhotosDB | iPhotoDB,
+) -> list[osxphotos.PhotoInfo]:
     """Return list of all photosdb assets not yet analyzed"""
     if isinstance(photosdb, iPhotoDB):
         # not supported on iPhoto
@@ -59,7 +63,9 @@ def get_non_analyzed_assets(photosdb: osxphotos.PhotosDB) -> list[osxphotos.Phot
     ]
 
 
-def get_latest_analysis_date(photosdb: osxphotos.PhotosDB) -> datetime.datetime | None:
+def get_latest_analysis_date(
+    photosdb: osxphotos.PhotosDB | iPhotoDB,
+) -> datetime.datetime | None:
     """Return list of all photosdb assets not yet analyzed"""
     if isinstance(photosdb, iPhotoDB):
         # not supported on iPhoto
@@ -83,7 +89,7 @@ def get_latest_analysis_date(photosdb: osxphotos.PhotosDB) -> datetime.datetime 
 
 
 def get_unnamed_person_photos(
-    photosdb: osxphotos.PhotosDB,
+    photosdb: osxphotos.PhotosDB | iPhotoDB,
 ) -> list[osxphotos.PhotoInfo]:
     """Get list of photos with unnamed persons"""
     if isinstance(photosdb, iPhotoDB):
@@ -110,7 +116,7 @@ def get_unnamed_person_photos(
     return unnamed_faces
 
 
-def get_face_count(photosdb: osxphotos.PhotosDB, manual: bool) -> int:
+def get_face_count(photosdb: osxphotos.PhotosDB | iPhotoDB, manual: bool) -> int:
     """Get count of faces in library"""
 
     if isinstance(photosdb, iPhotoDB):
@@ -125,7 +131,7 @@ def get_face_count(photosdb: osxphotos.PhotosDB, manual: bool) -> int:
                     WHERE RKFace.manual = {manual_flag};
             """
         ).fetchone()
-        return results[0]
+        return cast(int, results[0])  # COUNT() is an int
 
     results = photosdb.execute(
         f""" SELECT COUNT(ZDETECTEDFACE.Z_PK)
@@ -133,20 +139,20 @@ def get_face_count(photosdb: osxphotos.PhotosDB, manual: bool) -> int:
                 WHERE ZDETECTEDFACE.ZMANUAL = {manual_flag};
             """
     ).fetchone()
-    return results[0]
+    return cast(int, results[0])  # COUNT() is an int
 
 
-def get_manual_face_count(photosdb: osxphotos.PhotosDB) -> int:
+def get_manual_face_count(photosdb: osxphotos.PhotosDB | iPhotoDB) -> int:
     """Get count of manually added faces in library"""
     return get_face_count(photosdb, manual=True)
 
 
-def get_detected_face_count(photosdb: osxphotos.PhotosDB) -> int:
+def get_detected_face_count(photosdb: osxphotos.PhotosDB | iPhotoDB) -> int:
     """Get count of detected faces in library"""
     return get_face_count(photosdb, manual=False)
 
 
-def get_persons_count(photosdb: osxphotos.PhotosDB) -> int:
+def get_persons_count(photosdb: osxphotos.PhotosDB | iPhotoDB) -> int:
     """Get count of named persons in the database"""
 
     if isinstance(photosdb, iPhotoDB):
@@ -155,7 +161,9 @@ def get_persons_count(photosdb: osxphotos.PhotosDB) -> int:
     return len([p for p in photosdb.person_info if p.name != _UNKNOWN_PERSON])
 
 
-def get_non_selected_bursts(photosdb: osxphotos.PhotosDB) -> list[osxphotos.PhotoInfo]:
+def get_non_selected_bursts(
+    photosdb: osxphotos.PhotosDB | iPhotoDB,
+) -> list[osxphotos.PhotoInfo]:
     """Return list of all non-selected burst images"""
 
     if isinstance(photosdb, iPhotoDB):
@@ -179,8 +187,8 @@ def get_non_selected_bursts(photosdb: osxphotos.PhotosDB) -> list[osxphotos.Phot
 
 
 def get_photo_categories(
-    photosdb: osxphotos.PhotosDB,
-) -> dict[str, list[osxphotos.PhotoInfo]]:
+    photosdb: osxphotos.PhotosDB | iPhotoDB,
+) -> dict[str, Sequence[osxphotos.PhotoInfo | iPhotoPhotoInfo]]:
     """Return dict of photo categories"""
 
     in_trash = photosdb.query(QueryOptions(deleted_only=True))
@@ -314,7 +322,7 @@ def get_photo_categories(
 
     has_unnamed_persons = get_unnamed_person_photos(photosdb)
 
-    categories = {}
+    categories: dict[str, Sequence[osxphotos.PhotoInfo | iPhotoPhotoInfo]] = {}
     categories["all"] = all_assets
     categories["all_photos"] = all_photos
     categories["all_videos"] = all_videos
@@ -389,9 +397,9 @@ def get_photo_categories(
     return categories
 
 
-def get_photosdb_counts(photosdb: osxphotos.PhotosDB) -> dict[str, Any]:
+def get_photosdb_counts(photosdb: osxphotos.PhotosDB | iPhotoDB) -> dict[str, Any]:
     """Return dict of various counts in PhotosDB"""
-    counts = {}
+    counts: dict[str, Any] = {}
     counts["persons_count"] = get_persons_count(photosdb)
     counts["detected_faces"] = get_detected_face_count(photosdb)
     counts["manual_faces"] = get_manual_face_count(photosdb)
@@ -428,10 +436,10 @@ def get_photosdb_counts(photosdb: osxphotos.PhotosDB) -> dict[str, Any]:
     return counts
 
 
-def get_photo_counts(photosdb: osxphotos.PhotosDB) -> dict[str, int]:
+def get_photo_counts(photosdb: osxphotos.PhotosDB | iPhotoDB) -> dict[str, Any]:
     """Return dict of photo counts"""
     categories = get_photo_categories(photosdb)
-    counts = {k: len(v) for k, v in categories.items()}
+    counts: dict[str, Any] = {k: len(v) for k, v in categories.items()}
     counts |= get_photosdb_counts(photosdb)
     counts["non_analyzed"] = len(get_non_analyzed_assets(photosdb))
     counts["analyzed"] = counts["all_photos_app"] - counts["non_analyzed"]
@@ -445,17 +453,18 @@ def get_photo_counts(photosdb: osxphotos.PhotosDB) -> dict[str, int]:
     return counts
 
 
-def print_counts_json(counts: dict[str, Any]):
+def print_counts_json(counts: dict[str, Any]) -> None:
     """Print counts as JSON"""
 
-    def _default(o):
+    def _default(o: Any) -> str | None:
         if isinstance(o, (datetime.datetime)):
             return o.isoformat()
+        return None
 
     print(json.dumps(counts, default=_default, indent=4))
 
 
-def num(n: int) -> str:
+def num(n: object) -> str:
     """Return number as string rich tags"""
     return f"[num]{n}[/]"
 
@@ -478,13 +487,15 @@ def total_photo_video(all: int, photos: int, videos: int) -> str:
     return f"total: {num(all)}, photos: {num(photos)}, videos: {num(videos)}"
 
 
-def echo_dict_counts(data: dict[str, int]):
+def echo_dict_counts(data: dict[str, int]) -> None:
     """Print out key, value for dicts such as persons"""
     for k, v in data.items():
         echo(f"{k}: [num]{v}[/]")
 
 
-def print_counts(counts: dict[str, int], photosdb: osxphotos.PhotosDB, verbose: bool):
+def print_counts(
+    counts: dict[str, Any], photosdb: osxphotos.PhotosDB | iPhotoDB, verbose: int
+) -> None:
     """Print counts report"""
     echo(f"[b]Library:[/] [filepath]{photosdb.library_path}[/]")
     echo(
@@ -761,7 +772,13 @@ def print_counts(counts: dict[str, int], photosdb: osxphotos.PhotosDB, verbose: 
 @JSON_OPTION
 @click.pass_obj
 @click.pass_context
-def info(ctx, cli_obj, verbose, db, json_):
+def info(
+    ctx: click.Context,
+    cli_obj: CLI_Obj | None,
+    verbose: int,
+    db: str | None,
+    json_: bool,
+) -> None:
     """Print out descriptive info of the Photos library database.
 
     Use --verbose to see additional details such as detailed counts of keywords, etc.

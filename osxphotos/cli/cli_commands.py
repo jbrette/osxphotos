@@ -13,6 +13,7 @@ import typing as t  # match style used in Click source code
 
 import click
 
+from osxphotos.photoinfo import PhotoInfo
 from osxphotos.photoquery import QueryOptions, query_options_from_kwargs
 from osxphotos.photosdb import PhotosDB
 
@@ -42,22 +43,27 @@ __all__ = [
 ]
 
 
-def abort(message: str, exit_code: int = 1):
+def abort(message: str, exit_code: int = 1) -> t.NoReturn:
     """Abort with error message and exit code"""
     echo_error(f"[error]{message}[/]")
     sys.exit(exit_code)
 
 
-def config_verbose_callback(ctx: click.Context, param: click.Parameter, value: t.Any):
+def config_verbose_callback(
+    ctx: click.Context, param: click.Parameter, value: t.Any
+) -> t.Any:
     """Callback for --verbose option"""
     # calling verbose_print() will set the verbose level for the verbose() function
     theme = ctx.params.get("theme")
-    timestamp = ctx.params.get("timestamp")
+    # verbose_print only tests timestamp for truthiness; it is None until parsed
+    timestamp = bool(ctx.params.get("timestamp"))
     verbose_print(verbose=value, timestamp=timestamp, theme=theme)
     return value
 
 
-def config_theme_callback(ctx: click.Context, param: click.Parameter, value: t.Any):
+def config_theme_callback(
+    ctx: click.Context, param: click.Parameter, value: t.Any
+) -> t.Any:
     """Callback for --theme option"""
     # calling verbose_print() will set the verbose level for the verbose() function
     # if --verbose is passed after --theme, this callback won't have access it to
@@ -65,12 +71,13 @@ def config_theme_callback(ctx: click.Context, param: click.Parameter, value: t.A
     # set to zero and if --verbose is passed, it will be set correctly by the
     # config_verbose_callback (#1186)
     verbose = ctx.params.get("verbose_option") or get_verbose_level()
-    timestamp = ctx.params.get("timestamp")
+    # verbose_print only tests timestamp for truthiness; it is None until parsed
+    timestamp = bool(ctx.params.get("timestamp"))
     verbose_print(verbose=verbose, timestamp=timestamp, theme=value)
     return value
 
 
-def get_photos_for_query(ctx: click.Context):
+def get_photos_for_query(ctx: click.Context) -> list[PhotoInfo]:
     """Return list of PhotoInfo objects for the photos matching the query options in ctx.params"""
     options = query_options_from_kwargs(**ctx.params)
     db = ctx.params.get("db")
@@ -78,7 +85,7 @@ def get_photos_for_query(ctx: click.Context):
     return photosdb.query(options=options)
 
 
-def get_selected_photos(ctx: click.Context):
+def get_selected_photos(ctx: click.Context) -> list[PhotoInfo]:
     """Return list of PhotoInfo objects for the photos currently selected in Photos.app"""
     photosdb = PhotosDB(verbose=verbose)
     return photosdb.query(options=QueryOptions(selected=True))
@@ -280,7 +287,23 @@ class SelectionCommand(click.Command):
         return ctx
 
 
-def query_command(name=None, cls=QueryCommand, **attrs):
+@t.overload
+def query_command(
+    name: t.Callable[..., t.Any], cls: type[click.Command] = ..., **attrs: t.Any
+) -> click.Command: ...
+
+
+@t.overload
+def query_command(
+    name: str | None = None, cls: type[click.Command] = ..., **attrs: t.Any
+) -> t.Callable[[t.Callable[..., t.Any]], click.Command]: ...
+
+
+def query_command(
+    name: str | t.Callable[..., t.Any] | None = None,
+    cls: type[click.Command] = QueryCommand,
+    **attrs: t.Any,
+) -> click.Command | t.Callable[[t.Callable[..., t.Any]], click.Command]:
     """Decorator to create an osxphotos command to be run via 'osxphotos run example.py'
 
     The command will be passed a list of PhotoInfo objects for all photos in Photos
@@ -295,13 +318,29 @@ def query_command(name=None, cls=QueryCommand, **attrs):
     --theme
     --db
     """
-    if callable(name) and cls:
+    if callable(name):
         return click.command(cls=cls, **attrs)(name)
 
     return click.command(name, cls=cls, **attrs)
 
 
-def selection_command(name=None, cls=SelectionCommand, **attrs):
+@t.overload
+def selection_command(
+    name: t.Callable[..., t.Any], cls: type[click.Command] = ..., **attrs: t.Any
+) -> click.Command: ...
+
+
+@t.overload
+def selection_command(
+    name: str | None = None, cls: type[click.Command] = ..., **attrs: t.Any
+) -> t.Callable[[t.Callable[..., t.Any]], click.Command]: ...
+
+
+def selection_command(
+    name: str | t.Callable[..., t.Any] | None = None,
+    cls: type[click.Command] = SelectionCommand,
+    **attrs: t.Any,
+) -> click.Command | t.Callable[[t.Callable[..., t.Any]], click.Command]:
     """Decorator to create an osxphotos command to be run via 'osxphotos run example.py'
 
     The command will be passed a list of PhotoInfo objects for all photos selected in Photos.
@@ -312,7 +351,7 @@ def selection_command(name=None, cls=SelectionCommand, **attrs):
     --theme
     --db
     """
-    if callable(name) and cls:
+    if callable(name):
         return click.command(cls=cls, **attrs)(name)
 
     return click.command(name, cls=cls, **attrs)

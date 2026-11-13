@@ -5,6 +5,7 @@ import cProfile
 import io
 import pstats
 import sys
+from typing import Any
 
 import click
 
@@ -58,7 +59,13 @@ if is_macos:
 
 # Click CLI object & context settings
 class CLI_Obj:  # noqa: N801  (public name)
-    def __init__(self, db=None, json=False, debug=False, group=None):
+    def __init__(
+        self,
+        db: str | None = None,
+        json: bool = False,
+        debug: bool = False,
+        group: click.Group | None = None,
+    ) -> None:
         self.db = db
         self.json = json
         self.group = group
@@ -88,7 +95,13 @@ CTX_SETTINGS = {"help_option_names": ["-h", "--help"]}
     "Default = 'cumulative'.",
 )
 @click.pass_context
-def cli_main(ctx, profile, profile_sort, **kwargs):
+def cli_main(
+    ctx: click.Context,
+    /,
+    profile: bool,
+    profile_sort: tuple[str, ...] | list[str],
+    **kwargs: Any,
+) -> None:
     """OSXPhotos: the multi-tool for your Photos library.
 
     To get help on a specific command, use "osxphotos COMMAND --help"
@@ -124,7 +137,7 @@ def cli_main(ctx, profile, profile_sort, **kwargs):
         pr = cProfile.Profile()
         pr.enable()
 
-        def at_exit():
+        def at_exit() -> None:
             pr.disable()
             click.echo("Profiling completed")
             s = io.StringIO()
@@ -135,7 +148,7 @@ def cli_main(ctx, profile, profile_sort, **kwargs):
 
         atexit.register(at_exit)
 
-    def flush_stderr():
+    def flush_stderr() -> None:
         # click CliRunner doesn't respect line buffered stderr so flush it manually
         # this is only needed for testing
         sys.stderr.flush()

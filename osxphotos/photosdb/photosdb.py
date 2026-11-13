@@ -11,7 +11,7 @@ import os.path
 import pathlib
 import sqlite3
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import Any
 from unicodedata import normalize
@@ -81,8 +81,19 @@ class PhotosDBReadError(Exception):
 class PhotosDB:
     """Processes a Photos.app library database to extract information about photos"""
 
-    # set by the _process_* mixin methods imported below
+    # set in __init__ and by the _process_* mixin methods imported below
+    _dbfile: str | pathlib.Path | None
     _db_scoreinfo_uuid: dict[str, dict[str, Any]]
+    _db_exifinfo_uuid: dict[str, dict[str, Any]]
+    _db_hashed_person_id: dict[str, dict[str, str | None]]
+    _db_comments_uuid: dict[str, dict[str, list[Any]]]
+    _db_searchinfo_uuid: dict[str, list[dict[str, Any]]]
+    _db_searchinfo_categories: dict[int, list[str]]
+    _db_searchinfo_labels: dict[str, list[str]]
+    _db_searchinfo_labels_normalized: dict[str, list[str]]
+    _db_faceinfo_pk: dict[int, dict[str, Any]]
+    _db_faceinfo_uuid: dict[str, list[int]]
+    _db_faceinfo_person: dict[int, list[int]]
 
     # import additional methods
     from ._photosdb_process_comments import _process_comments
@@ -709,7 +720,7 @@ class PhotosDB:
         """Returns version of Photos app that created the library"""
         return self._photos_ver
 
-    def get_db_connection(self):
+    def get_db_connection(self) -> tuple[sqlite3.Connection, sqlite3.Cursor]:
         """Get connection to the working copy of the Photos database
 
         Returns:
@@ -717,7 +728,7 @@ class PhotosDB:
         """
         return sqlite_open_ro(self._tmp_db)
 
-    def _copy_db_file(self, fname: str) -> str:
+    def _copy_db_file(self, fname: str | os.PathLike[str]) -> str:
         """copies the sqlite database file to a temp file"""
         """ returns the name of the temp file """
         """ If sqlite shared memory and write-ahead log files exist, those are copied too """
@@ -3359,7 +3370,7 @@ class PhotosDB:
 
         return photoinfo
 
-    def get_photo(self, uuid):
+    def get_photo(self, uuid: str) -> PhotoInfo | None:
         """Returns a single photo matching uuid
 
         Arguments:
@@ -3373,7 +3384,7 @@ class PhotosDB:
         except KeyError:
             return None
 
-    def photos_by_uuid(self, uuids):
+    def photos_by_uuid(self, uuids: Iterable[str]) -> list[PhotoInfo]:
         """Returns a list of photos with UUID in uuids.
             Does not generate error if invalid or missing UUID passed.
             This is faster than using PhotosDB.photos if you have list of UUIDs.

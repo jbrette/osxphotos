@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 
-def get_help_msg(command):
+def get_help_msg(command: click.Command) -> str:
     """get help message for a Click command"""
     with click.Context(command) as ctx:
         return command.get_help(ctx)
@@ -515,7 +515,7 @@ def strip_md_header_and_links(md):
     return re.sub(links, subfn, md)
 
 
-def strip_md_links(md):
+def strip_md_links(md: str) -> str:
     """strip markdown links from markdown text md
 
     Args:
@@ -535,7 +535,7 @@ def strip_md_links(md):
     return re.sub(links, subfn, md)
 
 
-def strip_html_comments(text):
+def strip_html_comments(text: str) -> str:
     """Strip html comments from text (which doesn't need to be valid HTML)"""
     return re.sub(r"<!--(.|\s|\n)*?-->", "", text)
 

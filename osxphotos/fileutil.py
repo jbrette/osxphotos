@@ -453,7 +453,7 @@ class FileUtilABC(ABC):
 
     @classmethod
     @abstractmethod
-    def copy(cls, src, dest):
+    def copy(cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]) -> bool:
         pass
 
     @classmethod
@@ -535,7 +535,7 @@ class FileUtilMacOS(FileUtilABC):
             raise e from e
 
     @classmethod
-    def copy(cls, src, dest):
+    def copy(cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]) -> bool:
         """Copies a file from src path to dest path
 
         Args:
@@ -747,7 +747,7 @@ class FileUtilShUtil(FileUtilMacOS):
     """Various file utilities, uses shutil.copy to copy files instead of NSFileManager (#807)"""
 
     @classmethod
-    def copy(cls, src, dest):
+    def copy(cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]) -> bool:
         """Copies a file from src path to dest path using shutil.copy
 
         Args:
@@ -822,8 +822,8 @@ class FileUtilNoOp(FileUtil):
         pass
 
     @classmethod
-    def copy(cls, src, dest):
-        pass
+    def copy(cls, src: str | os.PathLike[str], dest: str | os.PathLike[str]) -> bool:
+        return True
 
     @classmethod
     def unlink(cls, filepath):

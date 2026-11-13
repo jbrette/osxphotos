@@ -81,7 +81,7 @@ class ExifOptions:
     use_albums_as_keywords: bool = False
     use_persons_as_keywords: bool = False
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
 
@@ -175,7 +175,9 @@ class ExifWriter(_ExifMixin):
         super().__init__(photo)
         self._render_options = RenderOptions()
 
-    def write_exif_data(self, filepath: str | pathlib.Path, options: ExifOptions):
+    def write_exif_data(
+        self, filepath: str | pathlib.Path, options: ExifOptions
+    ) -> tuple[str | None, str | None]:
         """Write exif data to image file at filepath
 
         Args:
@@ -205,7 +207,7 @@ class ExifWriter(_ExifMixin):
         options: ExifOptions | None = None,
         filename: str | None = None,
         video: bool = False,
-    ):
+    ) -> dict[str, Any]:
         """Return dict of EXIF details for building exiftool JSON sidecar or sending commands to ExifTool.
             Does not include all the EXIF fields as those are likely already in the image.
 
@@ -263,7 +265,7 @@ class ExifWriter(_ExifMixin):
         options = options or ExifOptions()
         self._render_options = options.render_options or self._render_options
 
-        exif = (
+        exif: dict[str, Any] = (
             {
                 "SourceFile": filename,
                 "ExifTool:ExifToolVersion": "12.00",
@@ -483,7 +485,7 @@ class ExifWriter(_ExifMixin):
 
         return exif
 
-    def _get_mwg_face_regions_exiftool(self):
+    def _get_mwg_face_regions_exiftool(self) -> dict[str, Any]:
         """Return a dict with MWG face regions for use by exiftool"""
         if self.photo.orientation in [5, 6, 7, 8]:
             w = self.photo.height
@@ -492,10 +494,11 @@ class ExifWriter(_ExifMixin):
             w = self.photo.width
             h = self.photo.height
 
-        exif = {
+        region_list: list[dict[str, Any]] = []
+        exif: dict[str, Any] = {
             "XMP-mwg-rs:RegionInfo": {
                 "AppliedToDimensions": {"W": w, "H": h, "Unit": "pixel"},
-                "RegionList": [],
+                "RegionList": region_list,
             }
         }
 
@@ -514,7 +517,7 @@ class ExifWriter(_ExifMixin):
                     "Unit": "normalized",
                 },
             }
-            exif["XMP-mwg-rs:RegionInfo"]["RegionList"].append(region)
+            region_list.append(region)
         return exif
 
     def exiftool_json_sidecar(

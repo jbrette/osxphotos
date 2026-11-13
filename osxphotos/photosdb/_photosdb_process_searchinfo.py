@@ -3,16 +3,22 @@ Kudos to Simon Willison who figured out how to extract this data from psi.sql
 ref: https://github.com/dogsheep/photos-to-sqlite/issues/16
 """
 
+from __future__ import annotations
+
 import logging
 import pathlib
 import re
 import struct
 import uuid as uuidlib
 from functools import lru_cache
+from typing import TYPE_CHECKING, Any
 
 from .._constants import _PHOTOS_4_VERSION, search_category_factory
 from ..sqlite_utils import sqlite_db_is_locked, sqlite_open_ro
 from ..unicode import normalize_unicode
+
+if TYPE_CHECKING:
+    from .photosdb import PhotosDB
 
 """
     This module should be imported in the class defintion of PhotosDB in photosdb.py
@@ -42,7 +48,7 @@ logger = logging.getLogger("osxphotos")
 # only exist in leo.sqlite map to their own leo category ID
 # Note: leo category 2030 contains only internal PG*SearchableText tokens (see
 # PHOTOS_PLACEHOLDER_PATTERN) and is intentionally not mapped; venue types are in 2230
-LEO_CATEGORY_TO_PHOTOS8 = {
+LEO_CATEGORY_TO_PHOTOS8: dict[int, int] = {
     1010: 1100,  # MONTH
     1020: 1101,  # YEAR
     1030: 1103,  # HOLIDAY
@@ -123,24 +129,28 @@ LEO_CATEGORY_TO_PHOTOS8 = {
 PHOTOS_PLACEHOLDER_PATTERN = re.compile(r"^PG[A-Za-z0-9]+SearchableText$")
 
 
-def _process_searchinfo(self):
+def _process_searchinfo(self: PhotosDB) -> None:
     """load machine learning/search term label info from a Photos library
     db_connection: a connection to the SQLite database file containing the
     search terms.  In Photos 5, this is called psi.sqlite
     Note: Only works on Photos version == 5.0"""
 
     # _db_searchinfo_uuid is dict in form {uuid : [list of associated search info records]
-    self._db_searchinfo_uuid = _db_searchinfo_uuid = {}
+    _db_searchinfo_uuid: dict[str, list[dict[str, Any]]] = {}
+    self._db_searchinfo_uuid = _db_searchinfo_uuid
 
     # _db_searchinfo_categories is dict in form {search info category id: list normalized strings for the category
     # right now, this is mostly for debugging to easily see which search terms are in the library
-    self._db_searchinfo_categories = _db_searchinfo_categories = {}
+    _db_searchinfo_categories: dict[int, list[str]] = {}
+    self._db_searchinfo_categories = _db_searchinfo_categories
 
     # _db_searchinfo_labels is dict in form {normalized label: [list of photo uuids]}
     # this serves as a reverse index from label to photos containing the label
     # _db_searchinfo_labels_normalized is the same but with normalized (lower case) version of the label
-    self._db_searchinfo_labels = _db_searchinfo_labels = {}
-    self._db_searchinfo_labels_normalized = _db_searchinfo_labels_normalized = {}
+    _db_searchinfo_labels: dict[str, list[str]] = {}
+    self._db_searchinfo_labels = _db_searchinfo_labels
+    _db_searchinfo_labels_normalized: dict[str, list[str]] = {}
+    self._db_searchinfo_labels_normalized = _db_searchinfo_labels_normalized
 
     if self._skip_searchinfo:
         logger.debug("Skipping search info processing")
@@ -182,15 +192,16 @@ def _process_searchinfo(self):
 
 
 def _process_psi_searchinfo(
-    photosdb,
-    search_db_path,
-    db_searchinfo_uuid,
-    db_searchinfo_categories,
-    db_searchinfo_labels,
-    db_searchinfo_labels_normalized,
-):
+    photosdb: PhotosDB,
+    search_db_path: pathlib.Path,
+    db_searchinfo_uuid: dict[str, list[dict[str, Any]]],
+    db_searchinfo_categories: dict[int, list[str]],
+    db_searchinfo_labels: dict[str, list[str]],
+    db_searchinfo_labels_normalized: dict[str, list[str]],
+) -> None:
     """Process Photos search data from psi.sqlite."""
 
+    search_db: str | pathlib.Path
     if sqlite_db_is_locked(search_db_path):
         search_db = photosdb._copy_db_file(search_db_path)
     else:
@@ -272,15 +283,16 @@ def _process_psi_searchinfo(
 
 
 def _process_leo_searchinfo(
-    photosdb,
-    search_db_path,
-    db_searchinfo_uuid,
-    db_searchinfo_categories,
-    db_searchinfo_labels,
-    db_searchinfo_labels_normalized,
-):
+    photosdb: PhotosDB,
+    search_db_path: pathlib.Path,
+    db_searchinfo_uuid: dict[str, list[dict[str, Any]]],
+    db_searchinfo_categories: dict[int, list[str]],
+    db_searchinfo_labels: dict[str, list[str]],
+    db_searchinfo_labels_normalized: dict[str, list[str]],
+) -> None:
     """Process macOS 27 Photos search data from leo.sqlite."""
 
+    search_db: str | pathlib.Path
     if sqlite_db_is_locked(search_db_path):
         search_db = photosdb._copy_db_file(search_db_path)
     else:
@@ -289,8 +301,8 @@ def _process_leo_searchinfo(
     conn, c = sqlite_open_ro(search_db)
     categories = search_category_factory(photosdb._photos_ver)
 
-    lexeme_category = {}
-    lexeme_content = {}
+    lexeme_category: dict[int, int] = {}
+    lexeme_content: dict[int, str] = {}
     result = c.execute("SELECT lexeme_id, type, category, content FROM lexicon")
     for lexeme_id, lexeme_type, leo_category, content in result:
         mapped_category = LEO_CATEGORY_TO_PHOTOS8.get(leo_category)
@@ -314,7 +326,7 @@ def _process_leo_searchinfo(
         if not identifier:
             continue
         uuid = identifier.upper()
-        records = []
+        records: list[dict[str, Any]] = []
         for lexeme_id in decode_leo_lexeme_ids(lexeme_ids_blob):
             category = lexeme_category.get(lexeme_id)
             content_string = lexeme_content.get(lexeme_id)
@@ -356,8 +368,8 @@ def _process_leo_searchinfo(
     conn.close()
 
 
-@property
-def labels(self):
+@property  # type: ignore[misc]  # module-level property, bound in PhotosDB's class body
+def labels(self: PhotosDB) -> list[str]:
     """return list of all search info labels found in the library"""
     if self._db_version <= _PHOTOS_4_VERSION:
         logger.warning("SearchInfo not implemented for this library version")
@@ -366,8 +378,8 @@ def labels(self):
     return list(self._db_searchinfo_labels.keys())
 
 
-@property
-def labels_normalized(self):
+@property  # type: ignore[misc]  # module-level property, bound in PhotosDB's class body
+def labels_normalized(self: PhotosDB) -> list[str]:
     """return list of all normalized search info labels found in the library"""
     if self._db_version <= _PHOTOS_4_VERSION:
         logger.warning("SearchInfo not implemented for this library version")
@@ -376,8 +388,8 @@ def labels_normalized(self):
     return list(self._db_searchinfo_labels_normalized.keys())
 
 
-@property
-def labels_as_dict(self):
+@property  # type: ignore[misc]  # module-level property, bound in PhotosDB's class body
+def labels_as_dict(self: PhotosDB) -> dict[str, int]:
     """return labels as dict of label: count in reverse sorted order (descending)"""
     if self._db_version <= _PHOTOS_4_VERSION:
         logger.warning("SearchInfo not implemented for this library version")
@@ -388,8 +400,8 @@ def labels_as_dict(self):
     return labels
 
 
-@property
-def labels_normalized_as_dict(self):
+@property  # type: ignore[misc]  # module-level property, bound in PhotosDB's class body
+def labels_normalized_as_dict(self: PhotosDB) -> dict[str, int]:
     """return normalized labels as dict of label: count in reverse sorted order (descending)"""
     if self._db_version <= _PHOTOS_4_VERSION:
         logger.warning("SearchInfo not implemented for this library version")
@@ -403,7 +415,7 @@ def labels_normalized_as_dict(self):
 
 
 @lru_cache(maxsize=128)
-def ints_to_uuid(uuid_0, uuid_1):
+def ints_to_uuid(uuid_0: int, uuid_1: int) -> str:
     """convert two signed ints into a UUID strings
     uuid_0, uuid_1: the two int components of an RFC 4122 UUID"""
 
@@ -415,7 +427,7 @@ def ints_to_uuid(uuid_0, uuid_1):
     return str(uuidlib.UUID(bytes=bytes_)).upper()
 
 
-def decode_leo_lexeme_ids(data):
+def decode_leo_lexeme_ids(data: bytes | None) -> list[int]:
     """Decode leo.sqlite little-endian UInt32 lexeme IDs."""
     if not data:
         return []

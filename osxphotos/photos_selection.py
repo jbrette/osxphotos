@@ -8,6 +8,7 @@ if not is_macos:
     raise ImportError("PhotosSelection only supported on macOS")
 
 import re
+from collections.abc import Iterator
 
 import photoscript
 from applescript import ScriptError
@@ -47,15 +48,15 @@ class PhotosSelection:
         """Return list of selected photos"""
         return get_selected(self._photosdb)
 
-    def __getitem__(self, index) -> PhotoInfo:
+    def __getitem__(self, index: int) -> PhotoInfo:
         """Return PhotoInfo object for selected photo at index"""
         return self._get_selection()[index]
 
-    def __iter__(self) -> iter:
+    def __iter__(self) -> Iterator[PhotoInfo]:
         """Iterate over selected photos"""
         return iter(self._get_selection())
 
-    def __contains__(self, item) -> bool:
+    def __contains__(self, item: object) -> bool:
         """Return True if item is in selection, else False"""
         return item in self._get_selection()
 
@@ -72,7 +73,7 @@ class PhotosSelection:
         return len(self._get_selection())
 
 
-def get_selected(photosdb: PhotosDB):
+def get_selected(photosdb: PhotosDB) -> list[PhotoInfo]:
     assert_macos()
     try:
         selected = photoscript.PhotosLibrary().selection

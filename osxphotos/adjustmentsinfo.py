@@ -12,6 +12,7 @@ Reference: https://github.com/neilpa/photohack/issues/4
 import datetime
 import json
 import logging
+import os
 import plistlib
 import zlib
 from typing import Any
@@ -26,13 +27,13 @@ logger = logging.getLogger("osxphotos")
 class AdjustmentsDecodeError(Exception):
     """Could not decode adjustments plist file"""
 
-    def __init__(self, message):
+    def __init__(self, message: str) -> None:
         self.message = message
         super().__init__(self.message)
 
 
 class AdjustmentsInfo:
-    def __init__(self, plist_file):
+    def __init__(self, plist_file: str | os.PathLike[str]) -> None:
         self._plist_file = plist_file
         self._plist = self._load_plist_file(plist_file)
 
@@ -41,17 +42,17 @@ class AdjustmentsInfo:
         self._editor_bundle_id = self._plist.get("adjustmentEditorBundleID", None)
         self._format_identifier = self._plist.get("adjustmentFormatIdentifier", None)
         self._format_version = self._plist.get("adjustmentFormatVersion")
-        self._timestamp = self._plist.get("adjustmentTimestamp", None)
+        self._timestamp: Any = self._plist.get("adjustmentTimestamp", None)
         if self._timestamp and type(self._timestamp) is datetime.datetime:
             self._timestamp = datetime_naive_to_utc(self._timestamp)
 
         try:
-            self._adjustments = self._decode_adjustments_from_plist(self._plist)
+            self._adjustments: Any = self._decode_adjustments_from_plist(self._plist)
         except Exception:
             logger.debug(f"Could not decode adjustments data: {plist_file}")
             self._adjustments = None
 
-    def _decode_adjustments_from_plist(self, plist) -> dict | Any | None:
+    def _decode_adjustments_from_plist(self, plist: dict[str, Any]) -> Any:
         """decode adjustmentData from Apple Photos adjustments
 
         Args:
@@ -74,7 +75,7 @@ class AdjustmentsInfo:
                 f"'adjustmentData' must be bytes, got {type(data)}"
             )
 
-        def _decode_bytes(b: bytes):
+        def _decode_bytes(b: bytes | bytearray) -> Any:
             """Try to decode raw bytes as binary plist, JSON, or XML plist.
 
             Returns decoded object or None if not decodable.
@@ -114,7 +115,7 @@ class AdjustmentsInfo:
 
         raise AdjustmentsDecodeError("Could not decode adjustment data")
 
-    def _load_plist_file(self, plist_file):
+    def _load_plist_file(self, plist_file: str | os.PathLike[str]) -> dict[str, Any]:
         """Load plist file from disk
 
         Args:
@@ -125,49 +126,49 @@ class AdjustmentsInfo:
         """
         with open(str(plist_file), "rb") as fd:
             try:
-                plist_dict = plistlib.load(fd)
+                plist_dict: dict[str, Any] = plistlib.load(fd)
             except Exception:
                 logger.debug(f"Could not load plist file: {plist_file}")
                 plist_dict = {}
         return plist_dict
 
     @property
-    def plist(self):
+    def plist(self) -> dict[str, Any]:
         """The actual adjustments plist content as a dict"""
         return self._plist
 
     @property
-    def data(self):
+    def data(self) -> Any:
         """The raw adjustments data as a binary blob"""
         return self._data
 
     @property
-    def editor(self):
+    def editor(self) -> Any:
         """The editor bundle ID for app/plug-in which made the adjustments"""
         return self._editor_bundle_id
 
     @property
-    def format_id(self):
+    def format_id(self) -> Any:
         """The value of the adjustmentFormatIdentifier field in the plist"""
         return self._format_identifier
 
     @property
-    def base_version(self):
+    def base_version(self) -> Any:
         """Value of adjustmentBaseVersion field"""
         return self._base_version
 
     @property
-    def format_version(self):
+    def format_version(self) -> Any:
         """The value of the adjustmentFormatVersion in the plist"""
         return self._format_version
 
     @property
-    def timestamp(self):
+    def timestamp(self) -> Any:
         """The time stamp of the adjustment as timezone aware datetime.datetime object or None if no timestamp"""
         return self._timestamp
 
     @property
-    def adjustments(self):
+    def adjustments(self) -> Any:
         """List of adjustment dictionaries (or empty list if none or could not be decoded)"""
         try:
             return self._adjustments["adjustments"] if self._adjustments else []
@@ -175,7 +176,7 @@ class AdjustmentsInfo:
             return []
 
     @property
-    def adj_metadata(self):
+    def adj_metadata(self) -> Any:
         """Metadata dictionary or None if adjustment data could not be decoded"""
         try:
             return self._adjustments["metadata"] if self._adjustments else None
@@ -183,7 +184,7 @@ class AdjustmentsInfo:
             return None
 
     @property
-    def adj_orientation(self):
+    def adj_orientation(self) -> Any:
         """EXIF orientation of image or 0 if none specified or None if adjustments could not be decoded"""
         try:
             return self._adjustments["metadata"]["orientation"]
@@ -192,7 +193,7 @@ class AdjustmentsInfo:
             return 0
 
     @property
-    def adj_format_version(self):
+    def adj_format_version(self) -> Any:
         """Format version for adjustments data (formatVersion field from adjustmentData) or None if adjustments could not be decoded"""
         try:
             return self._adjustments["formatVersion"] if self._adjustments else None
@@ -200,14 +201,14 @@ class AdjustmentsInfo:
             return None
 
     @property
-    def adj_version_info(self):
+    def adj_version_info(self) -> Any:
         """version info for adjustments data or None if adjustments data could not be decoded"""
         try:
             return self._adjustments["versionInfo"] if self._adjustments else None
         except KeyError, TypeError:
             return None
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Returns all adjustments info as dictionary"""
         timestamp = self.timestamp
         if type(timestamp) is datetime.datetime:
@@ -227,5 +228,5 @@ class AdjustmentsInfo:
             "timestamp": timestamp,
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"AdjustmentsInfo(plist_file='{self._plist_file}')"

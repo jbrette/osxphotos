@@ -526,7 +526,9 @@ class ExifToolCaching(ExifTool):
 
     _singletons: ClassVar[dict[str, ExifToolCaching]] = {}
 
-    def __new__(cls, filepath, exiftool=None):
+    def __new__(
+        cls, filepath: str | os.PathLike[str], exiftool: str | None = None
+    ) -> _ExifToolCaching:
         """create new object or return instance of already created singleton"""
         if filepath not in cls._singletons:
             cls._singletons[filepath] = _ExifToolCaching(filepath, exiftool=exiftool)
@@ -534,7 +536,9 @@ class ExifToolCaching(ExifTool):
 
 
 class _ExifToolCaching(ExifTool):
-    def __init__(self, filepath, exiftool=None):
+    def __init__(
+        self, filepath: str | os.PathLike[str], exiftool: str | None = None
+    ) -> None:
         """Create read-only ExifTool object that caches values
 
         Args:

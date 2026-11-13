@@ -8,6 +8,7 @@ import datetime
 import pathlib
 import sqlite3
 from collections.abc import Callable
+from typing import Any
 
 from photoscript import Photo
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -90,9 +91,9 @@ class PhotoTimeZoneUpdater:
     def __init__(
         self,
         timezone: Timezone,
-        verbose: Callable | None = None,
+        verbose: Callable[..., Any] | None = None,
         library_path: str | None = None,
-    ):
+    ) -> None:
         self.timezone = timezone
         self.tz_offset = timezone.offset
         self.tz_name = timezone.name
@@ -115,7 +116,7 @@ class PhotoTimeZoneUpdater:
         self.db_path = db_path
         self.ASSET_TABLE = _DB_TABLE_NAMES[photos_version]["ASSET"]
 
-    def update_photo(self, photo: Photo, offset_only: bool = False):
+    def update_photo(self, photo: Photo, offset_only: bool = False) -> None:
         """Update the timezone of a photo in the database
 
         Args:
@@ -131,7 +132,7 @@ class PhotoTimeZoneUpdater:
         wait=wait_exponential(multiplier=1, min=0.100, max=5),
         stop=stop_after_attempt(10),
     )
-    def _update_photo(self, photo: Photo, offset_only: bool = False):
+    def _update_photo(self, photo: Photo, offset_only: bool = False) -> None:
         # Use retry decorator to retry if database is locked
         uuid = photo.uuid
         sql = f"""  SELECT

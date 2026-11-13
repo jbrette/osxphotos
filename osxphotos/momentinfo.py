@@ -1,61 +1,70 @@
-__all__ = ["MomentInfo"]
 """MomentInfo class with details about photo moments."""
+
+import datetime
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .photoinfo import PhotoInfo
+    from .photosdb import PhotosDB
+
+__all__ = ["MomentInfo"]
 
 
 class MomentInfo:
     """Info about a photo moment"""
 
-    def __init__(self, db, moment_pk):
+    def __init__(self, db: PhotosDB, moment_pk: int) -> None:
         """Initialize with a moment PK; returns None if PK not found."""
         self._db = db
         self._pk = moment_pk
 
-        self._moment = self._db._db_moment_pk.get(moment_pk)
-        if not self._moment:
+        moment = self._db._db_moment_pk.get(moment_pk)
+        if not moment:
             raise ValueError(f"No moment with PK {moment_pk}")
+        self._moment: dict[str, Any] = moment
 
     @property
-    def pk(self):
+    def pk(self) -> int:
         """Primary key of the moment."""
         return self._pk
 
     @property
-    def location(self):
+    def location(self) -> tuple[float | None, float | None]:
         """Location of the moment."""
         return (self._moment.get("latitude"), self._moment.get("longitude"))
 
     @property
-    def title(self):
+    def title(self) -> str | None:
         """Title of the moment."""
         return self._moment.get("title")
 
     @property
-    def subtitle(self):
+    def subtitle(self) -> str | None:
         """Subtitle of the moment."""
         return self._moment.get("subtitle")
 
     @property
-    def start_date(self):
+    def start_date(self) -> datetime.datetime | None:
         """Start date of the moment."""
         return self._moment.get("startDate")
 
     @property
-    def end_date(self):
+    def end_date(self) -> datetime.datetime | None:
         """Stop date of the moment."""
         return self._moment.get("endDate")
 
     @property
-    def date(self):
+    def date(self) -> datetime.datetime | None:
         """Date of the moment."""
         return self._moment.get("representativeDate")
 
     @property
-    def modification_date(self):
+    def modification_date(self) -> datetime.datetime | None:
         """Modification date of the moment."""
         return self._moment.get("modificationDate")
 
     @property
-    def photos(self):
+    def photos(self) -> list[PhotoInfo]:
         """All photos in this moment"""
         try:
             return self._photos
@@ -66,10 +75,10 @@ class MomentInfo:
                 if photo["momentID"] == self._pk
             ]
 
-            self._photos = self._db.photos_by_uuid(photo_uuids)
+            self._photos: list[PhotoInfo] = self._db.photos_by_uuid(photo_uuids)
             return self._photos
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """Returns all moment info as dictionary"""
         return {
             "pk": self.pk,

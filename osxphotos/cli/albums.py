@@ -1,6 +1,9 @@
 """albums command for osxphotos CLI"""
 
+from __future__ import annotations
+
 import json
+from typing import TYPE_CHECKING, cast
 
 import click
 import yaml
@@ -12,6 +15,9 @@ from osxphotos.iphoto import is_iphoto_library
 from .cli_params import DB_OPTION, JSON_OPTION
 from .common import get_photos_db
 from .list import _list_libraries
+
+if TYPE_CHECKING:
+    from .cli import CLI_Obj
 
 
 @click.command()
@@ -26,7 +32,13 @@ from .list import _list_libraries
 )
 @click.pass_obj
 @click.pass_context
-def albums(ctx, cli_obj, db, json_, sort_size):
+def albums(
+    ctx: click.Context,
+    cli_obj: CLI_Obj | None,
+    db: str | None,
+    json_: bool,
+    sort_size: bool,
+) -> None:
     """Print out albums found in the Photos library."""
 
     # below needed for to make CliRunner work for testing
@@ -44,7 +56,11 @@ def albums(ctx, cli_obj, db, json_, sort_size):
         else osxphotos.PhotosDB(dbfile=db)
     )
     albums = {"albums": album_dict(photosdb, sort_size)}
-    if photosdb.db_version > _PHOTOS_4_VERSION:
+    # iPhotoDB has no shared albums
+    if (
+        isinstance(photosdb, osxphotos.PhotosDB)
+        and photosdb.db_version > _PHOTOS_4_VERSION
+    ):
         albums["shared albums"] = shared_album_dict(photosdb, sort_size)
 
     # cli_obj will be None if called from pytest
@@ -54,9 +70,11 @@ def albums(ctx, cli_obj, db, json_, sort_size):
         click.echo(yaml.dump(albums, sort_keys=False, allow_unicode=True))
 
 
-def album_dict(photosdb: osxphotos.PhotosDB, sort_size: bool) -> dict[str, int]:
+def album_dict(
+    photosdb: osxphotos.PhotosDB | osxphotos.iPhotoDB, sort_size: bool
+) -> dict[str, int]:
     """Return albums with folder hierarchy and count of items"""
-    album_dict = {}
+    album_dict: dict[str, int] = {}
     for album in photosdb.album_info:
         album_path = "/".join(album.folder_names)
         if album_path:
@@ -74,7 +92,7 @@ def album_dict(photosdb: osxphotos.PhotosDB, sort_size: bool) -> dict[str, int]:
 
 def shared_album_dict(photosdb: osxphotos.PhotosDB, sort_size: bool) -> dict[str, int]:
     """Return shared albums with folder hierarchy and count of items"""
-    album_dict = photosdb.albums_shared_as_dict
+    album_dict = cast(dict[str, int], photosdb.albums_shared_as_dict)
 
     if sort_size:
         # already sorted in size from albums_shared_as_dict

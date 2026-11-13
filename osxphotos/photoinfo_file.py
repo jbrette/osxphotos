@@ -35,12 +35,15 @@ class PhotoInfoFromFile:
     Returns None for most attributes but allows some templates like exiftool and created to work correctly
     """
 
+    # memoized by the exiftool property; deliberately not set in __init__
+    _exiftool: ExifToolCaching | None
+
     def __init__(
         self,
         filepath: str | pathlib.Path,
         exiftool: str | None = None,
         sidecar: str | None = None,
-    ):
+    ) -> None:
         self._path = str(filepath)
         self._exiftool_path = exiftool or EXIFTOOL_PATH
         self._uuid = str(uuid.uuid1()).upper()
@@ -60,7 +63,7 @@ class PhotoInfoFromFile:
                 logger.warning(f"Error reading sidecar {sidecar}: {e}")
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         return self._uuid
 
     @property
@@ -68,7 +71,7 @@ class PhotoInfoFromFile:
         return pathlib.Path(self._path).name
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return pathlib.Path(self._path).name
 
     @property
@@ -90,7 +93,7 @@ class PhotoInfoFromFile:
         return is_video_file(self._path)
 
     @property
-    def date(self):
+    def date(self) -> datetime.datetime:
         """Use file creation date and local time zone if not exiftool or sidecar"""
         if self._metadata.date and (dt := self._metadata.date):
             return datetime_naive_to_local(dt)
@@ -100,7 +103,7 @@ class PhotoInfoFromFile:
         return datetime_naive_to_local(dt)
 
     @property
-    def path(self):
+    def path(self) -> str:
         """Path to photo file"""
         return self._path
 
@@ -137,17 +140,17 @@ class PhotoInfoFromFile:
         return None
 
     @property
-    def height(self) -> int:
+    def height(self) -> int | None:
         """height of photo in pixels"""
         return self._metadata.height
 
     @property
-    def width(self) -> int:
+    def width(self) -> int | None:
         """width of photo in pixels"""
         return self._metadata.width
 
     @property
-    def exiftool(self):
+    def exiftool(self) -> ExifToolCaching | None:
         """Returns a ExifToolCaching (read-only instance of ExifTool) object for the photo.
         Requires that exiftool (https://exiftool.org/) be installed
         If exiftool not installed, logs warning and returns None
@@ -160,7 +163,9 @@ class PhotoInfoFromFile:
             try:
                 exiftool_path = self._exiftool_path or get_exiftool_path()
                 if self._path is not None and os.path.isfile(self._path):
-                    exiftool = ExifToolCaching(self._path, exiftool=exiftool_path)
+                    exiftool: ExifToolCaching | None = ExifToolCaching(
+                        self._path, exiftool=exiftool_path
+                    )
                 else:
                     exiftool = None
             except FileNotFoundError:
@@ -173,7 +178,9 @@ class PhotoInfoFromFile:
             self._exiftool = exiftool
             return self._exiftool
 
-    def render_template(self, template_str: str, options: RenderOptions | None = None):
+    def render_template(
+        self, template_str: str, options: RenderOptions | None = None
+    ) -> tuple[list[str], list[str]]:
         """Renders a template string for PhotoInfo instance using PhotoTemplate
 
         Args:
@@ -187,7 +194,7 @@ class PhotoInfoFromFile:
         template = PhotoTemplate(self, exiftool_path=self._exiftool_path)
         return template.render(template_str, options)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> None:
         """Return None for any other non-private attribute"""
         if not name.startswith("_"):
             return
@@ -200,7 +207,7 @@ def render_photo_template_from_filepath(
     template: str,
     exiftool_path: str | None,
     sidecar: pathlib.Path | None,
-):
+) -> list[str]:
     """Render template string for a photo from a file instead of a PhotoInfo object
 
     Args:

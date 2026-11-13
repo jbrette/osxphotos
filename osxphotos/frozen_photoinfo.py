@@ -7,7 +7,7 @@ import json
 import logging
 import re
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 from osxmetadata import OSXMetaData
 
@@ -24,7 +24,7 @@ def frozen_photoinfo_factory(photo: osxphotos.photoinfo.PhotoInfo) -> SimpleName
     """Return a frozen SimpleNamespace object for a PhotoInfo object"""
     photo_json = photo.json()
 
-    def _object_hook(d: dict[Any, Any]):
+    def _object_hook(d: dict[Any, Any]) -> dict[Any, Any] | SimpleNamespace:
         if not d:
             return d
 
@@ -40,7 +40,7 @@ def frozen_photoinfo_factory(photo: osxphotos.photoinfo.PhotoInfo) -> SimpleName
     frozen = json.loads(photo_json, object_hook=lambda d: _object_hook(d))
 
     # add on json() method to frozen object
-    def _json(*args):
+    def _json(*args: Any) -> str:
         return photo_json
 
     frozen.json = _json
@@ -67,7 +67,9 @@ def frozen_photoinfo_factory(photo: osxphotos.photoinfo.PhotoInfo) -> SimpleName
 def _add_detected_text(frozen: SimpleNamespace) -> SimpleNamespace:
     """Add detected_text method to frozen PhotoInfo object"""
 
-    def detected_text(confidence_threshold=TEXT_DETECTION_CONFIDENCE_THRESHOLD):
+    def detected_text(
+        confidence_threshold: float = TEXT_DETECTION_CONFIDENCE_THRESHOLD,
+    ) -> list[tuple[str, float]]:
         """Detects text in photo and returns lists of results as (detected text, confidence)
 
         confidence_threshold: float between 0.0 and 1.0. If text detection confidence is below this threshold,
@@ -79,7 +81,11 @@ def _add_detected_text(frozen: SimpleNamespace) -> SimpleNamespace:
         """
 
         try:
-            return frozen._detected_text_cache[confidence_threshold]
+            # cache holds the lists this function stored below
+            return cast(
+                list[tuple[str, float]],
+                frozen._detected_text_cache[confidence_threshold],
+            )
         except (AttributeError, KeyError) as e:
             if isinstance(e, AttributeError):
                 frozen._detected_text_cache = {}
@@ -90,14 +96,15 @@ def _add_detected_text(frozen: SimpleNamespace) -> SimpleNamespace:
                 logger.warning(f"Error detecting text in photo {frozen.uuid}: {e}")
                 detected_text = []
 
-            frozen._detected_text_cache[confidence_threshold] = [
+            results: list[tuple[str, float]] = [
                 (text, confidence)
                 for text, confidence in detected_text
                 if confidence >= confidence_threshold
             ]
-            return frozen._detected_text_cache[confidence_threshold]
+            frozen._detected_text_cache[confidence_threshold] = results
+            return results
 
-    def _detected_text():
+    def _detected_text() -> list[list[Any]]:
         """detect text in photo, either from cached extended attribute or by attempting text detection"""
         path = (
             frozen.path_edited
@@ -109,9 +116,10 @@ def _add_detected_text(frozen: SimpleNamespace) -> SimpleNamespace:
             return []
 
         md = OSXMetaData(path)
+        detected_text: list[list[Any]] | None
         try:
 
-            def decoder(val):
+            def decoder(val: bytes) -> Any:
                 """Decode value from JSON"""
                 return json.loads(val.decode("utf-8"))
 
@@ -124,7 +132,7 @@ def _add_detected_text(frozen: SimpleNamespace) -> SimpleNamespace:
             orientation = frozen.orientation or None
             detected_text = detect_text(path, orientation)
 
-            def encoder(obj):
+            def encoder(obj: Any) -> bytes:
                 """Encode value as JSON"""
                 val = json.dumps(obj)
                 return val.encode("utf-8")
@@ -151,7 +159,9 @@ def _add_exiftool(
 def _add_render_template(frozen: SimpleNamespace) -> SimpleNamespace:
     """Add render_template method to frozen PhotoInfo object"""
 
-    def render_template(template_str: str, options: RenderOptions | None = None):
+    def render_template(
+        template_str: str, options: RenderOptions | None = None
+    ) -> tuple[list[str], list[str]]:
         """Renders a template string for PhotoInfo instance using PhotoTemplate
 
         Args:

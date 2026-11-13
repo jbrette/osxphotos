@@ -1,6 +1,7 @@
 """theme command for osxphotos for managing color themes"""
 
 import pathlib
+from typing import Any
 
 import click
 from rich.console import Console
@@ -48,7 +49,17 @@ from .help import get_help_msg
     help="Clone THEME to NEW_THEME.",
 )
 @click.option("--delete", metavar="THEME", help="Delete THEME.")
-def theme(ctx, cli_obj, default, list_, config, preview, edit, clone, delete):
+def theme(
+    ctx: click.Context,
+    cli_obj: Any,
+    default: bool,
+    list_: bool,
+    config: str | None,
+    preview: str | None,
+    edit: str | None,
+    clone: tuple[str, str] | None,
+    delete: str | None,
+) -> None:
     """Manage osxphotos color themes."""
 
     subcommands = [default, list_, config, preview, edit, clone, delete]
@@ -71,8 +82,8 @@ def theme(ctx, cli_obj, default, list_, config, preview, edit, clone, delete):
     console = Console(theme=get_default_theme())
 
     if default:
-        default = get_default_theme()
-        theme_manager.list_themes(theme_names=[default.name])
+        default_theme = get_default_theme()
+        theme_manager.list_themes(theme_names=[default_theme.name])
         return
 
     if list_:
