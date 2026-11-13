@@ -242,7 +242,7 @@ pythonpath = ["."]
 target-version = "py314"
 # 88 is the width the codebase was formatted to with black. The formatter
 # never wraps comments, docstrings, or strings, and line length is not linted
-# (E501 is not selected), so long help strings and comments are left as-is.
+# (E501 is ignored), so long help strings and comments are left as-is.
 line-length    = 88
 
 # Rule families shared with the other uv/ruff projects (E F W I N UP B C4 SIM RUF),
