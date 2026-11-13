@@ -274,7 +274,7 @@ def test_album_dates(photosdb):
     """Test album date methods"""
     import datetime
 
-    album = [a for a in photosdb.album_info if a.uuid == UUID_DICT["album_dates"]][0]
+    album = next(a for a in photosdb.album_info if a.uuid == UUID_DICT["album_dates"])
     assert album.creation_date == datetime.datetime(
         2019,
         7,

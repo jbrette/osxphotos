@@ -77,9 +77,9 @@ def test_export_same_basename():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS:
+        for uuid, value in EXPORT_RESULTS.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS[uuid]
+            assert files == value
 
         assert f"exported: {EXPORTED_TOTAL}, missing: 0" in result.output
 
@@ -105,9 +105,9 @@ def test_export_same_basename_then_update():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS:
+        for uuid, value in EXPORT_RESULTS.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS[uuid]
+            assert files == value
 
         assert f"exported: {EXPORTED_TOTAL}, missing: 0" in result.output
 
@@ -127,9 +127,9 @@ def test_export_same_basename_then_update():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS:
+        for uuid, value in EXPORT_RESULTS.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS[uuid]
+            assert files == value
 
         assert f"exported: 0, updated: 0, skipped: {EXPORTED_TOTAL}" in result.output
 
@@ -156,9 +156,9 @@ def test_export_same_basename_update():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS:
+        for uuid, value in EXPORT_RESULTS.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS[uuid]
+            assert files == value
 
         assert f"exported: {EXPORTED_TOTAL}, updated: 0, skipped: 0" in result.output
 
@@ -178,9 +178,9 @@ def test_export_same_basename_update():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS:
+        for uuid, value in EXPORT_RESULTS.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS[uuid]
+            assert files == value
 
         assert f"exported: 0, updated: 0, skipped: {EXPORTED_TOTAL}" in result.output
 
@@ -207,9 +207,9 @@ def test_export_same_basename_then_update_newest_first():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS_NEWEST_FIRST:
+        for uuid, value in EXPORT_RESULTS_NEWEST_FIRST.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS_NEWEST_FIRST[uuid]
+            assert files == value
 
         assert f"exported: {EXPORTED_TOTAL}, missing: 0" in result.output
 
@@ -230,9 +230,9 @@ def test_export_same_basename_then_update_newest_first():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS_NEWEST_FIRST:
+        for uuid, value in EXPORT_RESULTS_NEWEST_FIRST.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS_NEWEST_FIRST[uuid]
+            assert files == value
 
         assert f"exported: 0, updated: 0, skipped: {EXPORTED_TOTAL}" in result.output
 
@@ -258,9 +258,9 @@ def test_export_same_basename_oldest_then_newest():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS:
+        for uuid, value in EXPORT_RESULTS.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS[uuid]
+            assert files == value
 
         assert f"exported: {EXPORTED_TOTAL}, missing: 0" in result.output
 
@@ -281,9 +281,9 @@ def test_export_same_basename_oldest_then_newest():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS:
+        for uuid, value in EXPORT_RESULTS.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS[uuid]
+            assert files == value
 
         assert f"exported: 0, updated: 0, skipped: {EXPORTED_TOTAL}" in result.output
 
@@ -311,9 +311,9 @@ def test_export_same_basename_newest_then_oldest():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS_NEWEST_FIRST:
+        for uuid, value in EXPORT_RESULTS_NEWEST_FIRST.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS_NEWEST_FIRST[uuid]
+            assert files == value
 
         assert f"exported: {EXPORTED_TOTAL}, updated: 0, skipped: 0" in result.output
 
@@ -333,9 +333,9 @@ def test_export_same_basename_newest_then_oldest():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS_NEWEST_FIRST:
+        for uuid, value in EXPORT_RESULTS_NEWEST_FIRST.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS_NEWEST_FIRST[uuid]
+            assert files == value
 
         assert f"exported: 0, updated: 0, skipped: {EXPORTED_TOTAL}" in result.output
 
@@ -363,9 +363,9 @@ def test_export_same_basename_newest_then_oldest_then_newest():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS_NEWEST_FIRST:
+        for uuid, value in EXPORT_RESULTS_NEWEST_FIRST.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS_NEWEST_FIRST[uuid]
+            assert files == value
 
         assert f"exported: {EXPORTED_TOTAL}, updated: 0, skipped: 0" in result.output
 
@@ -385,9 +385,9 @@ def test_export_same_basename_newest_then_oldest_then_newest():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS_NEWEST_FIRST:
+        for uuid, value in EXPORT_RESULTS_NEWEST_FIRST.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS_NEWEST_FIRST[uuid]
+            assert files == value
 
         assert f"exported: 0, updated: 0, skipped: {EXPORTED_TOTAL}" in result.output
 
@@ -408,8 +408,8 @@ def test_export_same_basename_newest_then_oldest_then_newest():
         with open("export.json", "rb") as fd:
             results = json.load(fd)
 
-        for uuid in EXPORT_RESULTS_NEWEST_FIRST:
+        for uuid, value in EXPORT_RESULTS_NEWEST_FIRST.items():
             files = get_results_for_uuid(results, uuid)
-            assert files == EXPORT_RESULTS_NEWEST_FIRST[uuid]
+            assert files == value
 
         assert f"exported: 0, updated: 0, skipped: {EXPORTED_TOTAL}" in result.output

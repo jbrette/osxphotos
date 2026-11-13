@@ -2399,7 +2399,7 @@ def test_export_exiftool():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL:
+        for uuid, value in CLI_EXIFTOOL.items():
             result = runner.invoke(
                 export,
                 [
@@ -2414,14 +2414,14 @@ def test_export_exiftool():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert sorted(files) == sorted([CLI_EXIFTOOL[uuid]["File:FileName"]])
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL[uuid]:
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
                 if type(exif[key]) is list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL[uuid][key]
+                    assert exif[key] == value[key]
             assert (
                 "XMP:Rating" not in exif
             )  # non-iPhoto library doesn't have rating, #1353
@@ -2487,7 +2487,7 @@ def test_export_exiftool_tmpdir():
     tmpdir = TemporaryDirectory()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL:
+        for uuid, value in CLI_EXIFTOOL.items():
             result = runner.invoke(
                 export,
                 [
@@ -2504,14 +2504,14 @@ def test_export_exiftool_tmpdir():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert sorted(files) == sorted([CLI_EXIFTOOL[uuid]["File:FileName"]])
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL[uuid]:
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
                 if type(exif[key]) is list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2603,7 +2603,7 @@ def test_export_exiftool_path():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL:
+        for uuid, value in CLI_EXIFTOOL.items():
             result = runner.invoke(
                 export,
                 [
@@ -2621,14 +2621,14 @@ def test_export_exiftool_path():
             assert result.exit_code == 0
             assert f"exiftool path: {exiftool}" in result.output
             files = glob.glob("*")
-            assert sorted(files) == sorted([CLI_EXIFTOOL[uuid]["File:FileName"]])
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL[uuid]:
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
                 if type(exif[key]) is list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2673,7 +2673,7 @@ def test_export_exiftool_ignore_date_modified():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_IGNORE_DATE_MODIFIED:
+        for uuid, value in CLI_EXIFTOOL_IGNORE_DATE_MODIFIED.items():
             result = runner.invoke(
                 export,
                 [
@@ -2689,16 +2689,12 @@ def test_export_exiftool_ignore_date_modified():
             )
             assert result.exit_code == 0
 
-            exif = ExifTool(
-                CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid]["File:FileName"]
-            ).asdict()
-            for key in CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid]:
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
                 if type(exif[key]) is list:
-                    assert sorted(exif[key]) == sorted(
-                        CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid][key]
-                    )
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL_IGNORE_DATE_MODIFIED[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2709,7 +2705,7 @@ def test_export_exiftool_quicktime():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_QUICKTIME:
+        for uuid, value in CLI_EXIFTOOL_QUICKTIME.items():
             result = runner.invoke(
                 export,
                 [
@@ -2725,13 +2721,11 @@ def test_export_exiftool_quicktime():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert sorted(files) == sorted(
-                [CLI_EXIFTOOL_QUICKTIME[uuid]["File:FileName"]]
-            )
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL_QUICKTIME[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL_QUICKTIME[uuid]:
-                assert exif[key] == CLI_EXIFTOOL_QUICKTIME[uuid][key]
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
+                assert exif[key] == value[key]
 
             # clean up exported files to avoid name conflicts
             for filename in files:
@@ -2746,7 +2740,7 @@ def test_export_exiftool_duplicate_keywords():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_DUPLICATE_KEYWORDS:
+        for uuid, value in CLI_EXIFTOOL_DUPLICATE_KEYWORDS.items():
             runner.invoke(
                 export,
                 [
@@ -2759,7 +2753,7 @@ def test_export_exiftool_duplicate_keywords():
                     f"{uuid}",
                 ],
             )
-            exif = ExifTool(CLI_EXIFTOOL_DUPLICATE_KEYWORDS[uuid])
+            exif = ExifTool(value)
             exifdict = exif.asdict()
             assert sorted(exifdict["IPTC:Keywords"]) == ["Maria", "wedding"]
             assert sorted(exifdict["XMP:Subject"]) == ["Maria", "wedding"]
@@ -2773,7 +2767,7 @@ def test_export_exiftool_error():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL:
+        for uuid, value in CLI_EXIFTOOL.items():
             result = runner.invoke(
                 export,
                 [
@@ -2788,14 +2782,14 @@ def test_export_exiftool_error():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert sorted(files) == sorted([CLI_EXIFTOOL[uuid]["File:FileName"]])
+            assert sorted(files) == sorted([value["File:FileName"]])
 
-            exif = ExifTool(CLI_EXIFTOOL[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL[uuid]:
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
                 if type(exif[key]) is list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL[uuid][key])
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2841,7 +2835,7 @@ def test_export_exiftool_merge():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_MERGE:
+        for uuid, value in CLI_EXIFTOOL_MERGE.items():
             result = runner.invoke(
                 export,
                 [
@@ -2859,14 +2853,14 @@ def test_export_exiftool_merge():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            assert CLI_EXIFTOOL_MERGE[uuid]["File:FileName"] in files
+            assert value["File:FileName"] in files
 
-            exif = ExifTool(CLI_EXIFTOOL_MERGE[uuid]["File:FileName"]).asdict()
-            for key in CLI_EXIFTOOL_MERGE[uuid]:
+            exif = ExifTool(value["File:FileName"]).asdict()
+            for key in value:
                 if type(exif[key]) is list:
-                    assert sorted(exif[key]) == sorted(CLI_EXIFTOOL_MERGE[uuid][key])
+                    assert sorted(exif[key]) == sorted(value[key])
                 else:
-                    assert exif[key] == CLI_EXIFTOOL_MERGE[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
@@ -2877,7 +2871,7 @@ def test_export_exiftool_merge_sidecar():
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
     with runner.isolated_filesystem():
-        for uuid in CLI_EXIFTOOL_MERGE:
+        for uuid, value in CLI_EXIFTOOL_MERGE.items():
             result = runner.invoke(
                 export,
                 [
@@ -2896,24 +2890,20 @@ def test_export_exiftool_merge_sidecar():
             )
             assert result.exit_code == 0
             files = glob.glob("*")
-            json_file = f"{CLI_EXIFTOOL_MERGE[uuid]['File:FileName']}.json"
+            json_file = f"{value['File:FileName']}.json"
             assert json_file in files
 
             with open(json_file) as fp:
                 exif = json.load(fp)[0]
 
-            for key in CLI_EXIFTOOL_MERGE[uuid]:
+            for key in value:
                 if key == "File:FileName":
                     continue
                 if type(exif[key]) is list:
-                    expected = (
-                        CLI_EXIFTOOL_MERGE[uuid][key]
-                        if type(CLI_EXIFTOOL_MERGE[uuid][key]) is list
-                        else [CLI_EXIFTOOL_MERGE[uuid][key]]
-                    )
+                    expected = value[key] if type(value[key]) is list else [value[key]]
                     assert sorted(exif[key]) == sorted(expected)
                 else:
-                    assert exif[key] == CLI_EXIFTOOL_MERGE[uuid][key]
+                    assert exif[key] == value[key]
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")

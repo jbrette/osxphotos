@@ -10,9 +10,9 @@ class PhotoInfoMock(PhotoInfo):
         self._info = photo._info
         self._uuid = photo.uuid
 
-        for kw in kwargs:
+        for kw, value in kwargs.items():
             if hasattr(photo, kw):
-                setattr(self, f"_mock_{kw}", kwargs[kw])
+                setattr(self, f"_mock_{kw}", value)
             else:
                 raise ValueError(f"Not a PhotoInfo attribute: {kw}")
 

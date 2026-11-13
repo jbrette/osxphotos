@@ -77,7 +77,7 @@ def test_person_info_photosdb_v5(photosdb5):
     import json
 
     test_key = "katie_5"
-    katie = [p for p in photosdb5.person_info if p.uuid == UUID_DICT[test_key]][0]
+    katie = next(p for p in photosdb5.person_info if p.uuid == UUID_DICT[test_key])
 
     assert katie.facecount == 3
     assert katie.name == "Katie"
@@ -101,7 +101,7 @@ def test_person_info_photosinfo_v5(photosdb5):
     person_info = photo.person_info
     assert len(person_info) == 2
 
-    katie = [p for p in person_info if p.name == "Katie"][0]
+    katie = next(p for p in person_info if p.name == "Katie")
 
     assert katie.facecount == 3
     assert katie.name == "Katie"
@@ -120,7 +120,7 @@ def test_person_info_photosdb_v4(photosdb4):
     import json
 
     test_key = "katie_4"
-    katie = [p for p in photosdb4.person_info if p.uuid == UUID_DICT[test_key]][0]
+    katie = next(p for p in photosdb4.person_info if p.uuid == UUID_DICT[test_key])
 
     assert katie.facecount == 3
     assert katie.name == "Katie"
@@ -144,7 +144,7 @@ def test_person_info_photosinfo_v4(photosdb4):
     person_info = photo.person_info
     assert len(person_info) == 2
 
-    katie = [p for p in person_info if p.name == "Katie"][0]
+    katie = next(p for p in person_info if p.name == "Katie")
     assert katie.facecount == 3
     assert katie.name == "Katie"
     assert katie.display_name == "Katie"

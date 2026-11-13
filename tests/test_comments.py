@@ -92,24 +92,24 @@ def photosdb():
 
 
 def test_comments(photosdb):
-    for uuid in COMMENT_UUID_DICT:
+    for uuid, value in COMMENT_UUID_DICT.items():
         photo = photosdb.get_photo(uuid)
-        assert photo.comments == COMMENT_UUID_DICT[uuid]
+        assert photo.comments == value
 
 
 def test_likes(photosdb):
-    for uuid in LIKE_UUID_DICT:
+    for uuid, value in LIKE_UUID_DICT.items():
         photo = photosdb.get_photo(uuid)
-        assert photo.likes == LIKE_UUID_DICT[uuid]
+        assert photo.likes == value
 
 
 def test_comments_as_dict(photosdb):
-    for uuid in COMMENT_UUID_ASDICT:
+    for uuid, value in COMMENT_UUID_ASDICT.items():
         photo = photosdb.get_photo(uuid)
-        assert photo.comments[0].asdict() == COMMENT_UUID_ASDICT[uuid]
+        assert photo.comments[0].asdict() == value
 
 
 def test_likes_as_dict(photosdb):
-    for uuid in LIKE_UUID_ASDICT:
+    for uuid, value in LIKE_UUID_ASDICT.items():
         photo = photosdb.get_photo(uuid)
-        assert photo.likes[0].asdict() == LIKE_UUID_ASDICT[uuid]
+        assert photo.likes[0].asdict() == value

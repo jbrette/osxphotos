@@ -255,7 +255,7 @@ def test_export_skip_live_photokit():
     runner = CliRunner()
     cwd = os.getcwd()
     # pylint: disable=not-context-manager
-    for uuid in UUID_SKIP_LIVE_PHOTOKIT:
+    for uuid, value in UUID_SKIP_LIVE_PHOTOKIT.items():
         with runner.isolated_filesystem():
             result = runner.invoke(
                 export,
@@ -276,4 +276,4 @@ def test_export_skip_live_photokit():
             )
             assert result.exit_code == 0
             files = [str(p) for p in pathlib.Path(".").glob("IMG*")]
-            assert sorted(files) == sorted(UUID_SKIP_LIVE_PHOTOKIT[uuid])
+            assert sorted(files) == sorted(value)

@@ -83,10 +83,10 @@ def test_score_info_v5(photosdb):
     # use math.isclose to compare floats
     # on MacOS x64 these can probably compared for equality but would possibly
     # fail if osxphotos ever ported to other platforms
-    for uuid in SCORE_DICT:
+    for uuid, value in SCORE_DICT.items():
         photo = photosdb.photos(uuid=[uuid], movies=True)[0]
         for attr in photo.score.__dict__:
-            assert isclose(getattr(photo.score, attr), getattr(SCORE_DICT[uuid], attr))
+            assert isclose(getattr(photo.score, attr), getattr(value, attr))
 
 
 def test_score_info_v4():

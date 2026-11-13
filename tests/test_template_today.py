@@ -57,9 +57,9 @@ def test_subst_today(photosdb):
     photo_template.today = DATETIME_TODAY
 
     options = RenderOptions()
-    for template in TODAY_VALUES:
+    for template, value in TODAY_VALUES.items():
         rendered, _ = photo_template.render(template, options)
-        assert rendered[0] == TODAY_VALUES[template]
+        assert rendered[0] == value
 
 
 def test_subst_strftime_today(photosdb):

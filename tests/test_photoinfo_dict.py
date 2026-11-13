@@ -13,7 +13,7 @@ PHOTOSDB = "tests/Test-13.0.0.photoslibrary"
 def test_rehydrate_dict():
     """Test rehydrating a dictionary"""
     photosdb = PhotosDB(dbfile=PHOTOSDB)
-    photo = [p for p in photosdb.photos() if p.original_filename == "wedding.jpg"][0]
+    photo = next(p for p in photosdb.photos() if p.original_filename == "wedding.jpg")
     photo_dict = photo.asdict()
     photo2 = photoinfo_from_dict(photo_dict)
     assert isinstance(photo2, PhotoInfoFromDict)
@@ -25,7 +25,7 @@ def test_rehydrate_dict():
 def test_rehydrate_dict_methods(tmp_path):
     """Test rehydrating a dictionary with methods not implemented"""
     photosdb = PhotosDB(dbfile=PHOTOSDB)
-    photo = [p for p in photosdb.photos() if p.original_filename == "wedding.jpg"][0]
+    photo = next(p for p in photosdb.photos() if p.original_filename == "wedding.jpg")
     photo_dict = photo.asdict()
     photo2 = photoinfo_from_dict(photo_dict)
     with pytest.raises(NotImplementedError):
@@ -35,7 +35,7 @@ def test_rehydrate_dict_methods(tmp_path):
 def test_photoinfo_asdict_cache_returns_independent_copy():
     """Mutating PhotoInfo.asdict() result should not mutate the cached value."""
     photosdb = PhotosDB(dbfile=PHOTOSDB)
-    photo = [p for p in photosdb.photos() if p.original_filename == "wedding.jpg"][0]
+    photo = next(p for p in photosdb.photos() if p.original_filename == "wedding.jpg")
 
     photo_dict = photo.asdict()
     photo_dict["uuid"] = "mutated"
@@ -50,7 +50,7 @@ def test_photoinfo_asdict_cache_returns_independent_copy():
 def test_photoinfo_asdict_cache_same_instance(monkeypatch: pytest.MonkeyPatch):
     """Repeated asdict calls on same PhotoInfo instance should use cached data."""
     photosdb = PhotosDB(dbfile=PHOTOSDB)
-    photo = [p for p in photosdb.photos() if p.original_filename == "wedding.jpg"][0]
+    photo = next(p for p in photosdb.photos() if p.original_filename == "wedding.jpg")
     expected = photo.asdict()
 
     def unexpected_uncached_asdict(*args, **kwargs):
@@ -64,7 +64,7 @@ def test_photoinfo_asdict_cache_same_instance(monkeypatch: pytest.MonkeyPatch):
 def test_photoinfo_json_cache_same_instance(monkeypatch: pytest.MonkeyPatch):
     """Repeated json calls on same PhotoInfo instance should use cached data."""
     photosdb = PhotosDB(dbfile=PHOTOSDB)
-    photo = [p for p in photosdb.photos() if p.original_filename == "wedding.jpg"][0]
+    photo = next(p for p in photosdb.photos() if p.original_filename == "wedding.jpg")
     expected = photo.json(indent=2, shallow=False)
 
     def unexpected_asdict(*args, **kwargs):

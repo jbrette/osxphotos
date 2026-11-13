@@ -337,7 +337,7 @@ def test_albums_as_dict(photosdb):
 
 
 def test_album_sort_order(photosdb):
-    album = [a for a in photosdb.album_info if a.title == "Pumpkin Farm"][0]
+    album = next(a for a in photosdb.album_info if a.title == "Pumpkin Farm")
     photos = album.photos
 
     uuids = [p.uuid for p in photos]
@@ -345,7 +345,7 @@ def test_album_sort_order(photosdb):
 
 
 def test_album_empty_album(photosdb):
-    album = [a for a in photosdb.album_info if a.title == "EmptyAlbum"][0]
+    album = next(a for a in photosdb.album_info if a.title == "EmptyAlbum")
     photos = album.photos
     assert photos == []
 

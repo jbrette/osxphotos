@@ -2988,7 +2988,7 @@ class PhotosDB:
             if len(folders) != 1:
                 raise ValueError("Expected only a single key in folders dict")
 
-            folder_uuid = list(folders)[0]  # first and only key of dict
+            folder_uuid = next(iter(folders))  # first and only key of dict
 
             parent_title = self._dbfolder_details[folder_uuid]["name"]
             hierarchy.append(parent_title)
@@ -3028,7 +3028,7 @@ class PhotosDB:
             if len(folders) != 1:
                 raise ValueError("Expected only a single key in folders dict")
 
-            folder_uuid = list(folders)[0]  # first and only key of dict
+            folder_uuid = next(iter(folders))  # first and only key of dict
             parent_title = self._dbalbum_details[folder_uuid]["title"]
             hierarchy.append(parent_title)
 
@@ -3068,7 +3068,7 @@ class PhotosDB:
             if len(folders) != 1:
                 raise ValueError("Expected only a single key in folders dict")
 
-            folder_uuid = list(folders)[0]  # first and only key of dict
+            folder_uuid = next(iter(folders))  # first and only key of dict
             hierarchy.append(FolderInfo(db=self, uuid=folder_uuid))
 
             folders = folders[folder_uuid]
@@ -3102,7 +3102,7 @@ class PhotosDB:
             if len(folders) != 1:
                 raise ValueError("Expected only a single key in folders dict")
 
-            folder_uuid = list(folders)[0]  # first and only key of dict
+            folder_uuid = next(iter(folders))  # first and only key of dict
             hierarchy.append(FolderInfo(db=self, uuid=folder_uuid))
 
             folders = folders[folder_uuid]

@@ -186,9 +186,9 @@ def photosdb8() -> osxphotos.PhotosDB:
 
 def test_exif_info_v5(photosdb5: osxphotos.PhotosDB):
     """test exif_info"""
-    for uuid in EXIF_DICT_5:
+    for uuid, value in EXIF_DICT_5.items():
         photo = photosdb5.photos(uuid=[uuid], movies=True)[0]
-        assert photo.exif_info == EXIF_DICT_5[uuid]
+        assert photo.exif_info == value
 
 
 def test_exif_info_v4():
@@ -202,6 +202,6 @@ def test_exif_info_v4():
 
 def test_exif_info_v8(photosdb8: osxphotos.PhotosDB):
     """test exif_info"""
-    for uuid in EXIF_DICT_8:
+    for uuid, value in EXIF_DICT_8.items():
         photo = photosdb8.photos(uuid=[uuid], movies=True)[0]
-        assert photo.exif_info == EXIF_DICT_8[uuid]
+        assert photo.exif_info == value

@@ -309,7 +309,7 @@ def test_cli_push_exif_report_csv(monkeypatch):
         with open("report.csv", newline="") as fp:
             report_data = list(csv.DictReader(fp))
         assert len(report_data) == 17
-        missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]
+        missing = next(row for row in report_data if row["uuid"] == UUID_MISSING)
         assert missing["missing"] == "original"
 
 
@@ -339,7 +339,7 @@ def test_cli_push_exif_report_csv_append(monkeypatch):
         with open("report.csv", newline="") as fp:
             report_data = list(csv.DictReader(fp))
         assert len(report_data) == 17
-        missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]
+        missing = next(row for row in report_data if row["uuid"] == UUID_MISSING)
         assert missing["missing"] == "original"
 
 
@@ -368,7 +368,7 @@ def test_cli_push_exif_report_json(monkeypatch):
         with open("report.json") as fp:
             report_data = json.load(fp)
         assert len(report_data) == 14
-        missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]
+        missing = next(row for row in report_data if row["uuid"] == UUID_MISSING)
         assert missing["missing"] == ["original"]
 
 
@@ -398,7 +398,7 @@ def test_cli_push_exif_report_sqlite(monkeypatch):
         conn.row_factory = sqlite3.Row
         report_data = list(conn.execute("SELECT * FROM report").fetchall())
         assert len(report_data) == 17
-        missing = [row for row in report_data if row["uuid"] == UUID_MISSING][0]
+        missing = next(row for row in report_data if row["uuid"] == UUID_MISSING)
         assert missing["missing"] == "original"
 
 

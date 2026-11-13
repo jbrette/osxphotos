@@ -571,9 +571,9 @@ def test_subst(photosdb_places):
     setlocale(locale.LC_ALL, "en_US")
     photo = photosdb_places.photos(uuid=[UUID_DICT["place_dc"]])[0]
 
-    for template in TEMPLATE_VALUES:
+    for template, value in TEMPLATE_VALUES.items():
         rendered, _ = photo.render_template(template)
-        assert rendered[0] == TEMPLATE_VALUES[template]
+        assert rendered[0] == value
 
 
 def test_subst_date_modified(photosdb_places):
@@ -583,9 +583,9 @@ def test_subst_date_modified(photosdb_places):
     setlocale(locale.LC_ALL, "en_US")
     photo = photosdb_places.photos(uuid=[UUID_DICT["date_modified"]])[0]
 
-    for template in TEMPLATE_VALUES_DATE_MODIFIED:
+    for template, value in TEMPLATE_VALUES_DATE_MODIFIED.items():
         rendered, _ = photo.render_template(template)
-        assert rendered[0] == TEMPLATE_VALUES_DATE_MODIFIED[template]
+        assert rendered[0] == value
 
 
 def test_subst_date_not_modified(photosdb_places):
@@ -595,9 +595,9 @@ def test_subst_date_not_modified(photosdb_places):
     setlocale(locale.LC_ALL, "en_US")
     photo = photosdb_places.photos(uuid=[UUID_DICT["date_not_modified"]])[0]
 
-    for template in TEMPLATE_VALUES_DATE_NOT_MODIFIED:
+    for template, value in TEMPLATE_VALUES_DATE_NOT_MODIFIED.items():
         rendered, _ = photo.render_template(template)
-        assert rendered[0] == TEMPLATE_VALUES_DATE_NOT_MODIFIED[template]
+        assert rendered[0] == value
 
 
 def test_subst_locale_1(photosdb_places):
@@ -610,9 +610,9 @@ def test_subst_locale_1(photosdb_places):
 
     photo = photosdb_places.photos(uuid=[UUID_DICT["place_dc"]])[0]
 
-    for template in TEMPLATE_VALUES_DEU:
+    for template, value in TEMPLATE_VALUES_DEU.items():
         rendered, _ = photo.render_template(template)
-        assert rendered[0] == TEMPLATE_VALUES_DEU[template]
+        assert rendered[0] == value
 
 
 def test_subst_locale_2(photosdb_places):
@@ -634,9 +634,9 @@ def test_subst_locale_2(photosdb_places):
 
     photo = photosdb_places.photos(uuid=[UUID_DICT["place_dc"]])[0]
 
-    for template in TEMPLATE_VALUES_DEU:
+    for template, value in TEMPLATE_VALUES_DEU.items():
         rendered, _ = photo.render_template(template)
-        assert rendered[0] == TEMPLATE_VALUES_DEU[template]
+        assert rendered[0] == value
 
 
 def test_subst_default_val(photosdb_places):
@@ -980,10 +980,10 @@ def test_subst_expand_inplace_3(photosdb):
 
 def test_comment(photosdb_comments):
 
-    for uuid in COMMENT_UUID_DICT:
+    for uuid, value in COMMENT_UUID_DICT.items():
         photo = photosdb_comments.get_photo(uuid)
         comments = photo.render_template("{comment}")
-        assert comments[0] == sorted(COMMENT_UUID_DICT[uuid])
+        assert comments[0] == sorted(value)
 
 
 def test_media_type(photosdb_cloud):
@@ -1050,9 +1050,9 @@ def test_expand_in_place_with_delim(photosdb):
 
     photo = photosdb.get_photo(UUID_MULTI_KEYWORDS)
 
-    for template in TEMPLATE_VALUES_MULTI_KEYWORDS:
+    for template, value in TEMPLATE_VALUES_MULTI_KEYWORDS.items():
         rendered, _ = photo.render_template(template)
-        assert sorted(rendered) == sorted(TEMPLATE_VALUES_MULTI_KEYWORDS[template])
+        assert sorted(rendered) == sorted(value)
 
 
 def test_expand_in_place_with_delim_single_value(photosdb):
@@ -1060,18 +1060,18 @@ def test_expand_in_place_with_delim_single_value(photosdb):
 
     photo = photosdb.get_photo(UUID_TITLE)
 
-    for template in TEMPLATE_VALUES_TITLE:
+    for template, value in TEMPLATE_VALUES_TITLE.items():
         rendered, _ = photo.render_template(template)
-        assert sorted(rendered) == sorted(TEMPLATE_VALUES_TITLE[template])
+        assert sorted(rendered) == sorted(value)
 
 
 @pytest.mark.skipif(exiftool is None, reason="exiftool not installed")
 def test_exiftool_template(photosdb):
-    for uuid in UUID_EXIFTOOL:
+    for uuid, value in UUID_EXIFTOOL.items():
         photo = photosdb.get_photo(uuid)
-        for template in UUID_EXIFTOOL[uuid]:
+        for template in value:
             rendered, _ = photo.render_template(template)
-            assert sorted(rendered) == sorted(UUID_EXIFTOOL[uuid][template])
+            assert sorted(rendered) == sorted(value[template])
 
 
 def test_hdr(photosdb):
@@ -1151,19 +1151,19 @@ def test_punctuation_2():
 
 
 def test_photo_template(photosdb):
-    for uuid in UUID_PHOTO:
+    for uuid, value in UUID_PHOTO.items():
         photo = photosdb.get_photo(uuid)
-        for template in UUID_PHOTO[uuid]:
+        for template in value:
             rendered, _ = photo.render_template(template)
-            assert sorted(rendered) == sorted(UUID_PHOTO[uuid][template])
+            assert sorted(rendered) == sorted(value[template])
 
 
 def test_conditional(photosdb):
-    for uuid in UUID_CONDITIONAL:
+    for uuid, value in UUID_CONDITIONAL.items():
         photo = photosdb.get_photo(uuid)
-        for template in UUID_CONDITIONAL[uuid]:
+        for template in value:
             rendered, _ = photo.render_template(template)
-            assert sorted(rendered) == sorted(UUID_CONDITIONAL[uuid][template])
+            assert sorted(rendered) == sorted(value[template])
 
 
 def test_function_hyphen_dir(photosdb):
@@ -1434,12 +1434,12 @@ def test_float_concatenation(photosdb):
 
 def test_var_eval(photosdb):
     """Test {%varname?True,False} #1318"""
-    photo = [p for p in photosdb.photos() if not p.title][0]
+    photo = next(p for p in photosdb.photos() if not p.title)
     template = "{var:test,{title,}}{%test?True,False}"
     rendered, _ = photo.render_template(template)
     assert rendered[0] == "False"
 
-    photo = [p for p in photosdb.photos() if p.title][0]
+    photo = next(p for p in photosdb.photos() if p.title)
     template = "{var:test,{title,}}{%test?True,False}"
     rendered, _ = photo.render_template(template)
     assert rendered[0] == "True"
@@ -1447,7 +1447,7 @@ def test_var_eval(photosdb):
 
 def test_null_template(photosdb):
     """Test that template with null value renders correctly, #1319"""
-    photo = [p for p in photosdb.photos() if not p.title][0]
+    photo = next(p for p in photosdb.photos() if not p.title)
     template = "{var:test,{title,}}Foo-{%test,}-Bar"
     rendered, _ = photo.render_template(template)
     assert rendered[0] == "Foo--Bar"
