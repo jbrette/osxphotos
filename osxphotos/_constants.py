@@ -621,7 +621,7 @@ class SearchCategory_Photos8(SearchCategory):  # noqa: N801  (public name)
         }
 
 
-def search_category_factory(version: int) -> type[SearchCategory]:
+def search_category_factory(version: float) -> type[SearchCategory]:
     """Return SearchCategory class for Photos version"""
     return SearchCategory_Photos8 if version >= 8 else SearchCategory
 

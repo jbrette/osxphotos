@@ -8,10 +8,10 @@ import pathlib
 import re
 import shlex
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from textx import TextXSyntaxError, metamodel_from_file
 
@@ -404,27 +404,31 @@ class PhotoTemplateParser:
     """Parser for PhotoTemplate"""
 
     # implemented as Singleton
+    instance: ClassVar[PhotoTemplateParser | None]
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
         """create new object or return instance of already created singleton"""
-        if not hasattr(cls, "instance") or not cls.instance:
-            cls.instance = super().__new__(cls)
+        instance: Self | None = getattr(cls, "instance", None)
+        if not instance:
+            instance = super().__new__(cls)
+            cls.instance = instance
 
-        return cls.instance
+        return instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         """return existing singleton or create a new one"""
 
         if hasattr(self, "metamodel"):
             return
 
-        self.metamodel = metamodel_from_file(MTL_GRAMMAR_MODEL, skipws=False)
+        # textX is untyped: the metamodel and the parse-tree nodes it returns are Any
+        self.metamodel: Any = metamodel_from_file(MTL_GRAMMAR_MODEL, skipws=False)
 
-    def parse(self, template_statement):
+    def parse(self, template_statement: str) -> Any:
         """Parse a template_statement string"""
         return self.metamodel.model_from_str(template_statement)
 
-    def fields(self, template_statement):
+    def fields(self, template_statement: str) -> list[str]:
         """Return list of fields found in a template statement; does not verify that fields are valid"""
         model = self.parse(template_statement)
         return [ts.template.field for ts in model.template_strings if ts.template]
@@ -445,7 +449,7 @@ class PhotoTemplate:
 
         # holds value of current date/time for {today.x} fields
         # gets initialized in get_template_value
-        self.today = None
+        self.today: datetime.datetime | None = None
 
         # get parser singleton
         self.parser = PhotoTemplateParser()
@@ -466,7 +470,7 @@ class PhotoTemplate:
         self.filepath = options.filepath
         self.quote = options.quote
         self.dest_path = options.dest_path
-        self.variables = {}
+        self.variables: dict[str, list[str]] = {}
 
     def render(
         self,
@@ -514,11 +518,11 @@ class PhotoTemplate:
 
     def _render_statement(
         self,
-        statement,
-        field_arg=None,
-    ):
-        results = []
-        unmatched = []
+        statement: Any,
+        field_arg: str | None = None,
+    ) -> tuple[list[str], list[str]]:
+        results: list[str] = []
+        unmatched: list[str] = []
         for ts in statement.template_strings:
             results, unmatched = self._render_template_string(
                 ts, results=results, unmatched=unmatched, field_arg=field_arg
@@ -540,11 +544,11 @@ class PhotoTemplate:
 
     def _render_template_string(
         self,
-        ts,
-        field_arg,
-        results=None,
-        unmatched=None,
-    ):
+        ts: Any,
+        field_arg: str | None,
+        results: list[str] | None = None,
+        unmatched: list[str] | None = None,
+    ) -> tuple[list[str], list[str]]:
         """Render a TemplateString object"""
 
         results = results or [""]
@@ -556,7 +560,7 @@ class PhotoTemplate:
             subfield = ts.template.subfield
 
             # process filters
-            filters = []
+            filters: list[str] = []
             if ts.template.filter is not None:
                 filters = ts.template.filter.value
 
@@ -567,6 +571,7 @@ class PhotoTemplate:
                 field_arg = None
 
             # process delim
+            delim: str | None
             if ts.template.delim is not None:
                 # if value is None, means format was {+field}
                 delim = ts.template.delim.value or ""
@@ -575,6 +580,7 @@ class PhotoTemplate:
                 delim = None
 
             # process combine operator
+            combine_val: list[str] | None
             if ts.template.combine is not None:
                 is_combine = True
                 if ts.template.combine.value is not None:
@@ -591,6 +597,7 @@ class PhotoTemplate:
                 combine_val = None
 
             # process boolean operator
+            bool_val: list[str] | None
             if ts.template.bool is not None:
                 is_bool = True
                 if ts.template.bool.value is not None:
@@ -607,6 +614,7 @@ class PhotoTemplate:
                 bool_val = None
 
             # process default
+            default: list[str]
             if ts.template.default is not None:
                 # default is also a TemplateString
                 if ts.template.default.value is not None:
@@ -622,6 +630,7 @@ class PhotoTemplate:
                 default = []
 
             # process conditional
+            conditional_value: list[str]
             if ts.template.conditional is not None:
                 operator = ts.template.conditional.operator
                 negation = ts.template.conditional.negation
@@ -642,9 +651,10 @@ class PhotoTemplate:
 
             if field.startswith("%"):
                 # variable in form {%var}
-                vals = self.variables.get(field[1:], None)
-                if vals is None:
+                variable_vals = self.variables.get(field[1:], None)
+                if variable_vals is None:
                     raise SyntaxError(f"Variable '{field[1:]}' is not defined.")
+                field_vals: Sequence[str | None] = variable_vals
             elif field == "var":
                 if not subfield or not default:
                     raise SyntaxError(
@@ -653,17 +663,20 @@ class PhotoTemplate:
                 # strip empty string from default, #1318, #512
                 default = [d for d in default if d != ""]
                 self.variables[subfield] = default
-                vals = []
+                field_vals = []
             else:
-                vals, u = self.get_field_values(field, subfield, field_arg, default)
+                field_vals, u = self.get_field_values(
+                    field, subfield, field_arg, default
+                )
                 if u:
                     unmatched.extend(u)
                     return [], unmatched
 
-            vals = [val for val in vals if val is not None]
+            vals = [val for val in field_vals if val is not None]
 
             if self.expand_inplace or delim is not None:
-                sep = delim if delim is not None else self.inplace_sep
+                # inplace_sep is only None if the caller explicitly passed None
+                sep = cast(str, delim if delim is not None else self.inplace_sep)
                 vals = [sep.join(vals)] if vals else []
 
             for filter_ in filters:
@@ -685,7 +698,7 @@ class PhotoTemplate:
             if operator:
                 # have a conditional operator
 
-                def string_test(test_function):
+                def string_test(test_function: Callable[[str, str], bool]) -> list[str]:
                     """Perform string comparison using test_function; closure to capture conditional_value, vals, negation"""
                     match = False
                     for c in conditional_value:
@@ -702,7 +715,9 @@ class PhotoTemplate:
                         else []
                     )
 
-                def comparison_test(test_function):
+                def comparison_test(
+                    test_function: Callable[[float, float], bool],
+                ) -> list[str]:
                     """Perform numerical comparisons using test_function; closure to capture conditional_val, vals, negation"""
                     # returns True if any of the values match the condition
                     if len(conditional_value) != 1:
@@ -765,7 +780,8 @@ class PhotoTemplate:
             if is_combine and combine_val:
                 vals.extend(val for val in combine_val if val)
 
-            if is_bool:
+            if is_bool and bool_val is not None:
+                # bool_val is set whenever is_bool is True
                 vals = default if not vals else bool_val
             elif not vals and field != "var":
                 # don't assign default value if the template was variable assignment
@@ -842,10 +858,10 @@ class PhotoTemplate:
         subfield: str | None,
         field_arg: str | None,
         default: list[str],
-    ) -> tuple[list[str], list[str]]:
+    ) -> tuple[Sequence[str | None], list[str]]:
         """Get the values for a field"""
-        vals = []
-        unmatched = []
+        vals: Sequence[str | None] = []
+        unmatched: list[str] = []
         if (
             field in SINGLE_VALUE_SUBSTITUTIONS
             or field.split(".")[0] in SINGLE_VALUE_SUBSTITUTIONS
@@ -889,7 +905,7 @@ class PhotoTemplate:
         default: list[str],
         subfield: str | None,
         field_arg: str | None,
-    ):
+    ) -> list[str | None]:
         """lookup value for template field (single-value template substitutions)
 
         Args:
@@ -911,7 +927,7 @@ class PhotoTemplate:
         if self.today is None:
             self.today = datetime.datetime.now()
 
-        value = None
+        value: str | None = None
 
         # wouldn't a switch/case statement be nice...
         # handle the fields that don't require a PhotoInfo object first
@@ -983,13 +999,12 @@ class PhotoTemplate:
                     album_info = _get_album_by_name(self.photo, album)
                 else:
                     album_info = _get_album_by_path(self.photo, dest_path)
-                value = album_info.photo_index(self.photo) if album_info else None
+                album_index = album_info.photo_index(self.photo) if album_info else None
             else:
-                value = None
-            if value is not None:
+                album_index = None
+            if album_index is not None:
                 start_id = int(field_arg) if field_arg is not None else 0
-                value = int(value) + start_id
-                value = format_str_value(value, subfield)
+                value = format_str_value(int(album_index) + start_id, subfield)
         elif field.startswith("counter"):
             value = counter.get_counter_value(field, subfield, field_arg)
         elif field == "burst":
@@ -1003,17 +1018,18 @@ class PhotoTemplate:
             raise ValueError(f"Unhandled template value: {field}")
 
         # sanitize filename or directory name if needed
-        if self.filename:
-            value = sanitize_pathpart(value)
-        elif self.dirname:
-            value = sanitize_dirname(value)
+        if value is not None:
+            if self.filename:
+                value = sanitize_pathpart(value)
+            elif self.dirname:
+                value = sanitize_dirname(value)
 
         # ensure no empty strings in value (see #512)
         value = None if value == "" else value
 
         return [value]
 
-    def get_template_value_pathlib(self, field):
+    def get_template_value_pathlib(self, field: str) -> list[str]:
         """lookup value for template pathlib template fields
 
         Args:
@@ -1050,6 +1066,7 @@ class PhotoTemplate:
         """Return filtered values"""
 
         # extract args, if any
+        args: str | None
         if re.search(r"\(.*\)", filter_):
             filter_, args = filter_.split("(", 1)
             args = args.rstrip(")")
@@ -1080,6 +1097,10 @@ class PhotoTemplate:
         ] and (args is None or not len(args)):
             raise SyntaxError(f"{filter_} requires arguments")
 
+        # the filters that require arguments were validated above, so for them
+        # required_args is the same non-empty str as args
+        required_args = args or ""
+
         if filter_ == "lower":
             value = [v.lower() for v in values]
         elif filter_ == "upper":
@@ -1109,14 +1130,14 @@ class PhotoTemplate:
         elif filter_ == "chop":
             # chop off characters from the end
             try:
-                chop = int(args)
+                chop = int(required_args)
             except ValueError as e:
                 raise SyntaxError(f"Invalid value for chop: {args}") from e
             value = [v[:-chop] for v in values] if chop else values
         elif filter_ == "chomp":
             # chop off characters from the beginning
             try:
-                chomp = int(args)
+                chomp = int(required_args)
             except ValueError as e:
                 raise SyntaxError(f"Invalid value for chomp: {args}") from e
             value = [v[chomp:] for v in values] if chomp else values
@@ -1149,10 +1170,10 @@ class PhotoTemplate:
             value = [delim.join(values)]
         elif filter_ == "append":
             # append value to list
-            value = [*values, args]
+            value = [*values, required_args]
         elif filter_ == "prepend":
             # prepend value to list
-            value = [args, *values]
+            value = [required_args, *values]
         elif filter_ == "appends":
             # append value to each item in list
             value = [f"{v}{args}" for v in values]
@@ -1164,14 +1185,14 @@ class PhotoTemplate:
             value = [v for v in values if v != args]
         elif filter_ == "slice":
             # slice list of values
-            value = values[create_slice(args)]
+            value = values[create_slice(required_args)]
         elif filter_ == "sslice":
             # slice each value in a list
-            slice_ = create_slice(args)
+            slice_ = create_slice(required_args)
             value = [v[slice_] for v in values]
         elif filter_ == "filter":
             # filter values based on a predicate
-            value = [v for v in values if self.filter_predicate(v, args)]
+            value = [v for v in values if self.filter_predicate(v, required_args)]
         elif filter_ == "int":
             # convert value to integer
             value = values_to_int(values)
@@ -1192,15 +1213,15 @@ class PhotoTemplate:
         # extract function name and arguments
         if not args:
             raise SyntaxError("Filter predicate requires arguments")
-        args = args.split(None, 1)
-        if args[0] == "not":
-            args = args[1:]
-            return not self.filter_predicate(value, " ".join(args))
+        args_list = args.split(None, 1)
+        if args_list[0] == "not":
+            args_list = args_list[1:]
+            return not self.filter_predicate(value, " ".join(args_list))
 
-        predicate = args[0]
-        conditional_value = args[1].split("|")
+        predicate = args_list[0]
+        conditional_value = args_list[1].split("|")
 
-        def comparison_test(test_function):
+        def comparison_test(test_function: Callable[[float, float], bool]) -> bool:
             """Perform numerical comparisons using test_function"""
             # returns True if any of the values match the condition
             try:
@@ -1237,7 +1258,13 @@ class PhotoTemplate:
 
         return predicate_is_true
 
-    def get_template_value_multi(self, field, subfield, path_sep, default):
+    def get_template_value_multi(
+        self,
+        field: str,
+        subfield: str | None,
+        path_sep: str | None,
+        default: list[str],
+    ) -> Sequence[str | None]:
         """lookup value for template field (multi-value template substitutions)
 
         Args:
@@ -1255,12 +1282,14 @@ class PhotoTemplate:
 
         """ return list of values for a multi-valued template field """
 
-        path_sep = path_sep or self.path_sep
+        # path_sep is only None if the caller explicitly passed None in RenderOptions
+        path_sep = cast(str, path_sep or self.path_sep)
 
         if self.photo.uuid is None:
             return []
 
-        values = []
+        # self.photo is duck-typed (Any), so most values are Any
+        values: list[Any] = []
         if field == "album":
             values = (
                 sorted(self.photo.burst_albums)
@@ -1395,11 +1424,12 @@ class PhotoTemplate:
             # skip folder_album because it would have been handled above
             values = [sanitize_dirname(value) for value in values]
 
-        return values or []
+        # values is always a list here
+        return values
 
     def get_format_values(
-        self, field: str, subfield: str, default: list[str]
-    ) -> list[str | None] | None:
+        self, field: str, subfield: str | None, default: list[str]
+    ) -> list[str]:
         """Return values for {format} templates"""
 
         if field != "format":
@@ -1412,6 +1442,7 @@ class PhotoTemplate:
             raise SyntaxError(
                 f"'{type_}' is not a valid type for {format}: must be one of 'int', 'float', 'str'"
             )
+        default_: list[int] | list[float] | list[str]
         if type_ == "int":
             # convert to float then int to avoid error when converting a string float to int
             default_ = [int(float(v)) for v in default]
@@ -1424,8 +1455,8 @@ class PhotoTemplate:
 
     def get_template_value_exiftool(
         self,
-        subfield,
-    ):
+        subfield: str,
+    ) -> list[str]:
         """Get template value for format "{exiftool:EXIF:Model}" """
 
         if self.photo is None:
@@ -1457,7 +1488,7 @@ class PhotoTemplate:
         subfield: str,
         field_arg: str | None,
         caller: str,
-    ):
+    ) -> list[str]:
         """Get template value from external function
 
         Args:
@@ -1484,7 +1515,7 @@ class PhotoTemplate:
             # must be a PhotoInfoNone instance
             # if no uuid, then template is being validated but not actually run
             # so don't run the function
-            values = []
+            values: list[Any] | str = []
         elif caller in {"export", "query"}:
             # function signature is:
             # def example(photo: PhotoInfo, options: ExportOptions, args: Optional[str] = None, **kwargs) -> Union[List, str]:
@@ -1513,7 +1544,9 @@ class PhotoTemplate:
 
         return values
 
-    def get_template_value_filter_function(self, filter_, args, values):
+    def get_template_value_filter_function(
+        self, filter_: str, args: str | None, values: list[str]
+    ) -> list[str]:
         """Filter template value from external function"""
         # TODO: add args to filter function call? Would change signature of function
 
@@ -1547,12 +1580,12 @@ class PhotoTemplate:
 
         return values
 
-    def get_photo_video_type(self, default):
+    def get_photo_video_type(self, default: list[str]) -> str:
         """return media type, e.g. photo or video"""
         default_dict = parse_default_kv(default, PHOTO_VIDEO_TYPE_DEFAULTS)
         return default_dict["photo"] if self.photo.isphoto else default_dict["video"]
 
-    def get_media_type(self, default):
+    def get_media_type(self, default: list[str]) -> str:
         """return special media type, e.g. slow_mo, panorama, etc., defaults to photo or video if no special type"""
         default_dict = parse_default_kv(default, MEDIA_TYPE_DEFAULTS)
         p = self.photo
@@ -1579,12 +1612,14 @@ class PhotoTemplate:
         else:
             return default_dict["photo"]
 
-    def get_photo_bool_attribute(self, attr, default, bool_val):
+    def get_photo_bool_attribute(self, attr: str, default: Any, bool_val: Any) -> Any:
         """Return the boolean value for a photo attribute"""
         return bool_val if getattr(self.photo, attr) else default
 
 
-def parse_default_kv(default, default_dict):
+def parse_default_kv(
+    default: list[str] | None, default_dict: dict[str, str]
+) -> dict[str, str]:
     """parse a string in form key1=value1;key2=value2,... as used for some template fields
 
     Args:
@@ -1631,7 +1666,7 @@ def get_template_field_table() -> str:
     return template_table
 
 
-def _get_pathlib_value(field, value, quote):
+def _get_pathlib_value(field: str, value: str | os.PathLike[str], quote: bool) -> str:
     """Get the value for a pathlib.Path type template
 
     Args:
@@ -1657,7 +1692,7 @@ def _get_pathlib_value(field, value, quote):
     return val_str
 
 
-def format_str_value(value, format_str):
+def format_str_value(value: Any, format_str: str | None) -> str:
     """Format value based on format code in field in format id:02d"""
     if not format_str:
         return str(value)
@@ -1665,7 +1700,8 @@ def format_str_value(value, format_str):
     return format_str.format(value)
 
 
-def _get_album_by_name(photo, album):
+# photo is duck-typed (PhotoInfo or another photo class), so photo and album info are Any
+def _get_album_by_name(photo: Any, album: str) -> Any:
     """Finds first album named album that photo is in and returns the AlbumInfo object, otherwise returns None"""
     return next(
         (album_info for album_info in photo.album_info if album_info.title == album),
@@ -1673,7 +1709,7 @@ def _get_album_by_name(photo, album):
     )
 
 
-def _get_album_by_path(photo, folder_album_path):
+def _get_album_by_path(photo: Any, folder_album_path: str) -> Any:
     """finds the first album whose folder_album path matches and folder_album_path and returns the AlbumInfo object, otherwise, returns None"""
     for album_info in photo.album_info:
         # following code is how {folder_album} builds the folder path
@@ -1684,14 +1720,16 @@ def _get_album_by_path(photo, folder_album_path):
     return None
 
 
-def _get_detected_text(photo, confidence=TEXT_DETECTION_CONFIDENCE_THRESHOLD):
+def _get_detected_text(
+    photo: Any, confidence: str | float | None = TEXT_DETECTION_CONFIDENCE_THRESHOLD
+) -> list[str]:
     """Returns the detected text for a photo
     {detected_text} uses this instead of PhotoInfo.detected_text() to cache the text for all confidence values
     """
     if not photo.isphoto:
         return []
 
-    confidence = (
+    threshold = (
         float(confidence)
         if confidence is not None
         else TEXT_DETECTION_CONFIDENCE_THRESHOLD
@@ -1700,26 +1738,29 @@ def _get_detected_text(photo, confidence=TEXT_DETECTION_CONFIDENCE_THRESHOLD):
     # _detected_text caches the text detection results in an extended attribute
     # so the first time this gets called is slow but repeated accesses are fast
     detected_text = photo._detected_text()
-    return [text for text, conf in detected_text if conf >= confidence]
+    return [text for text, conf in detected_text if conf >= threshold]
 
 
-def create_slice(args):
+def create_slice(args: str) -> slice:
     """Create a slice object from a string of args in form "start:end:step" """
     slice_args = args.split(":")
+    start: int | None
+    end: int | None
+    step: int | None
     if len(slice_args) == 1:
         start = int(slice_args[0] or 0)
         end = None
         step = None
     elif len(slice_args) == 2:
-        start, end = slice_args
-        start = int(start) if start != "" else None
-        end = int(end) if end != "" else None
+        start_str, end_str = slice_args
+        start = int(start_str) if start_str != "" else None
+        end = int(end_str) if end_str != "" else None
         step = None
     elif len(slice_args) == 3:
-        start, end, step = slice_args
-        start = int(start) if start != "" else None
-        end = int(end) if end != "" else None
-        step = int(step) if step != "" else None
+        start_str, end_str, step_str = slice_args
+        start = int(start_str) if start_str != "" else None
+        end = int(end_str) if end_str != "" else None
+        step = int(step_str) if step_str != "" else None
     else:
         raise SyntaxError(f"Invalid slice: {args}")
     return slice(start, end, step)
@@ -1769,7 +1810,7 @@ def _strftime(dt: datetime.datetime, format: str) -> str:
     )
 
 
-def format_date_field(dt: datetime.datetime, field: str, args: list[str]) -> str:
+def format_date_field(dt: datetime.datetime, field: str, args: list[str]) -> str | None:
     """Format a date template field in format 'created', 'create.year' etc.
 
     Args:
@@ -1795,12 +1836,13 @@ def format_date_field(dt: datetime.datetime, field: str, args: list[str]) -> str
             raise ValueError(f"Invalid strftime template: '{args}'") from err
     else:
         try:
-            return getattr(DateTimeFormatter(dt), subfield)
+            formatted: str = getattr(DateTimeFormatter(dt), subfield)
+            return formatted
         except AttributeError as e:
             raise ValueError(f"Unhandled template value: {field}") from e
 
 
-def get_place_value(photo: PhotoInfo, field: str):
+def get_place_value(photo: PhotoInfo, field: str) -> str | None:
     """Get the value of a 'place' field by attribute
 
     Args:
@@ -1873,7 +1915,7 @@ def get_template_values_pathlib(filter: str, values: Iterable[Any]) -> list[Any]
             if not hasattr(pathlib.Path, prop):
                 raise SyntaxError(f"Invalid pathlib property: {prop}")
 
-    result = []
+    result: list[Any] = []
     for v in values:
         path_obj = pathlib.Path(str(v))
         if properties:

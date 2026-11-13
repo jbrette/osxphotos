@@ -19,11 +19,15 @@ from collections.abc import Iterator
 from contextlib import suppress
 from io import StringIO
 from sqlite3 import Error
-from typing import Any
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, Self, cast
 
-from tenacity import retry, retry_if_not_exception_type, stop_after_attempt
-
-import osxphotos
+from tenacity import (
+    RetryCallState,
+    retry,
+    retry_if_not_exception_type,
+    stop_after_attempt,
+)
 
 from ._constants import OSXPHOTOS_EXPORT_DB, SQLITE_CHECK_SAME_THREAD
 from ._version import __version__
@@ -33,6 +37,9 @@ from .sqlite_utils import (
     sqlite_delete_dbfiles,
 )
 from .unicode import normalize_fs_path
+
+if TYPE_CHECKING:
+    from .exportoptions import ExportResults
 
 __all__ = [
     "BatchContext",
@@ -60,10 +67,11 @@ HISTORY_BATCH_SIZE = int(os.environ.get("OSXPHOTOS_HISTORY_BATCH_SIZE", "100"))
 logger = logging.getLogger("osxphotos")
 
 
-def retry_log_error_no_raise(retry_state):
+def retry_log_error_no_raise(retry_state: RetryCallState) -> None:
     """Log error for retry but don't raise exception"""
+    fn_name = retry_state.fn.__name__ if retry_state.fn is not None else None
     logger.debug(
-        f"Error {retry_state.outcome} for {retry_state.fn.__name__}({retry_state.args}, {retry_state.kwargs}); retrying...",
+        f"Error {retry_state.outcome} for {fn_name}({retry_state.args}, {retry_state.kwargs}); retrying...",
     )
 
 
@@ -108,20 +116,29 @@ class BatchContext:
     def __init__(self, export_db: ExportDB):
         self._export_db = export_db
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self._export_db._batch_mode += 1
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self._export_db._batch_mode -= 1
         if self._export_db._batch_mode == 0:
             # Outermost batch is complete, flush and commit
             self._export_db.flush_history()
             with self._export_db.lock:
-                if exc_type and self._export_db._conn.in_transaction:
-                    self._export_db._conn.rollback()
-                elif self._export_db._conn.in_transaction:
-                    self._export_db._conn.commit()
+                conn = self._export_db._conn
+                if conn is None:
+                    # database was closed inside the batch; nothing to commit
+                    return
+                if exc_type and conn.in_transaction:
+                    conn.rollback()
+                elif conn.in_transaction:
+                    conn.commit()
 
 
 class ExportDB:
@@ -139,8 +156,8 @@ class ExportDB:
 
     def __init__(
         self,
-        dbfile: str | os.PathLike,
-        export_dir: str | os.PathLike | None,
+        dbfile: str | os.PathLike[str],
+        export_dir: str | os.PathLike[str] | None,
         version: str | None = None,
     ):
         """Create a new ExportDB object
@@ -163,7 +180,7 @@ class ExportDB:
         # whilst preserving the UUID to filename mapping
         self._path: str | None = str(export_dir) if export_dir else None
 
-        self.was_upgraded: tuple[str, str] | tuple = ()
+        self.was_upgraded: tuple[str, str] | tuple[()] = ()
         self.was_created = False
 
         self.lock = threading.Lock()
@@ -179,8 +196,9 @@ class ExportDB:
         # Batch mode counter - when > 0, commits are deferred until batch completes
         self._batch_mode: int = 0
 
-        self._conn = self._open_export_db(self._dbfile, version)
-        self._perform_db_maintenance(self._conn)
+        conn = self._open_export_db(self._dbfile, version)
+        self._conn: sqlite3.Connection | None = conn
+        self._perform_db_maintenance(conn)
         self._insert_run_info()
         self._insert_export_dir()
 
@@ -190,8 +208,14 @@ class ExportDB:
         return self._dbfile
 
     @property
-    def export_dir(self) -> str:
+    def export_dir(self) -> str | None:
         """returns path to export directory"""
+        return self._path
+
+    def _export_dir_str(self) -> str:
+        """return export_dir; raise TypeError if not set, as os.path.join(None, ...) would"""
+        if self._path is None:
+            raise TypeError("export_dir is not set for this export database")
         return self._path
 
     @property
@@ -200,7 +224,7 @@ class ExportDB:
         return self._conn or self._get_db_connection(self._dbfile)
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def get_file_record(self, filename: str | os.PathLike) -> ExportRecord | None:
+    def get_file_record(self, filename: str | os.PathLike[str]) -> ExportRecord | None:
         """get info for filename
 
         Returns: an ExportRecord object or None if filename not found
@@ -238,7 +262,7 @@ class ExportDB:
         )
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def prefetch_directory_records(self, directory: str | os.PathLike) -> int:
+    def prefetch_directory_records(self, directory: str | os.PathLike[str]) -> int:
         """Batch-load all ExportRecord data for files in a directory.
 
         This loads all records with a single SQL query and caches them for
@@ -320,7 +344,9 @@ class ExportDB:
         )
         return len(dir_cache)
 
-    def invalidate_record_cache(self, directory: str | os.PathLike | None = None):
+    def invalidate_record_cache(
+        self, directory: str | os.PathLike[str] | None = None
+    ) -> None:
         """Invalidate the record cache for a directory or all directories.
 
         Args:
@@ -338,7 +364,7 @@ class ExportDB:
         retry=retry_if_not_exception_type(sqlite3.IntegrityError),
     )
     def create_file_record(
-        self, filename: str | os.PathLike, uuid: str
+        self, filename: str | os.PathLike[str], uuid: str
     ) -> ExportRecord:
         """create a new record for filename and uuid
 
@@ -363,7 +389,7 @@ class ExportDB:
         retry=retry_if_not_exception_type(sqlite3.IntegrityError),
     )
     def create_or_get_file_record(
-        self, filename: str | os.PathLike, uuid: str
+        self, filename: str | os.PathLike[str], uuid: str
     ) -> ExportRecord:
         """create a new record for filename and uuid or return existing record
 
@@ -409,7 +435,7 @@ class ExportDB:
         return ExportRecord(conn, self.lock, filename_normalized, export_db=self)
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def get_uuid_for_file(self, filename: str) -> str | None:
+    def get_uuid_for_file(self, filename: str | os.PathLike[str]) -> str | None:
         """query database for filename and return UUID
         returns None if filename not found in database
         """
@@ -436,7 +462,7 @@ class ExportDB:
                 (uuid,),
             )
             results = c.fetchall()
-            return [os.path.join(self.export_dir, r[0]) for r in results]
+            return [os.path.join(self._export_dir_str(), r[0]) for r in results]
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
     def get_photoinfo_for_uuid(self, uuid: str) -> str | None:
@@ -452,7 +478,7 @@ class ExportDB:
         stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
         retry=retry_if_not_exception_type(sqlite3.IntegrityError),
     )
-    def set_photoinfo_for_uuid(self, uuid: str, info: str):
+    def set_photoinfo_for_uuid(self, uuid: str, info: str) -> None:
         """sets the photoinfo JSON string for a UUID"""
         with self.lock:
             conn = self.connection
@@ -464,7 +490,9 @@ class ExportDB:
             conn.commit()
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def get_target_for_file(self, uuid: str, filename: str | os.PathLike) -> str | None:
+    def get_target_for_file(
+        self, uuid: str, filename: str | os.PathLike[str]
+    ) -> str | None:
         """query database for file matching file name and return the matching filename if there is one;
            otherwise return None; looks for file.ext, file (1).ext, file (2).ext and so on to find the
            actual target name that was used to export filename
@@ -490,12 +518,12 @@ class ExportDB:
                 if result_ext != filepath_ext:
                     continue
                 if re.match(re.escape(filepath_stem) + r"(\s\(\d+\))?$", result_stem):
-                    return os.path.join(self.export_dir, result[1])
+                    return os.path.join(self._export_dir_str(), result[1])
 
             return None
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def get_previous_uuids(self):
+    def get_previous_uuids(self) -> list[str]:
         """returns list of UUIDs of previously exported photos found in export database"""
         with self.lock:
             conn = self.connection
@@ -508,7 +536,7 @@ class ExportDB:
         stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
         retry=retry_if_not_exception_type(sqlite3.IntegrityError),
     )
-    def set_config(self, config_data: str):
+    def set_config(self, config_data: str) -> None:
         """set config in the database"""
         with self.lock:
             conn = self.connection
@@ -524,7 +552,7 @@ class ExportDB:
         stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
         retry=retry_if_not_exception_type(sqlite3.IntegrityError),
     )
-    def set_export_results(self, results: osxphotos.photoexporter.ExportResults):
+    def set_export_results(self, results: ExportResults) -> None:
         """Store export results in database; data is pickled and gzipped for storage"""
 
         results_data = pickle_and_zip(results)
@@ -545,9 +573,7 @@ class ExportDB:
             conn.commit()
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def get_export_results(
-        self, run: int = 0
-    ) -> osxphotos.photoexporter.ExportResults | None:
+    def get_export_results(self, run: int = 0) -> ExportResults | None:
         """Retrieve export results from database
 
         Args:
@@ -572,6 +598,7 @@ class ExportDB:
                 """,
             )
             rows = c.fetchall()
+            results: ExportResults | None
             try:
                 data = rows[run][0]
                 results = unzip_and_unpickle(data) if data else None
@@ -588,16 +615,16 @@ class ExportDB:
             c.execute("SELECT uuid, filepath FROM export_data")
 
             while row := c.fetchone():
-                yield row[0], os.path.join(self.export_dir, row[1])
+                yield row[0], os.path.join(self._export_dir_str(), row[1])
             return
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def delete_data_for_uuid(self, uuid: str):
+    def delete_data_for_uuid(self, uuid: str) -> int:
         """Delete all exportdb data for given UUID"""
         with self.lock:
             conn = self.connection
             c = conn.cursor()
-            count = 0
+            count: int = 0
             c.execute("DELETE FROM export_data WHERE uuid = ?;", (uuid,))
             count += c.execute("SELECT CHANGES();").fetchone()[0]
             c.execute("DELETE FROM photoinfo WHERE uuid = ?;", (uuid,))
@@ -606,7 +633,7 @@ class ExportDB:
             return count
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def delete_data_for_filepath(self, filepath: str | os.PathLike):
+    def delete_data_for_filepath(self, filepath: str | os.PathLike[str]) -> int:
         """Delete all exportdb data for given filepath"""
         with self.lock:
             conn = self.connection
@@ -620,11 +647,11 @@ class ExportDB:
 
     def set_history(
         self,
-        filename: str | os.PathLike,
+        filename: str | os.PathLike[str],
         uuid: str,
         action: str,
         diff: str | None,
-    ):
+    ) -> None:
         """Set the history record for the filepath
 
         Args:
@@ -641,7 +668,7 @@ class ExportDB:
         if len(self._history_buffer) >= HISTORY_BATCH_SIZE:
             self.flush_history()
 
-    def flush_history(self):
+    def flush_history(self) -> None:
         """Flush buffered history records to the database.
 
         This is called automatically when the buffer reaches HISTORY_BATCH_SIZE,
@@ -687,8 +714,8 @@ class ExportDB:
 
     # @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
     def get_history(
-        self, filepath: str | os.PathLike | None = None, uuid: str | None = None
-    ):
+        self, filepath: str | os.PathLike[str] | None = None, uuid: str | None = None
+    ) -> list[tuple[str, str, str | None]]:
         """Get history for a filepath or uuid
 
         Args:
@@ -744,7 +771,8 @@ class ExportDB:
             ).fetchone()
             if not results:
                 return None
-            return results[0]
+            export_directory: str | None = results[0]
+            return export_directory
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
     def close(self) -> None:
@@ -834,7 +862,7 @@ class ExportDB:
 
     def _create_or_migrate_db_tables(
         self, conn: sqlite3.Connection, version: str | None = None
-    ):
+    ) -> None:
         """create (if not already created) the necessary db tables for the export database and apply any needed migrations
 
         Args:
@@ -849,19 +877,19 @@ class ExportDB:
             version_info = (__version__, "4.3")
 
         max_version = float(OSXPHOTOS_EXPORTDB_VERSION)
-        version = float(version) if version else max_version
+        requested_version = float(version) if version else max_version
         current_version = float(version_info[1])
-        if version < float("4.3"):
+        if requested_version < float("4.3"):
             raise ValueError(
-                f"Requested database version {version} is older than minimum supported version 4.3"
+                f"Requested database version {requested_version} is older than minimum supported version 4.3"
             )
-        if version > max_version:
+        if requested_version > max_version:
             raise ValueError(
-                f"Requested database version {version} is newer than maximum supported version {OSXPHOTOS_EXPORTDB_VERSION}"
+                f"Requested database version {requested_version} is newer than maximum supported version {OSXPHOTOS_EXPORTDB_VERSION}"
             )
-        if current_version > version:
+        if current_version > requested_version:
             raise ValueError(
-                f"Database version {version_info[1]} is newer than requested version {version}"
+                f"Database version {version_info[1]} is newer than requested version {requested_version}"
             )
 
         # Current for version 4.3, for anything greater, do a migration after creation
@@ -948,7 +976,7 @@ class ExportDB:
                 c.execute(cmd)
             c.execute(
                 "INSERT INTO version(osxphotos, exportdb) VALUES (?, ?);",
-                (__version__, version),
+                (__version__, requested_version),
             )
             c.execute("INSERT INTO about(about) VALUES (?);", (OSXPHOTOS_ABOUT_STRING,))
             conn.commit()
@@ -958,43 +986,43 @@ class ExportDB:
         if current_version < float("4.3"):
             self._migrate_normalized_filepath(conn)
 
-        if current_version < float("5.0") and version >= float("5.0"):
+        if current_version < float("5.0") and requested_version >= float("5.0"):
             self._migrate_4_3_to_5_0(conn)
 
-        if current_version < float("6.0") and version >= float("6.0"):
+        if current_version < float("6.0") and requested_version >= float("6.0"):
             # create export_data table
             self._migrate_5_0_to_6_0(conn)
 
-        if current_version < float("7.0") and version >= float("7.0"):
+        if current_version < float("7.0") and requested_version >= float("7.0"):
             # create report_data table
             self._migrate_6_0_to_7_0(conn)
 
-        if current_version < float("7.1") and version >= float("7.1"):
+        if current_version < float("7.1") and requested_version >= float("7.1"):
             # add timestamp to export_data
             self._migrate_7_0_to_7_1(conn)
 
-        if current_version < float("8.0") and version >= float("8.0"):
+        if current_version < float("8.0") and requested_version >= float("8.0"):
             # add error to export_data
             self._migrate_7_1_to_8_0(conn)
 
-        if current_version < float("9.0") and version >= float("9.0"):
+        if current_version < float("9.0") and requested_version >= float("9.0"):
             # add history table
             self._migrate_8_0_to_9_0(conn)
 
-        if current_version < float("9.1") and version >= float("9.1"):
+        if current_version < float("9.1") and requested_version >= float("9.1"):
             # Add history index
             self._migrate_9_0_to_9_1(conn)
 
-        if current_version < float("10.0") and version >= float("10.0"):
+        if current_version < float("10.0") and requested_version >= float("10.0"):
             self._migrate_9_1_to_10_0(conn)
 
-        if current_version < float("10.1") and version >= float("10.1"):
+        if current_version < float("10.1") and requested_version >= float("10.1"):
             self._migrate_10_0_to_10_1(conn)
 
-        if current_version < float("11.0") and version >= float("11.0"):
+        if current_version < float("11.0") and requested_version >= float("11.0"):
             self._migrate_10_1_to_11_0(conn)
 
-        if current_version < float("11.1") and version >= float("11.1"):
+        if current_version < float("11.1") and requested_version >= float("11.1"):
             # add index on export_data.uuid
             self._migrate_11_0_to_11_1(conn)
 
@@ -1002,13 +1030,14 @@ class ExportDB:
             conn.execute("VACUUM;")
             conn.commit()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """ensure the database connection is closed"""
         with suppress(Exception):
-            self._conn.close()
+            if self._conn is not None:
+                self._conn.close()
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def _insert_run_info(self):
+    def _insert_run_info(self) -> None:
         """Insert run info into runs table"""
         dt = datetime.datetime.now(datetime.UTC).isoformat()
         python_path = sys.executable
@@ -1025,7 +1054,7 @@ class ExportDB:
             conn.commit()
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def _insert_export_dir(self):
+    def _insert_export_dir(self) -> None:
         """Insert export_directory info into export_directory table"""
 
         if float(self.version) < float("10.0"):
@@ -1056,20 +1085,20 @@ class ExportDB:
 
             conn.commit()
 
-    def _relative_filepath(self, filepath: str | os.PathLike) -> str:
+    def _relative_filepath(self, filepath: str | os.PathLike[str]) -> str:
         """return filepath relative to self.export_dir"""
-        return str(pathlib.Path(filepath).relative_to(self.export_dir))
+        return str(pathlib.Path(filepath).relative_to(self._export_dir_str()))
 
-    def _normalize_filepath(self, filepath: str | os.PathLike) -> str:
+    def _normalize_filepath(self, filepath: str | os.PathLike[str]) -> str:
         """normalize filepath for unicode, lower case"""
         return normalize_fs_path(str(filepath)).lower()
 
-    def _normalize_filepath_relative(self, filepath: str | os.PathLike) -> str:
+    def _normalize_filepath_relative(self, filepath: str | os.PathLike[str]) -> str:
         """normalize filepath for unicode, relative path (to export dir), lower case"""
         filepath = self._relative_filepath(filepath)
         return normalize_fs_path(str(filepath)).lower()
 
-    def _migrate_normalized_filepath(self, conn: sqlite3.Connection):
+    def _migrate_normalized_filepath(self, conn: sqlite3.Connection) -> None:
         """Fix all filepath_normalized columns for unicode normalization"""
         # Prior to database version 4.3, filepath_normalized was not normalized for unicode
         migration_sql = [
@@ -1110,7 +1139,7 @@ class ExportDB:
                 )
             conn.commit()
 
-    def _migrate_4_3_to_5_0(self, conn: sqlite3.Connection):
+    def _migrate_4_3_to_5_0(self, conn: sqlite3.Connection) -> None:
         """Migrate database from version 4.3 to 5.0"""
         with self.lock:
             c = conn.cursor()
@@ -1118,7 +1147,7 @@ class ExportDB:
             c.execute("ALTER TABLE files ADD COLUMN metadata TEXT;")
             conn.commit()
 
-    def _migrate_5_0_to_6_0(self, conn: sqlite3.Connection):
+    def _migrate_5_0_to_6_0(self, conn: sqlite3.Connection) -> None:
         with self.lock:
             c = conn.cursor()
             # add export_data table
@@ -1221,7 +1250,7 @@ class ExportDB:
 
             conn.commit()
 
-    def _migrate_6_0_to_7_0(self, conn: sqlite3.Connection):
+    def _migrate_6_0_to_7_0(self, conn: sqlite3.Connection) -> None:
         with self.lock:
             c = conn.cursor()
             c.execute(
@@ -1242,7 +1271,7 @@ class ExportDB:
                 time.sleep(0.001)
             conn.commit()
 
-    def _migrate_7_0_to_7_1(self, conn: sqlite3.Connection):
+    def _migrate_7_0_to_7_1(self, conn: sqlite3.Connection) -> None:
         """Add timestamp column to export_data table and triggers to update it on insert and update."""
         with self.lock:
             c = conn.cursor()
@@ -1273,7 +1302,7 @@ class ExportDB:
             )
             conn.commit()
 
-    def _migrate_7_1_to_8_0(self, conn: sqlite3.Connection):
+    def _migrate_7_1_to_8_0(self, conn: sqlite3.Connection) -> None:
         """Add error column to export_data table"""
         with self.lock:
             c = conn.cursor()
@@ -1284,7 +1313,7 @@ class ExportDB:
                 c.execute("""ALTER TABLE export_data ADD COLUMN error JSON;""")
             conn.commit()
 
-    def _migrate_8_0_to_9_0(self, conn: sqlite3.Connection):
+    def _migrate_8_0_to_9_0(self, conn: sqlite3.Connection) -> None:
         """Add history table"""
         with self.lock:
             c = conn.cursor()
@@ -1328,7 +1357,7 @@ class ExportDB:
 
             conn.commit()
 
-    def _migrate_9_0_to_9_1(self, conn: sqlite3.Connection):
+    def _migrate_9_0_to_9_1(self, conn: sqlite3.Connection) -> None:
         """Add history index"""
         with self.lock:
             c = conn.cursor()
@@ -1343,7 +1372,7 @@ class ExportDB:
 
             conn.commit()
 
-    def _migrate_9_1_to_10_0(self, conn: sqlite3.Connection):
+    def _migrate_9_1_to_10_0(self, conn: sqlite3.Connection) -> None:
         """Add export_directory table"""
         with self.lock:
             c = conn.cursor()
@@ -1358,7 +1387,7 @@ class ExportDB:
 
             conn.commit()
 
-    def _migrate_10_0_to_10_1(self, conn: sqlite3.Connection):
+    def _migrate_10_0_to_10_1(self, conn: sqlite3.Connection) -> None:
         """Add history related indexes"""
         with self.lock:
             c = conn.cursor()
@@ -1377,7 +1406,7 @@ class ExportDB:
 
             conn.commit()
 
-    def _migrate_10_1_to_11_0(self, conn: sqlite3.Connection):
+    def _migrate_10_1_to_11_0(self, conn: sqlite3.Connection) -> None:
         """Add modified date"""
         with self.lock:
             c = conn.cursor()
@@ -1390,7 +1419,7 @@ class ExportDB:
                 )
             conn.commit()
 
-    def _migrate_11_0_to_11_1(self, conn: sqlite3.Connection):
+    def _migrate_11_0_to_11_1(self, conn: sqlite3.Connection) -> None:
         """Add index on export_data.uuid
 
         export_data was indexed only on filepath_normalized but
@@ -1407,7 +1436,7 @@ class ExportDB:
             )
             conn.commit()
 
-    def _perform_db_maintenance(self, conn: sqlite3.Connection):
+    def _perform_db_maintenance(self, conn: sqlite3.Connection) -> None:
         """Perform database maintenance"""
         if float(self.version) < float("6.0"):
             return
@@ -1441,8 +1470,8 @@ class ExportDBInMemory(ExportDB):
 
     def __init__(
         self,
-        dbfile: str | os.PathLike,
-        export_dir: str | os.PathLike | None,
+        dbfile: str | os.PathLike[str],
+        export_dir: str | os.PathLike[str] | None,
         version: str | None = None,
     ):
         """ "Initialize ExportDBInMemory
@@ -1464,7 +1493,7 @@ class ExportDBInMemory(ExportDB):
         # whilst preserving the UUID to filename mapping
         self._path: str | None = str(export_dir) if export_dir else None
 
-        self.was_upgraded: tuple[str, str] | tuple = ()
+        self.was_upgraded: tuple[str, str] | tuple[()] = ()
         self.was_created = False
 
         self.lock = threading.Lock()
@@ -1483,7 +1512,7 @@ class ExportDBInMemory(ExportDB):
         self._insert_export_dir()
 
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
-    def write_to_disk(self):
+    def write_to_disk(self) -> None:
         """Write changes from in-memory database back to disk"""
 
         # dump the database
@@ -1530,7 +1559,7 @@ class ExportDBInMemory(ExportDB):
     @retry(stop=stop_after_attempt(MAX_RETRY_ATTEMPTS))
     def _open_export_db(
         self, dbfile: str, version: str | None = None
-    ):  # sourcery skip: raise-specific-error
+    ) -> sqlite3.Connection:  # sourcery skip: raise-specific-error
         """Open export database and return a db connection
 
         Args:
@@ -1575,8 +1604,8 @@ class ExportDBInMemory(ExportDB):
 
         return dst
 
-    def _get_db_connection(self):
-        """return db connection to in memory database"""
+    def _get_db_connection(self, dbfile: str | None = None) -> sqlite3.Connection:
+        """return db connection to in memory database (dbfile is ignored)"""
         return sqlite3.connect(":memory:", check_same_thread=SQLITE_CHECK_SAME_THREAD)
 
     def _dump_db(self, conn: sqlite3.Connection) -> StringIO:
@@ -1588,7 +1617,7 @@ class ExportDBInMemory(ExportDB):
         dbdump.seek(0)
         return dbdump
 
-    def __del__(self):
+    def __del__(self) -> None:
         """close the database connection"""
         with suppress(Error):
             self.close()
@@ -1625,7 +1654,7 @@ class ExportDBTemp(ExportDBInMemory):
         self._insert_run_info()
         self._insert_export_dir()
 
-    def _relative_filepath(self, filepath: str | os.PathLike) -> str:
+    def _relative_filepath(self, filepath: str | os.PathLike[str]) -> str:
         """Overrides _relative_filepath to return a path for use in the temp db"""
         filepath = str(filepath)
         return filepath[1:] if filepath[0] == "/" else filepath
@@ -1684,7 +1713,8 @@ class ExportRecord:
             "SELECT filepath FROM export_data WHERE filepath_normalized = ?;",
             (self._filepath_normalized,),
         ).fetchone():
-            return row[0]
+            filepath: str = row[0]
+            return filepath
 
         raise ValueError(
             f"No filepath found in database for {self._filepath_normalized}"
@@ -1711,12 +1741,13 @@ class ExportRecord:
             "SELECT uuid FROM export_data WHERE filepath_normalized = ?;",
             (self._filepath_normalized,),
         ).fetchone():
-            return row[0]
+            uuid: str = row[0]
+            return uuid
 
         raise ValueError(f"No uuid found in database for {self._filepath_normalized}")
 
     @property
-    def digest(self) -> str:
+    def digest(self) -> str | None:
         """returns the digest value"""
         if self._context_manager:
             return self._digest()
@@ -1724,7 +1755,7 @@ class ExportRecord:
             return self._digest()
 
     @digest.setter
-    def digest(self, value: str):
+    def digest(self, value: str) -> None:
         """set digest value"""
         if self._context_manager:
             self._digest_setter(value)
@@ -1732,7 +1763,7 @@ class ExportRecord:
             with self.lock:
                 self._digest_setter(value)
 
-    def _digest(self) -> str:
+    def _digest(self) -> str | None:
         """returns the digest value"""
         if self._cached_data is not None:
             return self._cached_data.get("digest")
@@ -1742,11 +1773,12 @@ class ExportRecord:
             "SELECT digest FROM export_data WHERE filepath_normalized = ?;",
             (self._filepath_normalized,),
         ).fetchone():
-            return row[0]
+            digest: str | None = row[0]
+            return digest
 
         raise ValueError(f"No digest found in database for {self._filepath_normalized}")
 
-    def _digest_setter(self, value: str):
+    def _digest_setter(self, value: str) -> None:
         """set digest value"""
         conn = self.connection
         c = conn.cursor()
@@ -1758,7 +1790,7 @@ class ExportRecord:
             conn.commit()
 
     @property
-    def exifdata(self) -> str:
+    def exifdata(self) -> str | None:
         """returns exifdata value for record"""
         if self._context_manager:
             return self._exifdata()
@@ -1766,7 +1798,7 @@ class ExportRecord:
             return self._exifdata()
 
     @exifdata.setter
-    def exifdata(self, value: str):
+    def exifdata(self, value: str) -> None:
         """set exifdata value"""
         if self._context_manager:
             self._exifdata_setter(value)
@@ -1774,7 +1806,7 @@ class ExportRecord:
             with self.lock:
                 self._exifdata_setter(value)
 
-    def _exifdata(self) -> str:
+    def _exifdata(self) -> str | None:
         """returns exifdata value for record"""
         if self._cached_data is not None:
             return self._cached_data.get("exifdata")
@@ -1784,13 +1816,14 @@ class ExportRecord:
             "SELECT exifdata FROM export_data WHERE filepath_normalized = ?;",
             (self._filepath_normalized,),
         ).fetchone():
-            return row[0]
+            exifdata: str | None = row[0]
+            return exifdata
 
         raise ValueError(
             f"No exifdata found in database for {self._filepath_normalized}"
         )
 
-    def _exifdata_setter(self, value: str):
+    def _exifdata_setter(self, value: str) -> None:
         """set exifdata value"""
         conn = self.connection
         c = conn.cursor()
@@ -1813,7 +1846,7 @@ class ExportRecord:
             return self._src_sig()
 
     @src_sig.setter
-    def src_sig(self, value: tuple[int, int, int | None]):
+    def src_sig(self, value: tuple[int, int, int | None]) -> None:
         """set source file signature value"""
         if self._context_manager:
             self._src_sig_setter(value)
@@ -1836,7 +1869,7 @@ class ExportRecord:
             f"No src_sig found in database for {self._filepath_normalized}"
         )
 
-    def _src_sig_setter(self, value: tuple[int, int, int | None]):
+    def _src_sig_setter(self, value: tuple[int, int, int | None]) -> None:
         """set source file signature value"""
         conn = self.connection
         c = conn.cursor()
@@ -1861,7 +1894,7 @@ class ExportRecord:
             return self._dest_sig()
 
     @dest_sig.setter
-    def dest_sig(self, value: tuple[int, int, int | None]):
+    def dest_sig(self, value: tuple[int, int, int | None]) -> None:
         """set destination file signature"""
         if self._context_manager:
             self._dest_sig_setter(value)
@@ -1872,7 +1905,10 @@ class ExportRecord:
     def _dest_sig(self) -> tuple[int, int, int | None]:
         """return destination file signature"""
         if self._cached_data is not None:
-            return self._cached_data.get("dest_sig")
+            # the prefetch cache always stores dest_sig as a (mode, size, mtime) tuple
+            return cast(
+                "tuple[int, int, int | None]", self._cached_data.get("dest_sig")
+            )
         conn = self.connection
         c = conn.cursor()
         if row := c.execute(
@@ -1886,7 +1922,7 @@ class ExportRecord:
             f"No dest_sig found in database for {self._filepath_normalized}"
         )
 
-    def _dest_sig_setter(self, value: tuple[int, int, int | None]):
+    def _dest_sig_setter(self, value: tuple[int, int, int | None]) -> None:
         """set destination file signature"""
         conn = self.connection
         c = conn.cursor()
@@ -1903,7 +1939,7 @@ class ExportRecord:
             conn.commit()
 
     @property
-    def photoinfo(self) -> str:
+    def photoinfo(self) -> str | None:
         """Returns info value"""
         if self._context_manager:
             return self._photoinfo()
@@ -1911,7 +1947,7 @@ class ExportRecord:
             return self._photoinfo()
 
     @photoinfo.setter
-    def photoinfo(self, value: str):
+    def photoinfo(self, value: str) -> None:
         """Sets info value"""
         if self._context_manager:
             self._photoinfo_setter(value)
@@ -1919,7 +1955,7 @@ class ExportRecord:
             with self.lock:
                 self._photoinfo_setter(value)
 
-    def _photoinfo(self) -> str:
+    def _photoinfo(self) -> str | None:
         """Returns info value"""
         conn = self.connection
         c = conn.cursor()
@@ -1936,9 +1972,10 @@ class ExportRecord:
             "SELECT photoinfo from photoinfo where uuid = ?;",
             (uuid,),
         ).fetchone()
-        return row[0] if row else None
+        photoinfo: str | None = row[0] if row else None
+        return photoinfo
 
-    def _photoinfo_setter(self, value: str):
+    def _photoinfo_setter(self, value: str) -> None:
         """Sets info value"""
         conn = self.connection
         c = conn.cursor()
@@ -1959,7 +1996,7 @@ class ExportRecord:
             conn.commit()
 
     @property
-    def export_options(self) -> str:
+    def export_options(self) -> int | str | None:
         """Get export_options value"""
         if self._context_manager:
             return self._export_options()
@@ -1967,7 +2004,7 @@ class ExportRecord:
             return self._export_options()
 
     @export_options.setter
-    def export_options(self, value: str):
+    def export_options(self, value: int | str) -> None:
         """Set export_options value"""
         if self._context_manager:
             self._export_options_setter(value)
@@ -1975,7 +2012,7 @@ class ExportRecord:
             with self.lock:
                 self._export_options_setter(value)
 
-    def _export_options(self) -> str:
+    def _export_options(self) -> int | str | None:
         """Get export_options value"""
         if self._cached_data is not None:
             return self._cached_data.get("export_options")
@@ -1985,9 +2022,10 @@ class ExportRecord:
             "SELECT export_options from export_data where filepath_normalized = ?;",
             (self._filepath_normalized,),
         ).fetchone()
-        return row[0] if row else None
+        export_options: int | str | None = row[0] if row else None
+        return export_options
 
-    def _export_options_setter(self, value: str):
+    def _export_options_setter(self, value: int | str) -> None:
         """Set export_options value"""
         conn = self.connection
         c = conn.cursor()
@@ -2014,7 +2052,8 @@ class ExportRecord:
             "SELECT timestamp FROM export_data WHERE filepath_normalized = ?;",
             (self._filepath_normalized,),
         ).fetchone():
-            return row[0]
+            timestamp: str = row[0]
+            return timestamp
 
         raise ValueError(
             f"No timestamp found in database for {self._filepath_normalized}"
@@ -2029,7 +2068,7 @@ class ExportRecord:
             return self._error()
 
     @error.setter
-    def error(self, value: dict[str, str] | None):
+    def error(self, value: dict[str, Any] | None) -> None:
         """Set error value"""
         if self._context_manager:
             self._error_setter(value)
@@ -2051,7 +2090,7 @@ class ExportRecord:
 
         raise ValueError(f"No error found in database for {self._filepath_normalized}")
 
-    def _error_setter(self, value: dict[str, str] | None):
+    def _error_setter(self, value: dict[str, str] | None) -> None:
         """Set error value"""
         value = value or None
         conn = self.connection
@@ -2074,7 +2113,7 @@ class ExportRecord:
             return self._date_modified()
 
     @date_modified.setter
-    def date_modified(self, value: datetime.datetime | None):
+    def date_modified(self, value: datetime.datetime | None) -> None:
         """set asset date modified (date modified in Photos)"""
         if self._context_manager:
             self._date_modified_setter(value)
@@ -2101,7 +2140,7 @@ class ExportRecord:
             f"No date_modified found in database for {self._filepath_normalized}"
         )
 
-    def _date_modified_setter(self, value: datetime.datetime | None):
+    def _date_modified_setter(self, value: datetime.datetime | None) -> None:
         """set date_modified"""
         conn = self.connection
         c = conn.cursor()
@@ -2134,10 +2173,10 @@ class ExportRecord:
             "date_modified": self.date_modified,
         }
 
-    def json(self, indent=None) -> str:
+    def json(self, indent: int | str | None = None) -> str:
         """Return json string of self"""
 
-        def datetime_handler(obj):
+        def datetime_handler(obj: object) -> str:
             if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
                 return obj.isoformat()
             raise TypeError(
@@ -2146,12 +2185,17 @@ class ExportRecord:
 
         return json.dumps(self.asdict(), indent=indent, default=datetime_handler)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self._context_manager = True
         self.lock.acquire()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         # Check if we're in batch mode - if so, defer the commit
         in_batch = self._export_db is not None and self._export_db.in_batch_mode
         if exc_type and self._conn.in_transaction:

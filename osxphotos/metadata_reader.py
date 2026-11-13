@@ -8,9 +8,12 @@ import pathlib
 import re
 from dataclasses import dataclass, field, fields
 from enum import Enum
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from osxphotos.photoinfo_protocol import PhotoInfoProtocol
+
+if TYPE_CHECKING:
+    from osxphotos.photoinfo_dict import PhotoInfoFromDict
 
 from .datetime_utils import (
     datetime_has_tz,
@@ -534,7 +537,9 @@ def width_height_for_orientation(
         return width, height
 
 
-def metadata_from_photoinfo(photoinfo: PhotoInfoProtocol) -> MetaData:
+def metadata_from_photoinfo(
+    photoinfo: PhotoInfoProtocol | PhotoInfoFromDict,
+) -> MetaData:
     """Create a MetaData object from a PhotoInfo instance"""
     tz_offset = utc_offset_seconds(photoinfo.date)
     timezone = photoinfo.date.tzinfo

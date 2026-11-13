@@ -250,26 +250,6 @@ module = [
 ignore_missing_imports = true
 
 # LEGACY_UNTYPED_START
-# Modules not yet clean under strict. Everything else is checked strictly; this
-# list only shrinks: fix a module, remove it here.
-[[tool.mypy.overrides]]
-module = [
-    "osxphotos.cli.exiftool_cli",
-    "osxphotos.cli.export",
-    "osxphotos.cli.import_cli",
-    "osxphotos.cli.photo_inspect",
-    "osxphotos.cli.report_writer",
-    "osxphotos.export_db",
-    "osxphotos.iphoto",
-    "osxphotos.photoexporter",
-    "osxphotos.photoinfo",
-    "osxphotos.photokit",
-    "osxphotos.photoquery",
-    "osxphotos.photosdb.photosdb",
-    "osxphotos.phototemplate",
-    "osxphotos.searchinfo",
-]
-ignore_errors = true
 # LEGACY_UNTYPED_END
 
 [tool.pytest.ini_options]

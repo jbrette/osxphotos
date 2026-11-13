@@ -8,7 +8,6 @@ import datetime
 import json
 import logging
 import os
-import pathlib
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -176,7 +175,7 @@ class ExifWriter(_ExifMixin):
         self._render_options = RenderOptions()
 
     def write_exif_data(
-        self, filepath: str | pathlib.Path, options: ExifOptions
+        self, filepath: str | os.PathLike[str], options: ExifOptions
     ) -> tuple[str | None, str | None]:
         """Write exif data to image file at filepath
 

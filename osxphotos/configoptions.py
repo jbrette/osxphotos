@@ -37,6 +37,7 @@ class ConfigOptions:
     if TYPE_CHECKING:
         # option attributes are set dynamically from the command's parameters
         def __getattr__(self, name: str) -> Any: ...
+        def __setattr__(self, name: str, value: Any) -> None: ...
 
     def __init__(
         self,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import click
 import yaml
@@ -92,7 +92,7 @@ def album_dict(
 
 def shared_album_dict(photosdb: osxphotos.PhotosDB, sort_size: bool) -> dict[str, int]:
     """Return shared albums with folder hierarchy and count of items"""
-    album_dict = cast(dict[str, int], photosdb.albums_shared_as_dict)
+    album_dict = photosdb.albums_shared_as_dict
 
     if sort_size:
         # already sorted in size from albums_shared_as_dict

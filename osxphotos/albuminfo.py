@@ -436,10 +436,10 @@ class FolderInfo:
         self._db: PhotosDB = cast("PhotosDB", db)
         if self._db._db_version <= _PHOTOS_4_VERSION:
             self._pk = None
-            self._title = self._db._dbfolder_details[uuid]["name"]
+            self._title = self._db._dbfolder_details[self._uuid]["name"]
         else:
-            self._pk = self._db._dbalbum_details[uuid]["pk"]
-            self._title = self._db._dbalbum_details[uuid]["title"]
+            self._pk = self._db._dbalbum_details[self._uuid]["pk"]
+            self._title = self._db._dbalbum_details[self._uuid]["title"]
 
     @property
     def title(self) -> str:

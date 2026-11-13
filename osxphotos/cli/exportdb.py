@@ -503,13 +503,13 @@ def exportdb(
     if last_errors:
         exportdb = ExportDB(export_db, export_dir)
         if export_results := exportdb.get_export_results(0):
-            for error in [
+            for error_rec in [
                 *export_results.error,
                 *export_results.exiftool_error,
                 *export_results.exiftool_warning,
             ]:
                 rich_click_echo(
-                    f"[filepath]{error[0]}[/], [time]{export_results.datetime}[/], [error]{error[1]}[/]"
+                    f"[filepath]{error_rec[0]}[/], [time]{export_results.datetime}[/], [error]{error_rec[1]}[/]"
                 )
             sys.exit(0)
         else:
@@ -644,7 +644,7 @@ def exportdb(
     if sql:
         exportdb = ExportDB(export_db, export_dir)
         try:
-            c = exportdb._conn.cursor()
+            c = exportdb.connection.cursor()
             results = c.execute(sql)
         except Exception as e:
             rich_echo_error(f"[error]Error: {e}[/error]")

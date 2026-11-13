@@ -1,6 +1,13 @@
 """class for PhotoInfo exposing SearchInfo data such as labels"""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from ._constants import _PHOTOS_4_VERSION, search_category_factory
+
+if TYPE_CHECKING:
+    from .photoinfo import PhotoInfo
 
 __all__ = ["SearchInfo"]
 
@@ -8,7 +15,7 @@ __all__ = ["SearchInfo"]
 class SearchInfo:
     """Info about search terms such as machine learning labels that Photos knows about a photo"""
 
-    def __init__(self, photo, normalized=False):
+    def __init__(self, photo: PhotoInfo, normalized: bool = False) -> None:
         """photo: PhotoInfo object
         normalized: if True, all properties return normalized (lower case) results"""
 
@@ -24,129 +31,131 @@ class SearchInfo:
         try:
             # get search info for this UUID
             # there might not be any search info data (e.g. if Photo was missing or photoanalysisd not run yet)
-            self._db_searchinfo = photo._db._db_searchinfo_uuid[self.uuid]
+            self._db_searchinfo: list[dict[str, Any]] | None = (
+                photo._db._db_searchinfo_uuid[self.uuid]
+            )
         except KeyError:
             self._db_searchinfo = None
 
     @property
-    def labels(self):
+    def labels(self) -> list[str]:
         """return list of labels associated with Photo"""
         return self._get_text_for_category(self._categories.LABEL)
 
     @property
-    def place_names(self):
+    def place_names(self) -> list[str]:
         """returns list of place names"""
         return self._get_text_for_category(self._categories.PLACE_NAME)
 
     @property
-    def streets(self):
+    def streets(self) -> list[str]:
         """returns list of street names"""
         return self._get_text_for_category(self._categories.STREET)
 
     @property
-    def neighborhoods(self):
+    def neighborhoods(self) -> list[str]:
         """returns list of neighborhoods"""
         return self._get_text_for_category(self._categories.NEIGHBORHOOD)
 
     @property
-    def locality_names(self):
+    def locality_names(self) -> list[str]:
         """returns list of other locality names"""
-        locality = []
+        locality: list[str] = []
         for category in self._categories.ALL_LOCALITY:
             locality += self._get_text_for_category(category)
         return locality
 
     @property
-    def city(self):
+    def city(self) -> str:
         """returns city/town"""
         city = self._get_text_for_category(self._categories.CITY)
         return city[0] if city else ""
 
     @property
-    def state(self):
+    def state(self) -> str:
         """returns state name"""
         state = self._get_text_for_category(self._categories.STATE)
         return state[0] if state else ""
 
     @property
-    def state_abbreviation(self):
+    def state_abbreviation(self) -> str:
         """returns state abbreviation"""
         abbrev = self._get_text_for_category(self._categories.STATE_ABBREVIATION)
         return abbrev[0] if abbrev else ""
 
     @property
-    def country(self):
+    def country(self) -> str:
         """returns country name"""
         country = self._get_text_for_category(self._categories.COUNTRY)
         return country[0] if country else ""
 
     @property
-    def month(self):
+    def month(self) -> str:
         """returns month name"""
         month = self._get_text_for_category(self._categories.MONTH)
         return month[0] if month else ""
 
     @property
-    def year(self):
+    def year(self) -> str:
         """returns year"""
         year = self._get_text_for_category(self._categories.YEAR)
         return year[0] if year else ""
 
     @property
-    def bodies_of_water(self):
+    def bodies_of_water(self) -> list[str]:
         """returns list of body of water names"""
         return self._get_text_for_category(self._categories.BODY_OF_WATER)
 
     @property
-    def holidays(self):
+    def holidays(self) -> list[str]:
         """returns list of holiday names"""
         return self._get_text_for_category(self._categories.HOLIDAY)
 
     @property
-    def activities(self):
+    def activities(self) -> list[str]:
         """returns list of activity names"""
         return self._get_text_for_category(self._categories.ACTIVITY)
 
     @property
-    def season(self):
+    def season(self) -> str:
         """returns season name"""
         season = self._get_text_for_category(self._categories.SEASON)
         return season[0] if season else ""
 
     @property
-    def venues(self):
+    def venues(self) -> list[str]:
         """returns list of venue names"""
         return self._get_text_for_category(self._categories.VENUE)
 
     @property
-    def venue_types(self):
+    def venue_types(self) -> list[str]:
         """returns list of venue types"""
         return self._get_text_for_category(self._categories.VENUE_TYPE)
 
     @property
-    def media_types(self):
+    def media_types(self) -> list[str]:
         """returns list of media types (photo, video, panorama, etc)"""
-        types = []
+        types: list[str] = []
         for category in self._categories.MEDIA_TYPES:
             types += self._get_text_for_category(category)
         return types
 
     @property
-    def detected_text(self):
+    def detected_text(self) -> list[str]:
         """Returns text detected in the photo (macOS 13+ / Photos 8+ only)"""
         if self._photo._db._photos_ver < 8:
             return []
         return self._get_text_for_category(self._categories.DETECTED_TEXT)
 
     @property
-    def text_found(self):
+    def text_found(self) -> list[str]:
         """Returns True if photos has detected text (macOS 13+ / Photos 8+ only)"""
         if self._photo._db._photos_ver < 8:
             return []
         return self._get_text_for_category(self._categories.TEXT_FOUND)
 
     @property
-    def camera(self):
+    def camera(self) -> str:
         """returns camera name (macOS 13+ / Photos 8+ only)"""
         if self._photo._db._photos_ver < 8:
             return ""
@@ -154,7 +163,7 @@ class SearchInfo:
         return camera[0] if camera else ""
 
     @property
-    def source(self):
+    def source(self) -> str:
         """returns source of the photo (e.g. "Messages", "Safar", etc) (macOS 13+ / Photos 8+ only)"""
         if self._photo._db._photos_ver < 8:
             return ""
@@ -162,112 +171,112 @@ class SearchInfo:
         return source[0] if source else ""
 
     @property
-    def times_of_day(self):
+    def times_of_day(self) -> list[str]:
         """returns list of times of day, e.g. "Morning" (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.TIME_OF_DAY)
 
     @property
-    def week_part(self):
+    def week_part(self) -> str:
         """returns part of week, "Weekday" or "Weekend" (Photos 8+ only)"""
         return self._get_first_text_for_category(self._categories.WEEKPART)
 
     @property
-    def day_of_week(self):
+    def day_of_week(self) -> str:
         """returns day of week, e.g. "Monday" (macOS 27+ only)"""
         return self._get_first_text_for_category(self._categories.DAY_OF_WEEK)
 
     @property
-    def home(self):
+    def home(self) -> str:
         """returns "Home" if photo was taken at the user's home location"""
         return self._get_first_text_for_category(self._categories.HOME)
 
     @property
-    def areas_of_interest(self):
+    def areas_of_interest(self) -> list[str]:
         """returns list of areas of interest, e.g. parks, airports, universities (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.AREA_OF_INTEREST)
 
     @property
-    def country_code(self):
+    def country_code(self) -> str:
         """returns country code, e.g. "US" (Photos 8+ only)"""
         return self._get_first_text_for_category(self._categories.COUNTRY_CODE)
 
     @property
-    def region(self):
+    def region(self) -> str:
         """returns geographic region, e.g. "Northern America" (Photos 8+ only)"""
         return self._get_first_text_for_category(self._categories.REGION)
 
     @property
-    def continent(self):
+    def continent(self) -> str:
         """returns continent, e.g. "Americas" (Photos 8+ only)"""
         return self._get_first_text_for_category(self._categories.CONTINENT)
 
     @property
-    def events(self):
+    def events(self) -> list[str]:
         """returns list of event names, e.g. sporting events or concerts (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.EVENT)
 
     @property
-    def event_performers(self):
+    def event_performers(self) -> list[str]:
         """returns list of event performers or teams (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.EVENT_PERFORMER)
 
     @property
-    def event_types(self):
+    def event_types(self) -> list[str]:
         """returns list of event types, e.g. "Football", "Music" (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.EVENT_TYPE)
 
     @property
-    def pets(self):
+    def pets(self) -> list[str]:
         """returns list of pet names (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.PET)
 
     @property
-    def age_groups(self):
+    def age_groups(self) -> list[str]:
         """returns list of age groups of people in the photo, e.g. "Adult", "Child" (macOS 27+ only)"""
         return self._get_text_for_category(self._categories.AGE_GROUP)
 
     @property
-    def landmarks(self):
+    def landmarks(self) -> list[str]:
         """returns list of landmarks (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.LANDMARK)
 
     @property
-    def sounds(self):
+    def sounds(self) -> list[str]:
         """returns list of sounds detected in video or Live Photo, e.g. "Laughter" (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.SOUND)
 
     @property
-    def human_actions(self):
+    def human_actions(self) -> list[str]:
         """returns list of human actions, e.g. "Dancing" (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.HUMAN_ACTION)
 
     @property
-    def document_types(self):
+    def document_types(self) -> list[str]:
         """returns list of document types, e.g. "Receipts", "Handwriting" (Photos 8+ only)"""
         return self._get_text_for_category(self._categories.DOCUMENT_TYPE)
 
     @property
-    def trip(self):
+    def trip(self) -> str:
         """returns "Trips" if photo is part of a trip (Photos 8+ only)"""
         return self._get_first_text_for_category(self._categories.TRIP)
 
     @property
-    def photographic_style(self):
+    def photographic_style(self) -> str:
         """returns photographic style, e.g. "Standard Style" (macOS 27+ only)"""
         return self._get_first_text_for_category(self._categories.PHOTOGRAPHIC_STYLE)
 
     @property
-    def file_type(self):
+    def file_type(self) -> str:
         """returns file type description, e.g. "HEIF Image" (macOS 27+ only)"""
         return self._get_first_text_for_category(self._categories.FILE_TYPE)
 
     @property
-    def captured_by_me(self):
+    def captured_by_me(self) -> str:
         """returns "Captured by Me" if photo was captured by the user (macOS 27+ only)"""
         return self._get_first_text_for_category(self._categories.CAPTURED_BY_ME)
 
     @property
-    def id_document_types(self):
+    def id_document_types(self) -> list[str]:
         """returns list of identity document types detected in the photo, e.g. "Passport" (macOS 27+ only)
         Not included in all()"""
         return sorted(
@@ -278,13 +287,13 @@ class SearchInfo:
         )
 
     @property
-    def id_document_names(self):
+    def id_document_names(self) -> list[str]:
         """returns list of names read from identity documents in the photo (macOS 27+ only)
         Not included in all()"""
         return self._get_text_for_category(self._categories.ID_DOCUMENT_NAME)
 
     @property
-    def all(self):
+    def all(self) -> list[str]:
         """return all search info properties in a single list"""
         all_ = (
             self.labels
@@ -344,7 +353,7 @@ class SearchInfo:
 
         return all_
 
-    def asdict(self):
+    def asdict(self) -> dict[str, Any]:
         """return dict of search info"""
         return {
             "labels": self.labels,
@@ -393,12 +402,12 @@ class SearchInfo:
             "id_document_names": self.id_document_names,
         }
 
-    def _get_first_text_for_category(self, category):
+    def _get_first_text_for_category(self, category: int | None) -> str:
         """return first text value for a specified category ID or "" if none"""
         text = self._get_text_for_category(category)
         return text[0] if text else ""
 
-    def _get_text_for_category(self, category: int) -> list[str]:
+    def _get_text_for_category(self, category: int | None) -> list[str]:
         """return list of text for a specified category ID"""
         if self._db_searchinfo:
             content = "normalized_string" if self._normalized else "content_string"

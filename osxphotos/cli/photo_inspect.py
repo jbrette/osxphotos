@@ -81,8 +81,8 @@ def format_search_info(photo: PhotoInfo) -> str:
     search_info_strs = []
     category_dict = search_category_factory(photo._db.photos_version).categories()
     for category in categories:
-        if text := search_info._get_text_for_category(category):
-            text = ", ".join(t for t in text if t) if isinstance(text, list) else text
+        if texts := search_info._get_text_for_category(category):
+            text = ", ".join(t for t in texts if t)
             category_name = str(category_dict.get(category, category)).lower()
             search_info_strs.append(f"{bold(category_name)}: {text}")
     return ", ".join(search_info_strs)

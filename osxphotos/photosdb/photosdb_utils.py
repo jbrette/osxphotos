@@ -82,13 +82,13 @@ def get_db_version(db_file: str | pathlib.Path) -> str:
     return version
 
 
-def get_model_version(db_file: str) -> str | None:
+def get_model_version(db_file: str) -> int | None:
     """Returns the database model version from Z_METADATA
 
     Args:
         db_file: path to Photos.sqlite database file containing Z_METADATA table
 
-    Returns: model version as str or None if model version not found
+    Returns: model version (PLModelVersion, an int) or None if not found
     """
 
     (conn, c) = sqlite_open_ro(db_file)
@@ -109,7 +109,7 @@ def get_model_version(db_file: str) -> str | None:
 
     try:
         plist = plistlib.loads(results[1])
-        return cast(str | None, plist["PLModelVersion"])
+        return cast(int | None, plist["PLModelVersion"])
     except KeyError:
         logger.warning(f"Error getting model version: {results}")
         return None

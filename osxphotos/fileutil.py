@@ -341,7 +341,7 @@ def _normalize_path(path: str | os.PathLike[str]) -> str | pathlib.Path:
     return normalize_fs_path(os.fspath(path))
 
 
-def utime_no_cache(path: str | os.PathLike[str], times: tuple[int, int]) -> bool:
+def utime_no_cache(path: str | os.PathLike[str], times: tuple[float, float]) -> bool:
     """Set file modification and access times with filesystem caching disabled
 
     Args:
@@ -377,7 +377,7 @@ def utime_no_cache(path: str | os.PathLike[str], times: tuple[int, int]) -> bool
                     os.close(fd)
 
 
-def utime_macos(path: str | os.PathLike[str], times: tuple[int, int]) -> bool:
+def utime_macos(path: str | os.PathLike[str], times: tuple[float, float]) -> bool:
     """Adjust file access, modified time, and creation time on macOS
 
     Args:
@@ -501,7 +501,7 @@ class FileUtilABC(ABC):
 
     @classmethod
     @abstractmethod
-    def utime(cls, path: str | os.PathLike[str], times: tuple[int, int]) -> None:
+    def utime(cls, path: str | os.PathLike[str], times: tuple[float, float]) -> None:
         pass
 
     @classmethod
@@ -645,7 +645,7 @@ class FileUtilMacOS(FileUtilABC):
             os.makedirs(dirpath, mode=mode, exist_ok=exist_ok)
 
     @classmethod
-    def utime(cls, path: str | os.PathLike[str], times: tuple[int, int]) -> None:
+    def utime(cls, path: str | os.PathLike[str], times: tuple[float, float]) -> None:
         """Set the access and modified time of path."""
         path = _normalize_path(path)
         utime_macos(path, times)
@@ -845,7 +845,7 @@ class FileUtilShUtil(FileUtilMacOS):
         return True
 
     @classmethod
-    def utime(cls, path: str | os.PathLike[str], times: tuple[int, int]) -> None:
+    def utime(cls, path: str | os.PathLike[str], times: tuple[float, float]) -> None:
         """Set the access and modified time of path."""
         path = _normalize_path(path)
         if is_macos:
@@ -904,7 +904,7 @@ class FileUtilNoOp(FileUtil):
         pass
 
     @classmethod
-    def utime(cls, path: str | os.PathLike[str], times: tuple[int, int]) -> None:
+    def utime(cls, path: str | os.PathLike[str], times: tuple[float, float]) -> None:
         pass
 
     @classmethod

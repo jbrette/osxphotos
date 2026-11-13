@@ -56,7 +56,7 @@ class PhotoTables:
 
 
 class Table:
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
+    def __init__(self, db: osxphotos.PhotosDB, version: float, uuid: str) -> None:
         """Create a Table object.
 
         Args:
@@ -100,7 +100,7 @@ class Table:
 class AssetTable(Table):
     """ZASSET table."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
+    def __init__(self, db: osxphotos.PhotosDB, version: float, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, self.asset_table)
@@ -131,7 +131,7 @@ class AssetTable(Table):
 class AdditionalAttributesTable(Table):
     """ZADDITIONALASSETATTRIBUTES table."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
+    def __init__(self, db: osxphotos.PhotosDB, version: float, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, "ZADDITIONALASSETATTRIBUTES")
@@ -167,7 +167,7 @@ class AdditionalAttributesTable(Table):
 class ExtendedAttributesTable(Table):
     """ZEXTENDEDATTRIBUTEStable."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
+    def __init__(self, db: osxphotos.PhotosDB, version: float, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, "ZEXTENDEDATTRIBUTES")
@@ -203,7 +203,7 @@ class ExtendedAttributesTable(Table):
 class DetectedFaceTable(Table):
     """ZDETECTEDFACE table."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
+    def __init__(self, db: osxphotos.PhotosDB, version: float, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, "ZDETECTEDFACE")
@@ -239,7 +239,7 @@ class DetectedFaceTable(Table):
 class PersonTable(Table):
     """ZPERSON table."""
 
-    def __init__(self, db: osxphotos.PhotosDB, version: int, uuid: str) -> None:
+    def __init__(self, db: osxphotos.PhotosDB, version: float, uuid: str) -> None:
         """Create a Table object."""
         super().__init__(db, version, uuid)
         self.columns = get_table_columns(self.conn, "ZPERSON")
