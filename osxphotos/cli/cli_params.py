@@ -12,7 +12,15 @@ import click
 
 from ..platform import is_macos
 from .common import OSXPHOTOS_HIDDEN, print_version
-from .param_types import *
+from .param_types import (
+    BitMathSize,
+    DateTimeISO8601,
+    DeprecatedPath,
+    FunctionCall,
+    PathOrStdin,
+    TimeISO8601,
+    TimeOffset,
+)
 from .verbose import (
     config_theme_callback,
     config_timestamp_callback,

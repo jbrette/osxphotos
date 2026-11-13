@@ -3,8 +3,6 @@
 import pathlib
 import tempfile
 
-UTI_DICT = {"public.jpeg": "jpeg", "com.canon.cr2-raw-image": "cr2"}
-
 from osxphotos.utils import (
     _dd_to_dms,
     increment_filename,
@@ -13,6 +11,8 @@ from osxphotos.utils import (
     shortuuid_to_uuid,
     uuid_to_shortuuid,
 )
+
+UTI_DICT = {"public.jpeg": "jpeg", "com.canon.cr2-raw-image": "cr2"}
 
 
 def test_dd_to_dms():

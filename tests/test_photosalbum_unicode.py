@@ -11,7 +11,6 @@ if not is_macos:
 
 import osxphotos
 from osxphotos.photosalbum import PhotosAlbum
-from osxphotos.unicode import *
 
 UNICODE_FOLDER_NFC = normalize("NFC", "FolderUnicode/føldêr2")
 UNICODE_FOLDER_NFD = normalize("NFD", UNICODE_FOLDER_NFC)

@@ -1,7 +1,6 @@
-__all__ = ["PyReplQuitter", "embed_repl"]
-""" Custom Python REPL based on ptpython that allows quitting with custom keywords instead of 'quit()' """
+"""Custom Python REPL based on ptpython that allows quitting with custom keywords instead of 'quit()'
 
-""" This file is distributed under the same license as the ptpython package:
+This file is distributed under the same license as the ptpython package:
 
 Copyright (c) 2015, Jonathan Slenders (ptpython), (c) 2021 Rhet Turnbull (this file)
 
@@ -43,6 +42,8 @@ from ptpython.repl import (
     builtins,
     patch_stdout_context,
 )
+
+__all__ = ["PyReplQuitter", "embed_repl"]
 
 
 class PyReplQuitter(PythonRepl):
